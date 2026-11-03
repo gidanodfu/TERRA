@@ -54,6 +54,30 @@ volume.
 **Fix:** verify the worker container, database connectivity and job policy/authorization.
 **Verify:** `./terra db -c "SELECT status, count(*) FROM download_jobs GROUP BY status;"`.
 
+## Blank page / /@vite/client errors
+
+**Identify:** blank UI; browser requests `/@vite/client` and receives 404 or HTML.
+**Cause:** the web container cannot see `node_modules/vite` (stale mount/volume) or a
+static server is serving development HTML.
+**Diagnose:**
+
+```bash
+curl -sS -D - -o /dev/null http://localhost:8080/@vite/client
+docker compose exec -T web test -f node_modules/vite/dist/client/client.mjs && echo ok
+./terra doctor
+```
+
+The response must be `Content-Type: text/javascript`.
+**Fix:**
+
+```bash
+./terra build web
+./terra up
+```
+
+`up` force-recreates web so obsolete mounts cannot persist.
+**Verify:** `./terra doctor` and `./terra test e2e`.
+
 ## Vite not reachable
 
 **Identify:** `http://localhost:8080` fails.

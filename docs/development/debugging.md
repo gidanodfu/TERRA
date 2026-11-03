@@ -55,6 +55,46 @@ npm run test:e2e
 ./terra migrate status
 ```
 
+## Pantalla en blanco y errores de Vite
+
+### Síntoma
+
+La página carga en `http://localhost:8080` pero queda en blanco; la consola muestra
+errores de `/@vite/client` o React Refresh.
+
+### Diagnóstico
+
+```bash
+curl -sS -D - -o /dev/null http://localhost:8080/@vite/client
+docker compose exec -T web test -f node_modules/vite/dist/client/client.mjs && echo ok
+./terra doctor
+```
+
+`/@vite/client` debe responder `Content-Type: text/javascript` y un cuerpo JavaScript
+de Vite. Si responde `text/html`, Vite no puede leer su propio cliente y su fallback
+SPA devuelve `index.html`.
+
+### Causa raíz conocida
+
+El contenedor web había quedado con un bind mount de todo el frontend sobre `/app` y
+un volumen de `node_modules` desalineado; `/app/node_modules` no era visible. Vite no
+podía servir su cliente; React no montaba. Un contenedor viejo reutilizado agravaba el
+problema.
+
+La arquitectura corregida monta únicamente `src`, `public`, `tests` y configuraciones,
+mantiene `node_modules` dentro de la imagen y fuerza la recreación de web en
+`./terra up`.
+
+### Corrección
+
+```bash
+./terra build web
+./terra up
+./terra doctor
+```
+
+No se desactiva HMR ni React Refresh. No se parchea el puerto para ocultar el fallo.
+
 ## SSE and proxy
 
 The SSE endpoint is under `/api/v1/download-jobs/{id}/events`. Vite proxies it to

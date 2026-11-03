@@ -46,9 +46,9 @@ Esto cubre REST y SSE. Los contenedores se comunican por nombre de servicio
 | Recurso | Tipo | Uso |
 |---|---|---|
 | `terra_terra-db` | volumen | PostgreSQL |
-| `/app/node_modules` | volumen anónimo | dependencias del frontend |
+| `node_modules` | capa de imagen | dependencias del frontend (no se monta el host) |
 | `../backend:/src` | bind | source Go |
-| `../frontend:/app` | bind | source React + HMR |
+| `../frontend/src`, `public`, `tests`, configs | binds individuales | source React + HMR |
 | `../data/dev:/var/lib/terra` | bind | documentos: api ro, worker rw |
 | `../.cache/go-mod`, `../.cache/go-build` | bind | cachés Go |
 
@@ -59,7 +59,7 @@ Esto cubre REST y SSE. Los contenedores se comunican por nombre de servicio
 - db: `pg_isready`.
 - api: `GET /api/v1/health`.
 - worker: proceso vivo (`kill -0 1`).
-- web: `GET /` en Vite.
+- web: `GET /@vite/client` verificando JavaScript de Vite (no `index.html`).
 
 ## Orden de arranque
 

@@ -14,7 +14,7 @@ necesita Docker, Compose, Bash y Git.
 - API y worker con imagen backend compartida y comandos independientes.
 - Go, Node, npm, PostgreSQL y herramientas de pruebas dentro de contenedores.
 - PostgreSQL 18 con volumen `terra_terra-db`.
-- Dependencias del frontend en un volumen anónimo y cachés Go en `.cache/`.
+- Dependencias del frontend en la imagen web y cachés Go en `.cache/`.
 - Sin Nginx, sin Compose de producción/staging, sin `.env.production`.
 - `.env.example` exclusivamente local.
 - Comando unificado `./terra` y scripts en `deploy/scripts/`.
@@ -50,7 +50,7 @@ Resultados:
 - Frontend unit: 14 pruebas correctas.
 - Frontend integration: 6 pruebas correctas.
 - Frontend lint/build/coverage: correcto.
-- E2E Playwright: 3 pruebas correctas (login, proxy Vite, ruta protegida).
+- E2E Playwright: 6 pruebas correctas (login, montaje React, @vite/client, React Refresh, proxy, HMR WebSocket).
 - `./terra test all`: correcto.
 
 ### Infraestructura local
@@ -64,6 +64,7 @@ Resultados:
 - `bash -n` y ShellCheck sin advertencias.
 - Build de imágenes sin dependencias de Go/Node en el host.
 - Imágenes sin `.git` ni `.env`.
+- Corregida la carga del frontend: `node_modules` visible en la imagen web, bind mounts individuales, `up` recrea web y doctor/verify detectan `/@vite/client` incorrecto.
 
 ## Pendiente externo
 

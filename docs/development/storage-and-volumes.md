@@ -39,7 +39,7 @@ preserved by stop/down and by container removal.
 
 ## Node modules and Go caches
 
-- Anonymous `/app/node_modules` volume: container-owned frontend dependencies.
+- `node_modules`: installed in the web image; not mounted from the host.
 - `.cache/go-mod` and `.cache/go-build`: host directories for Go module/build caches.
 
 These are caches, not application data.

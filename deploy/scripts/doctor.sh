@@ -77,6 +77,11 @@ else
   note_issue "Vite no responde en el puerto $port"
 fi
 
+terra_step "5b. Recursos Vite / React"
+terra_check_web_port_mapping || note_issue "Mapeo de puerto web incorrecto"
+terra_check_web_dependencies || note_issue "Dependencias del frontend no visibles"
+terra_check_vite_assets "http://127.0.0.1:$port" || note_issue "Recursos de Vite/React no disponibles"
+
 terra_step "6. Almacenamiento y volúmenes"
 if terra_volume_exists; then terra_ok "Volumen PostgreSQL presente"; else note_issue "Volumen PostgreSQL ausente"; fi
 storage_path="$(terra_storage_path)"

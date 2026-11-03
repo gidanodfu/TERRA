@@ -106,7 +106,7 @@ adicional y sin rollback automático.
 - `./terra test frontend unit`: 14 pruebas correctas.
 - `./terra test frontend integration`: 6 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 3 pruebas Playwright correctas.
+- `./terra test e2e`: 6 pruebas Playwright correctas (montaje React, Vite client, React Refresh, proxy, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Backup local, verificación y restauración con marcador.
@@ -134,3 +134,19 @@ artifacts y recopila logs en fallos. No despliega a ningún servidor.
 
 Se conservan PostgreSQL, documentos, metadatos y checksums. La clave de cifrado se
 respalda por separado. Las pruebas de recuperación no eliminan volúmenes.
+
+## 15. Corrección de la carga del frontend
+
+Se investigó una pantalla en blanco con errores de `/@vite/client` y React Refresh.
+La causa raíz fue el montaje de dependencias: el contenedor web no tenía visible
+`/app/node_modules` (bind de `/app` + volumen desalineado), por lo que Vite no podía
+servir su propio cliente y su fallback SPA devolvía `index.html`; React no montaba.
+
+Corrección:
+- se montan individualmente `src`, `public`, `tests` y configuraciones;
+- `node_modules` permanece dentro de la imagen web;
+- `./terra up` fuerza la recreación de web;
+- el healthcheck de web valida `/@vite/client` como JavaScript;
+- `./terra doctor` y `terra_verify_stack` comprueban puerto, dependencias, Vite client,
+  React Refresh y módulos;
+- E2E comprueba montaje de React y WebSocket HMR.

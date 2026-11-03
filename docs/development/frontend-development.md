@@ -23,11 +23,29 @@ port with `WEB_PORT` in `.env`.
 
 ## Live editing
 
-`../frontend` is bind-mounted at `/app`. Changes to `src/` are reflected through
-Vite HMR. `node_modules` lives in a container anonymous volume and is never installed on the host.
-Rebuild and recreate the web service after changing dependencies.
+Source files under `src/`, `public/`, `tests/` and development configs are bind-mounted into `/app`. Changes to `src/` are reflected through
+Vite HMR. `node_modules` is installed in the web image and never on the host. Rebuild and recreate
+the web service after changing `package.json`/`package-lock.json`.
 
 After changing `package.json` or `package-lock.json`, rebuild the web image:
+
+```bash
+./terra build web
+./terra up
+```
+
+## Vite client y React Refresh
+
+El doctor verifica que `/@vite/client` se sirva como JavaScript, que React Refresh
+esté disponible y que la app monte en `#root`:
+
+```bash
+./terra doctor
+./terra test e2e
+```
+
+Si `/@vite/client` devuelve HTML, el contenedor web no puede leer sus dependencias.
+Reconstruya y recree:
 
 ```bash
 ./terra build web

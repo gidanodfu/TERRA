@@ -172,8 +172,9 @@ contenedor.
 
 ## 13. Desarrollo frontend
 
-`../frontend` está montado en `/app`. Vite aplica HMR. `node_modules` vive en un
-volumen Docker y nunca se instala en el host.
+Los directorios `src/`, `public/`, `tests/` y las configuraciones de desarrollo se
+montan en `/app`; Vite aplica HMR. `node_modules` se instala dentro de la imagen web y
+nunca en el host.
 
 ```bash
 ./terra logs web -f
@@ -275,7 +276,7 @@ volúmenes, almacenamiento y errores recientes.
 | Recurso | Uso |
 |---|---|
 | `terra_terra-db` | PostgreSQL |
-| volumen anónimo de `node_modules` | dependencias del frontend en el contenedor |
+| `node_modules` de la imagen web | dependencias del frontend en el contenedor |
 | `data/dev` | documentos locales |
 | `.cache/go-*` | cachés de Go |
 

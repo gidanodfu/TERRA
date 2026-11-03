@@ -53,6 +53,9 @@ fi
 
 terra_step "Iniciando servicios"
 terra_compose up -d
+# El servicio web se recrea siempre para no reutilizar un contenedor con
+# montajes/volúmenes de dependencias obsoletos.
+terra_compose up -d --force-recreate web
 for service in db api worker web; do
   terra_wait_healthy "$service" 240
 done

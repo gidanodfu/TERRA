@@ -40,9 +40,9 @@ communication uses service names, never `localhost`.
 | Resource | Type | Purpose |
 |---|---|---|
 | `terra_terra-db` | named volume | PostgreSQL data |
-| `/app/node_modules` | anonymous volume | container-owned frontend dependencies |
+| `node_modules` | image layer | frontend dependencies installed during build |
 | `../backend:/src` | bind | Go source, live edits |
-| `../frontend:/app` | bind | React source, HMR |
+| `../frontend/{src,public,tests,...}` | binds individuales | React source, HMR y tests |
 | `../data/dev:/var/lib/terra` | bind | documents, ro for API and rw for worker |
 | `../.cache/go-mod`, `../.cache/go-build` | bind | Go caches owned by the host user |
 

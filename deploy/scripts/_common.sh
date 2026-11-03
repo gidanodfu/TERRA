@@ -434,6 +434,91 @@ terra_require_stack() {
   return 0
 }
 
+terra_check_web_port_mapping() {
+  local id mapping host_port
+  id="$(terra_service_container web)"
+  if [[ -z "$id" ]]; then
+    terra_error "No existe el contenedor web."
+    return 1
+  fi
+  host_port="$(terra_web_port)"
+  mapping="$("$TERRA_DOCKER_BIN" port "$id" 5173/tcp 2>/dev/null || true)"
+  if [[ "$mapping" == *":$host_port"* ]]; then
+    terra_ok "Puerto web publicado: $host_port → 5173/tcp"
+    return 0
+  fi
+  terra_error "El puerto publicado no corresponde a Vite (esperado host $host_port → 5173/tcp)."
+  terra_error "Mapeo actual: ${mapping:-<ninguno>}"
+  return 1
+}
+
+terra_check_web_dependencies() {
+  if terra_compose exec -T web test -f node_modules/vite/dist/client/client.mjs >/dev/null 2>&1; then
+    terra_ok "Dependencias del frontend visibles dentro de web (node_modules/vite)"
+    return 0
+  fi
+  terra_error "node_modules/vite no está visible dentro del contenedor web."
+  terra_error "Esto rompe /@vite/client y React Refresh; reconstruya web con ./terra build web y ./terra up."
+  return 1
+}
+
+terra_check_vite_assets() {
+  local base="$1" tmp headers body client failed=0
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/terra-vite-check.XXXXXX")"
+  headers="$tmp/headers"
+  body="$tmp/body"
+
+  if ! curl -fsS --max-time 5 -D "$headers" -o "$body" "$base/@vite/client" 2>/dev/null; then
+    terra_error "No se pudo solicitar /@vite/client."
+    rm -rf -- "$tmp"
+    return 1
+  fi
+  client="$(cat "$body")"
+  if grep -qi '^content-type: .*javascript' "$headers" && [[ "$client" == *"/node_modules/vite/dist/client"* ]]; then
+    terra_ok "/@vite/client se sirve como JavaScript de Vite"
+  else
+    terra_error "/@vite/client no es el cliente JavaScript de Vite."
+    terra_error "Recibido: $(head -c 120 "$body" | tr '\n' ' ')"
+    failed=1
+  fi
+
+  if curl -fsS --max-time 5 -D "$headers" -o "$body" "$base/@react-refresh" 2>/dev/null \
+      && grep -qi '^content-type: .*javascript' "$headers" \
+      && grep -q 'injectIntoGlobalHook' "$body"; then
+    terra_ok "/@react-refresh disponible para React Refresh"
+  else
+    terra_error "/@react-refresh no está disponible; React Refresh no funcionará."
+    failed=1
+  fi
+
+  if curl -fsS --max-time 5 -D "$headers" -o "$body" "$base/src/main.jsx" 2>/dev/null \
+      && grep -qi '^content-type: .*javascript' "$headers"; then
+    terra_ok "/src/main.jsx se sirve como módulo JavaScript"
+  else
+    terra_error "/src/main.jsx no se sirve como módulo JavaScript."
+    failed=1
+  fi
+
+  if curl -fsS --max-time 5 -D "$headers" -o "$body" "$base/src/styles/index.css" 2>/dev/null \
+      && grep -qi '^content-type: .*javascript' "$headers"; then
+    terra_ok "CSS de desarrollo se sirve como módulo Vite"
+  else
+    terra_error "El CSS de desarrollo no se sirve correctamente."
+    failed=1
+  fi
+
+  if curl -fsS --max-time 5 "$base/" 2>/dev/null | grep -q '@vite/client' \
+      && curl -fsS --max-time 5 "$base/" 2>/dev/null | grep -q 'id="root"'; then
+    terra_ok "HTML de desarrollo contiene Vite client y #root"
+  else
+    terra_error "El HTML servido no corresponde al index de desarrollo de Vite."
+    failed=1
+  fi
+
+  rm -rf -- "$tmp"
+  return "$failed"
+}
+
 terra_verify_stack() {
   local failed=0 service status port base storage_root migrations storage_path
   terra_step "Verificando los cuatro servicios"
@@ -469,6 +554,11 @@ terra_verify_stack() {
     terra_error "API no reporta readiness."
     failed=1
   fi
+
+  terra_step "Verificando recursos Vite / React"
+  terra_check_web_port_mapping || failed=1
+  terra_check_web_dependencies || failed=1
+  terra_check_vite_assets "$base" || failed=1
 
   storage_root="$(terra_env_get STORAGE_ROOT)"
   storage_root="${storage_root:-/var/lib/terra}"
