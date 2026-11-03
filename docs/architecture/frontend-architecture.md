@@ -62,5 +62,6 @@ la fila obtenida por REST; SSE no es autoridad.
 
 ## Build
 
-`vite build` produce `dist/`, copiado a Nginx. La única variable expuesta es
+`vite build` produce `dist/`, copiado a Nginx. La configuración de Nginx se versiona en
+`deploy/nginx/nginx.conf` y `deploy/nginx/conf.d/terra.conf`. La única variable expuesta es
 `VITE_TURNSTILE_SITE_KEY` (clave pública del widget). Ningún secreto usa prefijo `VITE_`.

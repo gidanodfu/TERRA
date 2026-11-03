@@ -2,21 +2,21 @@
 services:
   db:
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
 
   api:
     user: "${TERRA_UID:-1000}:${TERRA_GID:-1000}"
     environment:
       APP_ENV: development
     volumes:
-      - ../data/dev:/var/lib/terra:ro
+      - ${STORAGE_HOST_PATH:-../data/dev}:/var/lib/terra:ro
 
   worker:
     user: "${TERRA_UID:-1000}:${TERRA_GID:-1000}"
     environment:
       APP_ENV: development
     volumes:
-      - ../data/dev:/var/lib/terra:rw
+      - ${STORAGE_HOST_PATH:-../data/dev}:/var/lib/terra:rw
 
   web:
     environment:

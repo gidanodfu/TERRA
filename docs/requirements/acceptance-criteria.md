@@ -63,7 +63,14 @@
 ## Operación
 
 - [x] Healthchecks para los cuatro servicios.
-- [x] Scripts de backup/verificación/restauración/consistencia/retención.
-- [x] Documentación de instalación, configuración y despliegue.
+- [x] Un solo comando de inicialización (`init.sh dev`).
+- [x] Scripts oficiales de check/build/init/up/down/restart/status/logs/migrate/bootstrap/test/backup/restore/help.
+- [x] Ambientes dev/prod con archivos, proyectos, imágenes y volúmenes separados.
+- [x] `down.sh` e `init.sh` conservan volúmenes y datos.
+- [x] Recuperación tras eliminar los cuatro contenedores probada en desarrollo.
+- [x] Primera instalación aislada probada con proyecto y almacenamiento propios.
+- [x] Backup verificado y restauración ensayada con marcador.
+- [x] Scripts validados con `bash -n` y ShellCheck.
+- [x] Documentación operativa completa en `docs/operations/`.
 - [ ] Restauración completa ensayada por la institución (requiere entorno productivo).
 - [ ] Aprobación de límites y política institucional (externa).

@@ -37,6 +37,30 @@ Actualizado: 2026-11-03.
 - Healthchecks y límites de recursos.
 - Scripts de backup/restauración/consistencia/retención.
 
+## Automatización operativa (Fase 7)
+
+- `deploy/scripts/_common.sh` centraliza rutas, ambientes, validaciones, Compose, healthchecks,
+  confirmaciones y mensajes.
+- Scripts: `check`, `build`, `init`, `up`, `down`, `restart`, `status`, `logs`, `migrate`,
+  `bootstrap`, `test`, `backup`, `restore`, `verify-backup`, `consistency-check`, `retention`,
+  `help`.
+- Ambientes aislados por archivo y proyecto Docker: `terra`/`.env` y `terra-prod`/`.env.production`.
+- `init.sh` detecta volumen/datos previos, exige autorización para bases vacías y reutiliza datos.
+- `down.sh` no elimina volúmenes; `restore.sh` exige confirmación y doble confirmación en prod.
+- Nginx movido a `deploy/nginx/`; el build web usa contexto raíz y `.dockerignore`.
+- Nuevo binario `/app/migrate` ejecutado dentro de `api`.
+- Pruebas ShellCheck (`-S warning`) y `bash -n` sin hallazgos.
+- Recuperación tras eliminar los cuatro contenedores verificada: volumen conservado, `init.sh`
+  recreó servicios y se mantuvieron 2 usuarios y 4 migraciones.
+- Primera instalación aislada verificada en un proyecto de prueba (`terra-first`), puerto 8081,
+  almacenamiento temporal y bootstrap propio; fixture eliminado al finalizar.
+- Backup, verificación y restauración con marcador verificados; el marcador desapareció y los
+  datos originales permanecieron.
+- `test.sh dev all` ejecutado con unitarias Go, build frontend, integración PostgreSQL y E2E HTTP.
+- Validaciones negativas comprobadas: `.env` ausente, variable obligatoria ausente, Docker ausente,
+  ambiente inválido, servicio inválido, servicio Compose extra y restauración sin confirmación.
+- `check.sh prod` validado con un archivo de producción temporal (sin iniciar producción).
+
 ## Pruebas ejecutadas y resultados reales
 
 ### Automatizadas

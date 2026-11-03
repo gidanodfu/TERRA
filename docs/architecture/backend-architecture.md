@@ -7,7 +7,8 @@ backend/
 ├── cmd/
 │   ├── api/main.go        # HTTP
 │   ├── worker/main.go     # cola y transferencias
-│   └── bootstrap/main.go  # primer administrador
+│   ├── bootstrap/main.go  # primer administrador
+│   └── migrate/main.go    # migraciones dentro del contenedor API
 ├── internal/
 │   ├── auth/              # identidad, sesiones, CSRF, Turnstile, RBAC
 │   ├── users/

@@ -1,6 +1,12 @@
 # Configuración
 
-Toda la configuración se centraliza en `.env`. Los valores de ejemplo no son aptos para producción.
+La configuración se centraliza en dos archivos separados:
+
+- `.env` para desarrollo (proyecto Docker `terra`).
+- `.env.production` para producción (proyecto Docker `terra-prod`).
+
+Los scripts seleccionan el archivo según el ambiente explícito (`dev`/`prod`). Los valores de
+ejemplo no son aptos para producción. Ver `environment-configuration.md`.
 
 ## Aplicación
 
@@ -48,8 +54,10 @@ Toda la configuración se centraliza en `.env`. Los valores de ejemplo no son ap
 | Variable | Obligatoria | Descripción |
 |---|---|---|
 | `STORAGE_ROOT` | sí | Ruta **dentro** del contenedor (`/var/lib/terra`) |
-| `STORAGE_HOST_PATH` | sí | Ruta del host montada en dev (relativa a `deploy/` si no es absoluta) |
-| `STORAGE_HOST_PATH_PROD` | en prod | Ruta absoluta del host en `compose.prod.yaml` |
+| `STORAGE_HOST_PATH` | sí en dev | Ruta del host montada en dev (relativa a `deploy/` si no es absoluta) |
+| `STORAGE_HOST_PATH_PROD` | sí en prod | Ruta absoluta del host en producción |
+| `WEB_PORT` | no | Puerto local publicado del frontend (default 8080) |
+| `DB_PORT` | no | Puerto local de PostgreSQL solo en dev (default 5432) |
 
 ## Descargas y worker
 
@@ -89,4 +97,6 @@ Google ni límites universales.
 - Vite solo expone variables `VITE_*` al navegador. La única usada es la site key pública.
 - `APP_ENV=production` exige `https://` y claves Turnstile; si falta algo, el arranque falla.
 - Cambiar `TOKEN_ENCRYPTION_KEY` sin re-cifrar inutiliza los refresh tokens existentes.
-- Cambiar redirect URIs requiere actualizarlas en Google Cloud y en `.env`, y reiniciar la API.
+- Cambiar redirect URIs requiere actualizarlas en Google Cloud y en el archivo del ambiente, y recrear la API.
+- Cambios en `TURNSTILE_SITE_KEY` requieren reconstruir la imagen web.
+- Los scripts validan el archivo correcto y no mezclan dev/prod.

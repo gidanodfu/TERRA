@@ -59,7 +59,11 @@ TERRA/
 │   ├── src/{app,pages,features,components,layouts,services,utils,styles}/
 │   ├── nginx.conf
 │   └── Dockerfile
-├── deploy/{compose.yaml,compose.dev.yaml,compose.prod.yaml,scripts/}
+├── deploy/
+│   ├── compose.yaml, compose.dev.yaml, compose.prod.yaml
+│   ├── nginx/{nginx.conf,conf.d/}
+│   └── scripts/ (check, build, init, up, down, restart, status, logs,
+│                 migrate, bootstrap, test, backup, restore, help, ...)
 ├── docs/
 ├── .env.example
 ├── README.md
@@ -87,17 +91,21 @@ Los secretos no se versionan ni se exponen con prefijo `VITE_`.
 ## 7. Inicio
 
 ```bash
-mkdir -p data/dev/{staging,areas}
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml up -d --build
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml exec -T api /app/bootstrap
+cp .env.example .env
+chmod 600 .env
+./deploy/scripts/init.sh dev
 # http://localhost:8080
 ```
 
+Comandos oficiales: `check`, `build`, `init`, `up`, `down`, `restart`, `status`, `logs`,
+`migrate`, `bootstrap`, `test`, `backup`, `restore`, `help`. Ver
+`docs/operations/scripts-reference.md`.
+
 ## 8. Bootstrap
 
-`/app/bootstrap` valida configuración, aplica migraciones, prepara/verifica storage y crea el primer
-administrador una sola vez. Reejecutarlo no sobrescribe credenciales. La contraseña inicial debe
-rotarse en el primer acceso.
+`init.sh` ejecuta `/app/bootstrap` dentro de `api` después de las migraciones. Es idempotente,
+crea el primer administrador solo si no existe y nunca sobrescribe contraseñas. La contraseña
+inicial debe rotarse en el primer acceso. También puede ejecutarse con `bootstrap.sh`.
 
 ## 9. Migraciones
 
@@ -121,6 +129,14 @@ Se aplican con advisory lock y transacción por archivo.
   worker + lease, token inválido → `reauthorization_required` + `waiting_authorization`,
   idempotencia, SSE, cancelación, auditoría, listado no-admin, permisos 403 y snapshots de slugs.
 - Smoke de interfaz headless: 10 rutas administrativas, menú móvil y sin errores de página.
+- Suite operativa: `check.sh` (válido/inválido/sin .env/Docker ausente), `build.sh --no-cache`,
+  `init.sh` (primera instalación aislada y recuperación tras eliminar contenedores),
+  `down.sh`/`up.sh` (persistencia), `restart.sh`, `status.sh`, `logs.sh`, `migrate.sh`,
+  `bootstrap.sh`, `test.sh all`, `backup.sh`, `verify-backup.sh` y `restore.sh`.
+- Recuperación comprobada: contenedores eliminados, volumen intacto, servicios recreados y
+  2 usuarios + 4 migraciones conservados.
+- Restauración comprobada con un marcador posterior al backup: el marcador desapareció y los
+  datos originales permanecieron.
 - Se detectó y corrigió un bug de serialización en `/auth/me` y un placeholder SQL en el listado
   de trabajos para no administradores.
 
@@ -153,16 +169,28 @@ Detalle en `docs/testing/test-cases.md`.
 - Auditoría mutable por administradores de base de datos; exportar a almacenamiento inmutable si se
   requiere no repudio fuerte.
 
-## 14. Backup y restauración
+## 14. Automatización operativa
+
+Los scripts son el mecanismo oficial. Ambientes aislados:
+
+| Ambiente | Archivo | Proyecto Docker |
+|---|---|---|
+| dev | `.env` | `terra` |
+| prod | `.env.production` | `terra-prod` |
+
+`init.sh` valida, construye si falta, inicia PostgreSQL, aplica migraciones, ejecuta bootstrap,
+arranca worker/web y verifica. `down.sh` nunca elimina volúmenes. `restore.sh` exige confirmación
+y `CONFIRM_PROD` en producción. La recuperación tras eliminar contenedores está probada.
+
+## 15. Backup y restauración
 
 Scripts:
 
 ```bash
-deploy/scripts/backup.sh              # BD + volumen + SHA256 (+ GPG opcional)
-deploy/scripts/verify-backup.sh DIR   # integridad sin restaurar
-CONFIRM=yes deploy/scripts/restore-db.sh DIR/terra.dump
-CONFIRM=yes deploy/scripts/restore-storage.sh DIR/storage.tar.gz
-deploy/scripts/consistency-check.sh
+./deploy/scripts/backup.sh dev
+./deploy/scripts/verify-backup.sh backups/dev/<timestamp>
+CONFIRM=yes ./deploy/scripts/restore.sh dev backups/dev/<timestamp>
+./deploy/scripts/consistency-check.sh dev
 ```
 
 La recuperación exige coordinar PostgreSQL + volumen + `TOKEN_ENCRYPTION_KEY`. Sin la clave, los

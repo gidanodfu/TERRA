@@ -1,104 +1,203 @@
 # Troubleshooting
 
-## Diagnóstico general
+## Diagnóstico inicial
 
 ```bash
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml ps
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml logs -f api
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml logs -f worker
-curl -i http://localhost:8080/api/v1/health
-curl -i http://localhost:8080/api/v1/ready
+./deploy/scripts/check.sh dev
+./deploy/scripts/status.sh dev
+./deploy/scripts/logs.sh dev
 ```
 
-Solo hay cuatro servicios. Si aparece `redis`, `minio`, `nginx` independiente o un segundo worker,
-la configuración fue alterada y no corresponde a TERRA.
+Nunca borre volúmenes como primera solución. Los volúmenes contienen datos irremplazables.
 
-## La API no arranca
+## Docker no está iniciado
 
-| Log | Causa | Acción |
-|---|---|---|
-| `configuration_error` | Falta variable o clave AES inválida | Revisar `.env`; `openssl rand -base64 32` |
-| `storage directory missing or invalid` | API monta volumen ro y no existen `staging/`/`areas/` | Crear directorios en el host |
-| `migration_failed` | Esquema incompatible o BD no disponible | Revisar logs de PostgreSQL; restaurar backup |
-| `database_unavailable` | DSN/credenciales/red | Verificar `DATABASE_URL` y healthcheck de `db` |
+**Identificar:** `check.sh` muestra “daemon de Docker no accesible”.
+**Solución:** iniciar Docker y verificar permisos del usuario.
+**Verificar:** `docker info`.
+
+## Docker Compose no instalado
+
+**Identificar:** `docker compose version` falla.
+**Solución:** instalar el plugin Compose v2.
+**Verificar:** `docker compose version` ≥ 2.20.
+
+## Falta `.env` o `.env.production`
+
+**Identificar:** `check.sh` indica el archivo faltante.
+**Solución:**
+
+```bash
+cp .env.example .env
+# o
+cp .env.production.example .env.production
+```
+
+**Verificar:** `./deploy/scripts/check.sh dev`.
+
+## Variables inválidas o placeholders
+
+**Identificar:** `check.sh` nombra la variable (nunca imprime el valor).
+**Solución:** generar valores reales; no reutilizar ejemplos.
+**Verificar:** `check.sh` sin errores.
+
+## Error de construcción
+
+**Identificar:** `build.sh` falla.
+**Solución:**
+
+```bash
+./deploy/scripts/build.sh dev --no-cache
+```
+
+Revise red, espacio y logs de BuildKit. No afecta datos.
+**Verificar:** imágenes listadas al final.
+
+## Puerto ocupado
+
+**Identificar:** `up.sh` falla al publicar 8080/5432.
+**Solución:** detener el proceso que ocupa el puerto o definir `WEB_PORT` / `DB_PORT`.
+**Verificar:** `status.sh` muestra el puerto y `curl /health`.
 
 ## PostgreSQL no inicia
 
-- PostgreSQL 18 requiere el volumen montado en `/var/lib/postgresql` (no en
-  `/var/lib/postgresql/data`). El Compose ya lo hace así.
-- Un volumen de una versión anterior no se migra automáticamente. Haga dump/restore.
-- `pg_isready` falla si las credenciales del healthcheck no coinciden con `POSTGRES_USER/DB`.
+**Identificar:** `db` unhealthy/exited.
+**Logs:** `./deploy/scripts/logs.sh dev db`.
+**Causas:** credenciales, volumen incompatible, permisos, espacio.
+**Solución:** corregir configuración. No borrar el volumen. Si el volumen es de otra versión
+mayor, restaurar desde dump.
+**Verificar:** `db healthy` y `pg_isready`.
 
-## Worker no procesa
+## PostgreSQL no está saludable
+
+**Identificar:** timeout de healthcheck.
+**Logs:** `logs.sh dev db`.
+**Causas:** arranque lento, memoria, locks, corrupción.
+**Solución:** esperar; revisar recursos; restaurar backup si hay corrupción.
+**Verificar:** `migrate.sh dev version`.
+
+## Error de migración
+
+**Identificar:** API no healthy o `/app/migrate` falla.
+**Logs:** `logs.sh dev api`.
+**Causas:** migración incompatible, schema manual, migración ya aplicada modificada.
+**Solución:** restaurar backup y corregir la migración en una nueva versión. No editar migraciones
+ya aplicadas.
+**Verificar:** `migrate.sh dev status` y API healthy.
+
+## API no inicia
+
+**Identificar:** `api` unhealthy.
+**Logs:** `logs.sh dev api`.
+**Causas:** configuración, clave AES inválida, storage ausente, migración, DB.
+**Solución:** `check.sh`, corregir variable; no recrear la base.
+**Verificar:** `/api/v1/ready`.
+
+## Worker no inicia
+
+**Identificar:** `worker` unhealthy.
+**Logs:** `logs.sh dev worker`.
+**Causas:** DB, storage no escribible, configuración, lease.
+**Solución:** revisar permisos del volumen; verificar `DATABASE_URL`.
+**Verificar:** `status.sh` y heartbeat.
+
+## Nginx no sirve frontend
+
+**Identificar:** `/` devuelve error o HTML inesperado.
+**Logs:** `logs.sh dev web`.
+**Causas:** imagen web antigua, Nginx mal configurado, build fallido.
+**Solución:** `build.sh dev web` y `up.sh dev`.
+**Verificar:** `curl -I http://127.0.0.1:8080/` y cabeceras CSP.
+
+## Error de comunicación interna
+
+**Identificar:** frontend 502 o API no responde.
+**Logs:** `logs.sh dev web api`.
+**Causas:** API caída, red Docker, puerto interno.
+**Solución:** `status.sh`; recrear red/contenedores con `up.sh`.
+**Verificar:** `/api/v1/health` a través de web.
+
+## Volumen no encontrado
+
+**Identificar:** `up.sh` indica volumen ausente; `status.sh` lo marca missing.
+**Causa:** volumen eliminado o proyecto Docker distinto (dev/prod mezclados).
+**Solución:** comprobar proyecto (`terra` vs `terra-prod`), revisar backups y restaurar. No crear
+una base vacía en producción sin autorización.
+**Verificar:** `init.sh` reutiliza el volumen y conserva usuarios.
+
+## Permisos insuficientes en almacenamiento
+
+**Identificar:** API/worker unhealthy; logs con `permission denied`.
+**Solución producción:**
 
 ```bash
-docker compose ... logs worker | grep -E "claim|job|heartbeat"
+sudo chown -R 10001:10001 /srv/terra-data/prod
 ```
 
-| Síntoma | Causa probable |
-|---|---|
-| `claim_failed: FOR UPDATE cannot be applied...` | Consulta de cola modificada sin `FOR UPDATE OF j` |
-| Sin logs de jobs | No hay trabajos `queued` o no cumplen política/conexión |
-| `waiting_authorization` | Refresh token inválido o política no aceptada; el trabajador debe reconectar |
-| `job_lease_lost` | Heartbeat no pudo renovar; revisar conexión a BD y carga |
-| Reintentos 429 | Cuota de Google; ajustar intervalo/concurrencia |
+**Verificar:** `init.sh` o `status.sh`.
 
-## Login Google
+## Espacio insuficiente
 
-| Error | Causa |
-|---|---|
-| `redirect_uri_mismatch` | URL no registrada exactamente en Google Cloud |
-| `oauth_state` | Cookie de state ausente/expirada o callback en otro navegador |
-| `login_failed` | Intercambio de código fallido, correo no verificado o error de red |
-| `account_mismatch` | La cuenta Drive autorizada no es la misma que la de la sesión |
+**Identificar:** `check.sh` o logs de descarga.
+**Solución:** liberar espacio, revisar retención aprobada, ampliar volumen.
+**Verificar:** `df -h`, `status.sh`.
 
-No solicite “arreglarlo” desactivando la comprobación de `sub`: es un control de seguridad.
+## Google OAuth inválido
 
-## Turnstile
+**Identificar:** `redirect_uri_mismatch`, `oauth_state`, `login_failed`.
+**Solución:** registrar redirect URIs exactas; usar el mismo navegador; revisar reloj; revisar
+client ID/secret; no desactivar la validación de `state`/`sub`.
+**Verificar:** login con cuenta de prueba.
 
-| Error | Causa |
-|---|---|
-| `turnstile_not_configured` | Falta secret en la API |
-| `turnstile_failed` | Token inválido/expirado/reutilizado |
-| `no corresponde a esta operación` | `TURNSTILE_ACTION` no coincide |
-| `no corresponde a este dominio` | `TURNSTILE_HOSTNAME` no coincide |
-| Widget no aparece | `VITE_TURNSTILE_SITE_KEY` ausente en la compilación; CSP bloquea el script |
+## Refresh token revocado
 
-En producción no desactive la validación; corrija la configuración del widget.
+**Identificar:** conexión `reauthorization_required`, trabajo `waiting_authorization`.
+**Solución:** el trabajador debe reconectar Drive y aceptar la política vigente. El administrador
+no puede hacerlo por él.
+**Verificar:** `status.sh` y detalle del trabajo.
 
-## Volumen y permisos
+## Turnstile no válido
 
-| Síntoma | Acción |
-|---|---|
-| API: read-only file system | No debe crear directorios; verificar que existan y montar `:ro` |
-| Worker: permission denied | `chown -R 10001:10001` en producción; en dev usar `TERRA_UID/TERRA_GID` |
-| Archivo `.part` visible | El proceso se interrumpió; se limpia al reintentar. No es un documento final |
-| `path escapes storage root` | Nombre/ID manipulado; investigar y revisar logs |
+**Identificar:** `turnstile_failed`, `turnstile_unavailable`, hostname/action incorrectos.
+**Solución:** revisar site key/secret, hostname, action y CSP. No desactivar la verificación.
+**Verificar:** login administrativo.
 
-## SSE no actualiza
+## Contenedor eliminado accidentalmente
 
-- Verifique que Nginx tenga `proxy_buffering off` y `X-Accel-Buffering: no`.
-- Compruebe que el navegador no bloquee `text/event-stream`.
-- El frontend hace fallback REST cada 5 s; si REST tampoco actualiza, revise PostgreSQL/worker.
-- EventSource no permite headers personalizados; la autenticación es por cookie de mismo origen.
+**Identificar:** `status.sh` muestra MISSING; volúmenes siguen existiendo.
+**Solución:**
 
-## Capacidad
+```bash
+./deploy/scripts/init.sh dev
+# o con reconstrucción:
+./deploy/scripts/init.sh dev --rebuild
+```
 
-| Código | Acción |
-|---|---|
-| `capacity_disk` | Liberar espacio o aumentar el volumen |
-| `capacity_active_jobs` | Esperar o ajustar límite aprobado |
-| `capacity_user_storage` / `capacity_area_storage` | Revisar retención/política |
-| `size_limit_exceeded` | Archivo supera `MAX_DOWNLOAD_BYTES`; decisión institucional |
+**Verificar:** cuatro healthy y datos previos conservados.
 
-## Rate limit
+## Imágenes eliminadas
 
-`429 rate_limited` en login es esperado tras varios intentos. Espere la ventana o reinicie la API
-solo en desarrollo (los límites viven en memoria). En producción, agregue límites de borde.
+**Solución:**
 
-## Recuperación de un trabajo
+```bash
+./deploy/scripts/build.sh dev
+./deploy/scripts/up.sh dev
+```
 
-1. Revisar el detalle y los elementos fallidos.
-2. Corregir la causa (conexión, cuota, espacio).
-3. `POST /download-jobs/{id}/retry-failed`.
-4. Si el trabajo falló durante el escaneo, cree uno nuevo con nueva `Idempotency-Key`.
+Los datos no se ven afectados.
+
+## Volúmenes eliminados
+
+**Identificar:** `status.sh` no encuentra el volumen; `init.sh` detecta documentos/backups.
+**Solución:** restaurar el último backup verificado:
+
+```bash
+CONFIRM=yes ./deploy/scripts/restore.sh dev <backup>
+```
+
+En producción se exige `CONFIRM_PROD="RESTORE PROD"`. No inicializar vacío sin autorización.
+**Verificar:** `consistency-check.sh` y login con datos previos.
+
+## Restauración desde backup
+
+Ver [backup-restore.md](backup-restore.md). Nunca ejecutar `docker compose down -v`.

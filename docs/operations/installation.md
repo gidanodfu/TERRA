@@ -1,104 +1,171 @@
-# Instalación
+# Instalación desde un equipo limpio
 
-## Requisitos
+## 1. Instalar Docker
 
-- Docker Engine 29+ y Docker Compose v2/v5.
-- 4 GB de RAM recomendados para el stack completo (ajustable).
-- Espacio en disco para PostgreSQL y el volumen documental.
-- Conectividad saliente HTTPS hacia Google y Cloudflare.
-- Un hostname y TLS para producción.
+Instale Docker Engine y el plugin Compose v2 siguiendo la documentación oficial de su
+distribución. Verifique:
 
-No se requiere Go, Node ni PostgreSQL en el host.
+```bash
+docker version
+docker compose version
+```
 
-## 1. Configuración
+## 2. Clonar el repositorio
+
+```bash
+git clone https://github.com/gidanodfu/TERRA.git
+cd TERRA
+```
+
+No es necesario instalar Go, Node ni PostgreSQL.
+
+## 3. Configurar el ambiente
+
+### Desarrollo
 
 ```bash
 cp .env.example .env
 chmod 600 .env
 ```
 
-Complete como mínimo:
+Edite `.env` y complete:
 
 - `APP_PUBLIC_URL`
-- `DATABASE_URL` y `POSTGRES_PASSWORD`
-- `SESSION_SECRET` (`openssl rand -hex 32`)
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URL`, `GOOGLE_DRIVE_REDIRECT_URL`
-- `TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`)
-- `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `TURNSTILE_HOSTNAME`
-- `STORAGE_HOST_PATH`
+- `DATABASE_URL`, `POSTGRES_PASSWORD`
+- `SESSION_SECRET` → `openssl rand -hex 32`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, redirect URIs
+- `TOKEN_ENCRYPTION_KEY` → `openssl rand -base64 32`
+- claves Turnstile
+- `STORAGE_HOST_PATH` (por defecto `../data/dev` relativo a `deploy/`)
 - `BOOTSTRAP_ADMIN_USERNAME`, `BOOTSTRAP_ADMIN_PASSWORD`
-- límites de capacidad aprobados
+- límites aprobados
 
-## 2. Volumen documental
-
-Desarrollo (el usuario del host debe poder escribir; el override de dev usa `TERRA_UID`/`TERRA_GID`):
+### Producción
 
 ```bash
-mkdir -p data/dev/staging data/dev/areas
-chmod 750 data/dev data/dev/staging data/dev/areas
+cp .env.production.example .env.production
+chmod 600 .env.production
 ```
 
-Producción (UID/GID 10001 de la imagen):
+El archivo de producción es independiente y **nunca** se mezcla con `.env`.
+Los scripts usan:
+
+| Ambiente | Archivo | Proyecto Docker |
+|---|---|---|
+| dev | `.env` | `terra` |
+| prod | `.env.production` | `terra-prod` |
+
+## 4. Preparar Google OAuth
+
+1. Proyecto en Google Cloud con Google Drive API v3 habilitada.
+2. Cliente OAuth **External**.
+3. Redirect URIs exactas:
+
+```text
+http://localhost:8080/api/v1/auth/google/callback
+http://localhost:8080/api/v1/auth/google/drive/callback
+```
+
+Para producción, HTTPS bajo el dominio institucional. No cambie a Internal: los trabajadores
+usan cuentas personales. El scope documental es `drive.readonly` y requiere verificación de
+Google para uso general.
+
+## 5. Preparar Turnstile
+
+Cree un widget para el hostname y configure `TURNSTILE_SITE_KEY`,
+`TURNSTILE_SECRET_KEY`, `TURNSTILE_HOSTNAME` y `TURNSTILE_ACTION`.
+
+## 6. Preparar el almacenamiento
+
+### Desarrollo
+
+Los scripts crean `data/dev/{staging,areas}` y verifican permisos.
+
+### Producción
+
+Una sola vez, con privilegios suficientes:
 
 ```bash
-sudo deploy/scripts/init-storage.sh /srv/terra-data/prod
+sudo mkdir -p /srv/terra-data/prod/{staging,areas}
+sudo chown -R 10001:10001 /srv/terra-data/prod
+sudo chmod 750 /srv/terra-data/prod /srv/terra-data/prod/staging /srv/terra-data/prod/areas
 ```
 
-## 3. Arranque
+## 7. Validar el entorno
+
+```bash
+./deploy/scripts/check.sh dev
+```
+
+Comprueba Docker, Compose, `.env`, variables obligatorias, ausencia de placeholders, archivos,
+servicios exactos, almacenamiento, base de datos y espacio libre. No imprime secretos.
+
+## 8. Construir imágenes
+
+```bash
+./deploy/scripts/build.sh dev
+```
+
+Opcional sin caché:
+
+```bash
+./deploy/scripts/build.sh dev --no-cache
+```
+
+## 9. Inicializar servicios
 
 Desarrollo:
 
 ```bash
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml up -d --build
+./deploy/scripts/init.sh dev
 ```
 
-Producción:
+Producción (primera instalación autorizada):
 
 ```bash
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.prod.yaml up -d --build
+./deploy/scripts/init.sh prod --allow-empty-db
+# En automatización no interactiva:
+# CONFIRM_PROD="INIT PROD" ./deploy/scripts/init.sh prod --allow-empty-db
 ```
 
-## 4. Bootstrap
+El script crea el volumen, inicia PostgreSQL, aplica migraciones, ejecuta el bootstrap, arranca
+worker/web y verifica todo.
 
-Solo la primera vez (idempotente):
+## 10. Verificación final
 
 ```bash
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml \
-  exec -T api /app/bootstrap
+./deploy/scripts/status.sh dev
+curl -fsS http://127.0.0.1:8080/api/v1/health
+curl -fsS http://127.0.0.1:8080/api/v1/ready
 ```
 
-El administrador se crea con `must_rotate_password=true`. Inicie sesión y cambie la contraseña.
+Abra `http://127.0.0.1:8080`, inicie sesión como administrador y cambie la contraseña inicial.
 
-## 5. Verificación
+## Qué hace el instalador automáticamente
 
-```bash
-curl -fsS http://localhost:8080/api/v1/health
-curl -fsS http://localhost:8080/api/v1/ready
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml ps
-```
+- Valida Docker, Compose y la configuración.
+- Resuelve rutas desde cualquier directorio.
+- Crea directorios técnicos de almacenamiento en desarrollo.
+- Verifica el volumen PostgreSQL existente antes de inicializar.
+- Construye imágenes faltantes.
+- Inicia servicios en orden y espera healthchecks.
+- Aplica migraciones y bootstrap idempotente.
+- Verifica API, Nginx, base de datos, almacenamiento y worker.
+- Nunca elimina volúmenes ni datos.
 
-Los cuatro servicios deben estar `healthy`. Abra `http://localhost:8080`.
+## Qué debe configurar manualmente el operador
 
-## 6. Google Cloud
+- Credenciales OAuth y Turnstile.
+- Redirect URIs en Google Cloud.
+- Texto legal aprobado de la política.
+- Límites de capacidad aprobados.
+- Propiedad y ruta del volumen en producción.
+- TLS/proxy institucional.
+- Custodia separada de `TOKEN_ENCRYPTION_KEY`.
 
-1. Cree un cliente OAuth **External**.
-2. Agregue los redirect URIs exactos (dev y prod).
-3. Habilite Google Drive API v3.
-4. Configure la pantalla de consentimiento con los scopes de login y `drive.readonly`.
-5. Añada usuarios de prueba mientras la app no esté verificada.
-6. No asuma aprobación de Google.
+## Documentos relacionados
 
-## 7. Turnstile
-
-1. Cree un widget para el hostname real.
-2. Configure site key, secret, hostname y action.
-3. Verifique que el login rechaza un token inválido.
-4. No use claves de prueba en producción.
-
-## Desinstalación segura
-
-```bash
-docker compose ... down          # conserva volúmenes
-```
-
-No use `down -v` salvo que desee destruir la base de datos de desarrollo.
+- [Primer arranque](first-start.md)
+- [Configuración por ambiente](environment-configuration.md)
+- [Referencia de scripts](scripts-reference.md)
+- [Despliegue en producción](production-deployment.md)

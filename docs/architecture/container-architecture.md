@@ -15,7 +15,7 @@ No hay servicios auxiliares, broker, scheduler ni contenedor de migraciones.
 
 | Servicio | Puerto interno | Publicado |
 |---|---|---|
-| web | 8080 | `8080:8080` en dev; configurable en prod |
+| web | 8080 | `${WEB_PORT:-8080}` en dev; TLS/proxy en prod |
 | api | 8080 | No |
 | worker | — | No |
 | db | 5432 | Solo `127.0.0.1` en `compose.dev.yaml`; nunca en prod |
@@ -29,6 +29,8 @@ location /api/ {
     proxy_read_timeout 3600s;
 }
 ```
+
+La configuración vive en `deploy/nginx/nginx.conf` y `deploy/nginx/conf.d/terra.conf`.
 
 El backend sirve directamente `/api/v1/...`, sin reescritura de path.
 
@@ -58,8 +60,18 @@ El backend sirve directamente `/api/v1/...`, sin reescritura de path.
 
 ## Orden de arranque
 
-`db` healthy → `api` migra y queda healthy → `worker` y `web` arrancan. El worker también aplica
-migraciones con advisory lock, por lo que puede arrancar de forma segura aunque la API se reinicie.
+`init.sh` respeta el orden: `db` healthy → `api` migra y queda healthy → bootstrap → `worker` y
+`web`. El worker también aplica migraciones con advisory lock, por lo que puede arrancar de forma
+segura aunque la API se reinicie.
+
+## Proyectos por ambiente
+
+| Ambiente | Proyecto | Imágenes |
+|---|---|---|
+| dev | `terra` | `terra-web/api/worker` |
+| prod | `terra-prod` | `terra-prod-web/api/worker` |
+
+Esto evita compartir volúmenes, red o imágenes entre desarrollo y producción.
 
 ## Volúmenes de desarrollo y producción
 

@@ -1,0 +1,692 @@
+#!/usr/bin/env bash
+# =============================================================================
+# TERRA - funciones compartidas de operación
+# Versión: 1.0.0
+# Descripción: resuelve rutas, ambientes, validaciones, Compose y healthchecks.
+# Uso: sourced por los scripts de deploy/scripts. No se ejecuta directamente.
+# Requisitos: Bash 4+, Docker Engine, Docker Compose v2, curl.
+# Efectos: no modifica contenedores ni volúmenes por sí mismo.
+# =============================================================================
+# shellcheck shell=bash
+
+# Rutas absolutas derivadas de la ubicación del script que hace source.
+TERRA_SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+TERRA_DEPLOY_DIR="$(cd -- "$TERRA_SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
+TERRA_ROOT_DIR="$(cd -- "$TERRA_DEPLOY_DIR/.." >/dev/null 2>&1 && pwd)"
+TERRA_DOCKER_BIN="${TERRA_DOCKER_BIN:-docker}"
+TERRA_ALLOWED_SERVICES=(web api worker db)
+TERRA_MIN_DOCKER_VERSION="24.0.0"
+TERRA_MIN_COMPOSE_VERSION="2.20.0"
+
+if [[ -t 1 ]]; then
+  TERRA_C_RESET=$'\033[0m'; TERRA_C_BLUE=$'\033[1;34m'; TERRA_C_GREEN=$'\033[1;32m'
+  TERRA_C_YELLOW=$'\033[1;33m'; TERRA_C_RED=$'\033[1;31m'; TERRA_C_DIM=$'\033[2m'
+else
+  TERRA_C_RESET=""; TERRA_C_BLUE=""; TERRA_C_GREEN=""; TERRA_C_YELLOW=""; TERRA_C_RED=""; TERRA_C_DIM=""
+fi
+
+terra_info()  { printf '%s[TERRA]%s %s\n' "$TERRA_C_BLUE" "$TERRA_C_RESET" "$*"; }
+terra_step()  { printf '\n%s[TERRA]%s %s\n' "$TERRA_C_BLUE" "$TERRA_C_RESET" "$*"; }
+terra_ok()    { printf '%s[TERRA]%s %s\n' "$TERRA_C_GREEN" "$TERRA_C_RESET" "$*"; }
+terra_warn()  { printf '%s[TERRA]%s %s\n' "$TERRA_C_YELLOW" "$TERRA_C_RESET" "$*" >&2; }
+terra_error() { printf '%s[TERRA]%s %s\n' "$TERRA_C_RED" "$TERRA_C_RESET" "$*" >&2; }
+terra_dim()   { printf '%s%s%s\n' "$TERRA_C_DIM" "$*" "$TERRA_C_RESET"; }
+
+terra_die() {
+  local code="${2:-1}"
+  terra_error "$1"
+  exit "$code"
+}
+
+terra_on_error() {
+  local status=$?
+  terra_error "La operación falló en la línea $1 (código $status)."
+  terra_error "Revise el mensaje anterior y ejecute ./deploy/scripts/logs.sh <dev|prod> si el problema es de un servicio."
+  exit "$status"
+}
+
+terra_enable_traps() {
+  trap 'terra_on_error $LINENO' ERR
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+}
+
+terra_usage_env() {
+  local name="${1:-script}"
+  printf 'Uso: %s <dev|prod> [opciones]\n' "$name"
+}
+
+terra_parse_environment() {
+  local raw="${1:-}"
+  case "$raw" in
+    dev|development)
+      TERRA_ENV="development"
+      TERRA_ENV_SHORT="dev"
+      TERRA_DEFAULT_ENV_FILE="$TERRA_ROOT_DIR/.env"
+      TERRA_DEFAULT_PROJECT="terra"
+      TERRA_COMPOSE_FILES=(-f "$TERRA_DEPLOY_DIR/compose.yaml" -f "$TERRA_DEPLOY_DIR/compose.dev.yaml")
+      ;;
+    prod|production)
+      TERRA_ENV="production"
+      TERRA_ENV_SHORT="prod"
+      TERRA_DEFAULT_ENV_FILE="$TERRA_ROOT_DIR/.env.production"
+      TERRA_DEFAULT_PROJECT="terra-prod"
+      TERRA_COMPOSE_FILES=(-f "$TERRA_DEPLOY_DIR/compose.yaml" -f "$TERRA_DEPLOY_DIR/compose.prod.yaml")
+      ;;
+    *)
+      terra_error "Ambiente inválido: '${raw:-<vacío>}'. Use 'dev' o 'prod'."
+      terra_usage_env "$(basename "$0")"
+      exit 2
+      ;;
+  esac
+
+  TERRA_PROJECT="${TERRA_PROJECT:-$TERRA_DEFAULT_PROJECT}"
+  if [[ ! "$TERRA_PROJECT" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+    terra_die "Nombre de proyecto Docker inválido: use minúsculas, números, guiones o guiones bajos." 2
+  fi
+
+  if [[ -n "${TERRA_ENV_FILE:-}" ]]; then
+    if [[ "$TERRA_ENV_FILE" != /* ]]; then
+      TERRA_ENV_FILE="$PWD/$TERRA_ENV_FILE"
+    fi
+  else
+    TERRA_ENV_FILE="$TERRA_DEFAULT_ENV_FILE"
+  fi
+  export TERRA_ENV_FILE TERRA_PROJECT
+
+  TERRA_DB_VOLUME="${TERRA_PROJECT}_terra-db"
+  TERRA_NETWORK="${TERRA_PROJECT}_terra"
+  export TERRA_DB_VOLUME TERRA_NETWORK
+  TERRA_UID="$(id -u)"
+  TERRA_GID="$(id -g)"
+  export TERRA_UID TERRA_GID
+}
+
+terra_compose() {
+  "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
+    "${TERRA_COMPOSE_FILES[@]}" "$@"
+}
+
+terra_env_get() {
+  local key="$1" file="${2:-$TERRA_ENV_FILE}"
+  [[ -f "$file" ]] || return 0
+  awk -v key="$key" '
+    /^[[:space:]]*#/ { next }
+    index($0, key "=") == 1 {
+      value = substr($0, length(key) + 2)
+      gsub(/\r$/, "", value)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      if ((value ~ /^".*"$/) || (value ~ /^\047.*\047$/)) {
+        value = substr(value, 2, length(value) - 2)
+      }
+      print value
+      exit
+    }
+  ' "$file"
+}
+
+terra_version_ge() {
+  local have="$1" minimum="$2"
+  [[ "$(printf '%s\n%s\n' "$minimum" "$have" | sort -V | head -n1)" == "$minimum" ]]
+}
+
+terra_check_env_file() {
+  if [[ ! -f "$TERRA_ENV_FILE" ]]; then
+    terra_error "No existe el archivo de configuración: $TERRA_ENV_FILE"
+    if [[ "$TERRA_ENV_SHORT" == "prod" ]]; then
+      terra_error "Cree .env.production a partir de .env.production.example y complete los valores reales."
+    else
+      terra_error "Cree .env a partir de .env.example y complete los valores reales."
+    fi
+    return 1
+  fi
+  local mode
+  mode="$(stat -c '%a' "$TERRA_ENV_FILE" 2>/dev/null || echo '')"
+  if [[ -n "$mode" && "$mode" != "600" && "$mode" != "400" ]]; then
+    terra_warn "El archivo $TERRA_ENV_FILE tiene permisos $mode. Se recomienda 600."
+  fi
+}
+
+terra_check_commands() {
+  local missing=() cmd
+  for cmd in curl tar gzip sha256sum awk sed sort find stat base64 realpath; do
+    command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
+  done
+  if ((${#missing[@]} > 0)); then
+    terra_error "Faltan comandos requeridos: ${missing[*]}"
+    return 1
+  fi
+  if ! command -v "$TERRA_DOCKER_BIN" >/dev/null 2>&1; then
+    terra_error "Docker no está disponible ('$TERRA_DOCKER_BIN' no existe en PATH)."
+    return 1
+  fi
+  if ! "$TERRA_DOCKER_BIN" info >/dev/null 2>&1; then
+    terra_error "El daemon de Docker no está accesible. Inicie Docker o verifique sus permisos."
+    return 1
+  fi
+  if ! "$TERRA_DOCKER_BIN" compose version >/dev/null 2>&1; then
+    terra_error "Docker Compose v2 no está disponible como plugin ('docker compose')."
+    return 1
+  fi
+  local docker_version compose_version
+  docker_version="$("$TERRA_DOCKER_BIN" version --format '{{.Server.Version}}' 2>/dev/null | sed 's/-.*$//')"
+  compose_version="$("$TERRA_DOCKER_BIN" compose version --short 2>/dev/null | sed 's/^v//;s/-.*$//')"
+  if [[ -n "$docker_version" ]] && ! terra_version_ge "$docker_version" "$TERRA_MIN_DOCKER_VERSION"; then
+    terra_warn "Docker $docker_version es anterior al mínimo documentado $TERRA_MIN_DOCKER_VERSION."
+  fi
+  if [[ -n "$compose_version" ]] && ! terra_version_ge "$compose_version" "$TERRA_MIN_COMPOSE_VERSION"; then
+    terra_error "Docker Compose $compose_version es anterior al mínimo requerido $TERRA_MIN_COMPOSE_VERSION."
+    return 1
+  fi
+  return 0
+}
+
+terra_require_var() {
+  local key="$1" critical="${2:-0}" value
+  value="$(terra_env_get "$key")"
+  if [[ -z "$value" ]]; then
+    terra_error "Falta la variable obligatoria $key en $(basename "$TERRA_ENV_FILE")."
+    return 1
+  fi
+  if [[ "$critical" == "1" ]] && terra_is_placeholder "$value"; then
+    terra_error "La variable $key conserva un valor de ejemplo o inseguro."
+    terra_error "Genere un valor real antes de continuar (no se imprime el valor actual)."
+    return 1
+  fi
+  return 0
+}
+
+terra_is_placeholder() {
+  local value="${1:-}"
+  [[ "$value" =~ (change[-_]?me|changeme|replace[-_]?me|placeholder|your[-_]|example\.com|dummy|todo|xxxx) ]] && return 0
+  case "$value" in
+    ""|"postgres"|"password"|"secret") return 0 ;;
+  esac
+  return 1
+}
+
+terra_validate_aes_key() {
+  local value decoded_len
+  value="$(terra_env_get TOKEN_ENCRYPTION_KEY)"
+  if [[ -z "$value" ]]; then
+    terra_error "TOKEN_ENCRYPTION_KEY está vacía."
+    return 1
+  fi
+  if ! decoded_len="$(printf '%s' "$value" | base64 -d 2>/dev/null | wc -c | tr -d ' ')"; then
+    terra_error "TOKEN_ENCRYPTION_KEY no es base64 válido."
+    return 1
+  fi
+  if [[ "$decoded_len" != "32" ]]; then
+    terra_error "TOKEN_ENCRYPTION_KEY debe decodificar exactamente 32 bytes (openssl rand -base64 32)."
+    return 1
+  fi
+  return 0
+}
+
+terra_validate_database_url() {
+  local url host
+  url="$(terra_env_get DATABASE_URL)"
+  if [[ ! "$url" =~ ^postgres(ql)?:// ]]; then
+    terra_error "DATABASE_URL debe comenzar con postgres:// o postgresql://."
+    return 1
+  fi
+  host="$(printf '%s' "$url" | sed -E 's#^postgres(ql)?://([^@/]*@)?([^:/?]+).*#\3#')"
+  if [[ "$host" != "db" ]]; then
+    terra_error "DATABASE_URL debe apuntar al servicio interno 'db' dentro de Compose (host detectado distinto)."
+    return 1
+  fi
+  return 0
+}
+
+terra_validate_storage_root() {
+  local value
+  value="$(terra_env_get STORAGE_ROOT)"
+  if [[ -z "$value" ]]; then
+    terra_error "Falta STORAGE_ROOT (ruta interna del volumen, por ejemplo /var/lib/terra)."
+    return 1
+  fi
+  if [[ "$value" != /* || "$value" == "/" || "$value" == *".."* ]]; then
+    terra_error "STORAGE_ROOT debe ser una ruta absoluta segura y distinta de '/'."
+    return 1
+  fi
+  if [[ "$value" != "/var/lib/terra" ]]; then
+    terra_error "STORAGE_ROOT debe ser /var/lib/terra para coincidir con el montaje del volumen Compose."
+    return 1
+  fi
+  return 0
+}
+
+terra_storage_path() {
+  local raw
+  if [[ "$TERRA_ENV_SHORT" == "prod" ]]; then
+    raw="$(terra_env_get STORAGE_HOST_PATH_PROD)"
+    raw="${raw:-/srv/terra-data/prod}"
+    if [[ "$raw" != /* ]]; then
+      terra_die "STORAGE_HOST_PATH_PROD debe ser una ruta absoluta en producción." 1
+    fi
+  else
+    raw="$(terra_env_get STORAGE_HOST_PATH)"
+    raw="${raw:-../data/dev}"
+    if [[ "$raw" != /* ]]; then
+      raw="$TERRA_DEPLOY_DIR/$raw"
+    fi
+  fi
+  TERRA_STORAGE_PATH="$(realpath -m -- "$raw")"
+  printf '%s' "$TERRA_STORAGE_PATH"
+}
+
+terra_ensure_storage() {
+  local path
+  path="$(terra_storage_path)"
+  mkdir -p -- "$path/staging" "$path/areas"
+  chmod 750 -- "$path" "$path/staging" "$path/areas" 2>/dev/null || true
+  if [[ "$TERRA_ENV_SHORT" == "prod" ]]; then
+    if [[ "$(id -u)" == "0" ]]; then
+      chown -R 10001:10001 -- "$path"
+    else
+      local wrong_owner
+      wrong_owner="$(find "$path" \( ! -user 10001 -o ! -group 10001 \) -print -quit 2>/dev/null || true)"
+      if [[ -n "$wrong_owner" ]]; then
+        terra_error "El volumen documental debe pertenecer al UID/GID 10001 (usuario del worker)."
+        terra_error "Ejecute: sudo chown -R 10001:10001 '$path'"
+        return 1
+      fi
+    fi
+  fi
+  if [[ "$TERRA_ENV_SHORT" != "prod" && ! -w "$path" ]]; then
+    terra_error "El directorio de almacenamiento no es escribible: $path"
+    return 1
+  fi
+  TERRA_STORAGE_PATH="$path"
+  export TERRA_STORAGE_PATH
+  terra_ok "Almacenamiento disponible: $path"
+}
+
+terra_validate_compose() {
+  if ! terra_compose config >/dev/null 2>&1; then
+    terra_error "La configuración de Docker Compose no es válida para el ambiente $TERRA_ENV_SHORT."
+    terra_error "Ejecute 'docker compose --env-file $TERRA_ENV_FILE -f deploy/compose.yaml config' para ver el error."
+    return 1
+  fi
+  local services actual
+  actual="$(terra_compose config --services 2>/dev/null | sort | tr '\n' ' ')"
+  services="api db web worker "
+  if [[ "$actual" != "$services" ]]; then
+    terra_error "Los servicios Compose deben ser exactamente web, api, worker y db."
+    terra_error "Servicios detectados: ${actual:-<ninguno>}"
+    return 1
+  fi
+  return 0
+}
+
+terra_validate_files() {
+  local required=(
+    "$TERRA_ROOT_DIR/.env.example"
+    "$TERRA_ROOT_DIR/.env.production.example"
+    "$TERRA_ROOT_DIR/backend/Dockerfile"
+    "$TERRA_ROOT_DIR/frontend/Dockerfile"
+    "$TERRA_DEPLOY_DIR/compose.yaml"
+    "$TERRA_DEPLOY_DIR/compose.dev.yaml"
+    "$TERRA_DEPLOY_DIR/compose.prod.yaml"
+    "$TERRA_DEPLOY_DIR/nginx/nginx.conf"
+    "$TERRA_DEPLOY_DIR/nginx/conf.d/terra.conf"
+  )
+  local f missing=()
+  for f in "${required[@]}"; do
+    [[ -e "$f" ]] || missing+=("$f")
+  done
+  if ((${#missing[@]} > 0)); then
+    terra_error "Faltan archivos requeridos del proyecto:"
+    printf '  - %s\n' "${missing[@]}" >&2
+    return 1
+  fi
+  return 0
+}
+
+terra_check_required_vars() {
+  local for_init="${1:-0}" failed=0
+  local required=(
+    APP_ENV APP_PUBLIC_URL DATABASE_URL POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD
+    SESSION_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URL
+    GOOGLE_DRIVE_REDIRECT_URL TOKEN_ENCRYPTION_KEY TURNSTILE_SITE_KEY TURNSTILE_SECRET_KEY
+    STORAGE_ROOT DOWNLOAD_MIN_INTERVAL_MS WORKER_CONCURRENCY
+    WORKER_PER_ACCOUNT_CONCURRENCY MAX_DOWNLOAD_BYTES MIN_FREE_DISK_BYTES
+  )
+  if [[ "$TERRA_ENV_SHORT" != "prod" ]]; then
+    required+=(STORAGE_HOST_PATH)
+  fi
+  local key critical
+  for key in "${required[@]}"; do
+    critical=0
+    case "$key" in
+      POSTGRES_PASSWORD|SESSION_SECRET|GOOGLE_CLIENT_SECRET|TOKEN_ENCRYPTION_KEY|TURNSTILE_SECRET_KEY) critical=1 ;;
+    esac
+    terra_require_var "$key" "$critical" || failed=1
+  done
+  if [[ "$for_init" == "1" ]]; then
+    terra_require_var BOOTSTRAP_ADMIN_USERNAME 0 || failed=1
+    terra_require_var BOOTSTRAP_ADMIN_PASSWORD 1 || failed=1
+  fi
+  if [[ "$TERRA_ENV_SHORT" == "prod" ]]; then
+    for key in TURNSTILE_HOSTNAME STORAGE_HOST_PATH_PROD; do
+      terra_require_var "$key" "0" || failed=1
+    done
+  fi
+  local scopes
+  scopes="$(terra_env_get GOOGLE_DRIVE_SCOPES)"
+  if [[ "$scopes" != *"https://www.googleapis.com/auth/drive.readonly"* ]]; then
+    terra_error "GOOGLE_DRIVE_SCOPES debe incluir https://www.googleapis.com/auth/drive.readonly."
+    failed=1
+  fi
+
+  local session_secret public_url app_env
+  session_secret="$(terra_env_get SESSION_SECRET)"
+  public_url="$(terra_env_get APP_PUBLIC_URL)"
+  app_env="$(terra_env_get APP_ENV)"
+  if ((${#session_secret} < 32)); then
+    terra_error "SESSION_SECRET debe tener al menos 32 caracteres."
+    failed=1
+  fi
+  if [[ "$TERRA_ENV_SHORT" == "prod" ]]; then
+    if [[ "$app_env" != "production" ]]; then
+      terra_error "APP_ENV debe ser 'production' en el archivo de producción."
+      failed=1
+    fi
+    if [[ "$public_url" != https://* ]]; then
+      terra_error "APP_PUBLIC_URL debe usar https:// en producción."
+      failed=1
+    fi
+    local storage_prod
+    storage_prod="$(terra_env_get STORAGE_HOST_PATH_PROD)"
+    if [[ "$storage_prod" != /* ]]; then
+      terra_error "STORAGE_HOST_PATH_PROD debe ser absoluto."
+      failed=1
+    fi
+  else
+    if [[ "$app_env" != "development" ]]; then
+      terra_warn "APP_ENV no es 'development' en el ambiente dev (valor actual distinto)."
+    fi
+  fi
+  terra_validate_aes_key || failed=1
+  terra_validate_database_url || failed=1
+  terra_validate_storage_root || failed=1
+  return "$failed"
+}
+
+terra_volume_exists() {
+  "$TERRA_DOCKER_BIN" volume inspect "$TERRA_DB_VOLUME" >/dev/null 2>&1
+}
+
+terra_storage_has_data() {
+  local path
+  path="$(terra_storage_path)"
+  [[ -d "$path" ]] || return 1
+  [[ -n "$(find "$path/areas" -mindepth 1 -print -quit 2>/dev/null || true)" ]] && return 0
+  [[ -n "$(find "$path/staging" -mindepth 1 -print -quit 2>/dev/null || true)" ]] && return 0
+  return 1
+}
+
+terra_backups_for_env() {
+  local dir="$TERRA_ROOT_DIR/backups/$TERRA_ENV_SHORT"
+  [[ -d "$dir" ]] || return 0
+  find "$dir" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort
+}
+
+terra_service_container() {
+  terra_compose ps -q "$1" 2>/dev/null
+}
+
+terra_container_health() {
+  local id
+  id="$(terra_service_container "$1")"
+  [[ -n "$id" ]] || { printf 'missing'; return 0; }
+  "$TERRA_DOCKER_BIN" inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id" 2>/dev/null || printf 'missing'
+}
+
+terra_wait_healthy() {
+  local service="$1" timeout="${2:-180}" start="$SECONDS" status
+  terra_info "Esperando healthcheck de $service…"
+  while (( SECONDS - start < timeout )); do
+    status="$(terra_container_health "$service")"
+    case "$status" in
+      healthy|running) terra_ok "$service: $status"; return 0 ;;
+      unhealthy|exited|dead)
+        terra_error "$service entró en estado $status."
+        terra_error "Consulte: ./deploy/scripts/logs.sh $TERRA_ENV_SHORT $service"
+        return 1
+        ;;
+    esac
+    sleep 2
+  done
+  terra_error "Timeout esperando $service ($timeout s). Estado: $(terra_container_health "$service")"
+  terra_error "Consulte: ./deploy/scripts/logs.sh $TERRA_ENV_SHORT $service"
+  return 1
+}
+
+terra_wait_http() {
+  local url="$1" timeout="${2:-60}" start="$SECONDS"
+  while (( SECONDS - start < timeout )); do
+    if curl -fsS --max-time 5 "$url" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+terra_web_port() {
+  local port
+  port="$(terra_env_get WEB_PORT)"
+  printf '%s' "${port:-8080}"
+}
+
+terra_db_psql() {
+  local sql="$1" user db
+  user="$(terra_env_get POSTGRES_USER)"
+  db="$(terra_env_get POSTGRES_DB)"
+  terra_compose exec -T db psql -U "$user" -d "$db" -Atc "$sql"
+}
+
+terra_image_name() {
+  printf '%s-%s' "$TERRA_PROJECT" "$1"
+}
+
+terra_image_exists() {
+  "$TERRA_DOCKER_BIN" image inspect "$(terra_image_name "$1")" >/dev/null 2>&1
+}
+
+terra_missing_images() {
+  local service missing=()
+  for service in web api worker; do
+    terra_image_exists "$service" || missing+=("$service")
+  done
+  printf '%s' "${missing[*]:-}"
+}
+
+terra_require_db_running() {
+  local status
+  status="$(terra_container_health db)"
+  if [[ "$status" != "healthy" && "$status" != "running" ]]; then
+    terra_error "PostgreSQL no está disponible (estado: $status)."
+    terra_error "Ejecute ./deploy/scripts/up.sh $TERRA_ENV_SHORT o ./deploy/scripts/init.sh $TERRA_ENV_SHORT."
+    return 1
+  fi
+  return 0
+}
+
+terra_require_api_running() {
+  local status
+  status="$(terra_container_health api)"
+  if [[ "$status" != "healthy" && "$status" != "running" ]]; then
+    terra_error "La API no está disponible (estado: $status)."
+    terra_error "Ejecute ./deploy/scripts/up.sh $TERRA_ENV_SHORT."
+    return 1
+  fi
+  return 0
+}
+
+terra_require_stack() {
+  local service missing=()
+  for service in "${TERRA_ALLOWED_SERVICES[@]}"; do
+    [[ -n "$(terra_service_container "$service")" ]] || missing+=("$service")
+  done
+  if ((${#missing[@]} > 0)); then
+    terra_error "Faltan contenedores de TERRA: ${missing[*]}"
+    terra_error "Ejecute ./deploy/scripts/init.sh $TERRA_ENV_SHORT o ./deploy/scripts/up.sh $TERRA_ENV_SHORT."
+    return 1
+  fi
+  return 0
+}
+
+terra_verify_stack() {
+  local failed=0 service status
+  terra_step "Verificando los cuatro servicios"
+  for service in "${TERRA_ALLOWED_SERVICES[@]}"; do
+    status="$(terra_container_health "$service")"
+    if [[ "$status" == "healthy" || "$status" == "running" ]]; then
+      terra_ok "$service: $status"
+    else
+      terra_error "$service: $status"
+      failed=1
+    fi
+  done
+
+  local port base
+  port="$(terra_web_port)"
+  base="http://127.0.0.1:$port"
+
+  terra_step "Verificando API y frontend a través de Nginx"
+  if terra_wait_http "$base/api/v1/health" 30; then
+    terra_ok "API responde /api/v1/health"
+  else
+    terra_error "API no responde a través de Nginx."
+    failed=1
+  fi
+  if terra_wait_http "$base/api/v1/ready" 30; then
+    terra_ok "API reporta base de datos lista (/ready)"
+  else
+    terra_error "API no reporta readiness (PostgreSQL)."
+    failed=1
+  fi
+  if curl -fsS --max-time 5 "$base/" 2>/dev/null | grep -q '<div id="root">'; then
+    terra_ok "Nginx sirve el frontend compilado"
+  else
+    terra_error "Nginx no sirve el frontend esperado."
+    failed=1
+  fi
+
+  local storage_root
+  storage_root="$(terra_env_get STORAGE_ROOT)"
+  storage_root="${storage_root:-/var/lib/terra}"
+  if terra_compose exec -T api test -r "$storage_root" >/dev/null 2>&1; then
+    terra_ok "API tiene acceso de lectura al almacenamiento"
+  else
+    terra_error "API no puede leer $storage_root."
+    failed=1
+  fi
+  if terra_compose exec -T worker test -w "$storage_root/staging" >/dev/null 2>&1; then
+    terra_ok "Worker tiene acceso de escritura al almacenamiento"
+  else
+    terra_error "Worker no puede escribir en $storage_root/staging."
+    failed=1
+  fi
+
+  local migrations
+  if migrations="$(terra_db_psql "SELECT count(*) FROM schema_migrations;" 2>/dev/null)"; then
+    if [[ "$migrations" =~ ^[0-9]+$ ]] && ((migrations > 0)); then
+      terra_ok "Migraciones aplicadas: $migrations"
+    else
+      terra_error "No se detectaron migraciones aplicadas."
+      failed=1
+    fi
+  else
+    terra_error "No fue posible consultar schema_migrations."
+    failed=1
+  fi
+
+  local storage_path
+  storage_path="$(terra_storage_path)"
+  if [[ -d "$storage_path" ]]; then
+    terra_ok "Volumen documental disponible: $storage_path"
+  else
+    terra_error "No existe el volumen documental: $storage_path"
+    failed=1
+  fi
+
+  if ((failed != 0)); then
+    terra_error "La verificación encontró fallos. Use ./deploy/scripts/status.sh $TERRA_ENV_SHORT y los logs."
+    return 1
+  fi
+  return 0
+}
+
+terra_print_summary() {
+  local title="${1:-TERRA READY}" bootstrap="${2:-0}" port
+  port="$(terra_web_port)"
+  printf '\n%s\n' "$title"
+  printf 'Environment: %s\n' "$TERRA_ENV"
+  printf 'Docker: OK\nCompose: OK\nDatabase: HEALTHY\nAPI: HEALTHY\nWorker: HEALTHY\nWeb: HEALTHY\n'
+  printf 'Storage: READY\nMigrations: APPLIED\n'
+  if [[ "$bootstrap" == "1" ]]; then printf 'Bootstrap: VERIFIED\n'; fi
+  printf '\nServices:\n- web\n- api\n- worker\n- db\n'
+  printf '\nURL local: http://127.0.0.1:%s\n' "$port"
+}
+
+terra_confirm() {
+  local prompt="$1" expected="${2:-}" answer
+  if [[ -n "$expected" ]]; then
+    if [[ "${CONFIRM_PROD:-}" == "$expected" ]]; then
+      return 0
+    fi
+    if [[ ! -t 0 ]]; then
+      terra_error "Se requiere confirmación adicional: CONFIRM_PROD='$expected'."
+      return 1
+    fi
+    read -r -p "$prompt Escriba exactamente '$expected': " answer
+    [[ "$answer" == "$expected" ]]
+    return
+  fi
+  if [[ "${CONFIRM:-}" == "yes" ]]; then
+    return 0
+  fi
+  if [[ ! -t 0 ]]; then
+    terra_error "Operación destructiva sin terminal interactiva. Use CONFIRM=yes."
+    return 1
+  fi
+  read -r -p "$prompt [s/N]: " answer
+  [[ "$answer" =~ ^[sSyY]$ ]]
+}
+
+terra_require_prod_confirm() {
+  if [[ "$TERRA_ENV_SHORT" != "prod" ]]; then
+    return 0
+  fi
+  if [[ "${CONFIRM_PROD:-}" == "RESTORE PROD" || "${CONFIRM_PROD:-}" == "INIT PROD" ]]; then
+    return 0
+  fi
+  if [[ -t 0 ]]; then
+    local answer
+    read -r -p "Producción: escriba 'RESTORE PROD' para continuar: " answer
+    [[ "$answer" == "RESTORE PROD" ]]
+  else
+    terra_error "En producción se requiere CONFIRM_PROD='RESTORE PROD'."
+    return 1
+  fi
+}
+
+terra_file_size() {
+  du -sh -- "$1" 2>/dev/null | awk '{print $1}'
+}
+
+terra_repo_commit() {
+  git -C "$TERRA_ROOT_DIR" rev-parse --short HEAD 2>/dev/null || printf 'unknown'
+}
+
+terra_assert_service() {
+  local service="$1" allowed
+  for allowed in "${TERRA_ALLOWED_SERVICES[@]}"; do
+    [[ "$service" == "$allowed" ]] && return 0
+  done
+  terra_error "Servicio inválido: $service. Permitidos: ${TERRA_ALLOWED_SERVICES[*]}"
+  return 2
+}

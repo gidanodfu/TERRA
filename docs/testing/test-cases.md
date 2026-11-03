@@ -116,3 +116,39 @@ Leyenda: ✅ ejecutado y aprobado · ⚠️ parcial / depende de entorno · ⬜ 
 | UI-07 | Estados loading/empty/error | ✅ |
 | UI-08 | Responsive | ✅ smoke headless a 1440×1000 y 390×844; drawer móvil |
 | UI-09 | Pruebas E2E automatizadas | ⚠️ smoke Playwright ejecutado; suite no versionada |
+
+## Automatización operativa
+
+| ID | Caso | Resultado |
+|---|---|---|
+| OPS-13 | `bash -n` sobre todos los scripts | ✅ sin errores |
+| OPS-14 | ShellCheck severidad warning | ✅ sin advertencias |
+| OPS-15 | `check.sh dev` desde otro directorio | ✅ válido |
+| OPS-16 | `check.sh` sin `.env` | ✅ falla con instrucción |
+| OPS-17 | `check.sh prod` sin `.env.production` | ✅ falla con instrucción |
+| OPS-18 | Docker ausente simulado | ✅ falla con instrucción |
+| OPS-19 | Ambiente inválido (`qa`) | ✅ código 2 |
+| OPS-20 | Servicio inválido en `restart.sh` | ✅ código 2 |
+| OPS-21 | Primera instalación aislada (proyecto/puerto/storage propios) | ✅ 4 healthy, admin creado, datos separados |
+| OPS-22 | `build.sh dev --no-cache` | ✅ 3 imágenes verificadas |
+| OPS-23 | `init.sh` con volumen existente y contenedores eliminados | ✅ datos conservados (2 usuarios, 4 migraciones) |
+| OPS-24 | `down.sh` (stop) y `up.sh` | ✅ datos persistidos |
+| OPS-25 | `down.sh --remove` sin `-v` | ✅ volumen conservado |
+| OPS-26 | `restart.sh dev worker` | ✅ healthy |
+| OPS-27 | `status.sh` | ✅ estado, salud, volúmenes, storage, DB, API |
+| OPS-28 | `logs.sh dev api -n 4` | ✅ logs sin secretos |
+| OPS-29 | `migrate.sh dev status/version` | ✅ 4 migraciones |
+| OPS-30 | `bootstrap.sh` repetido | ✅ no sobrescribe credenciales |
+| OPS-31 | `test.sh dev unit/integration/e2e/all` | ✅ todo correcto |
+| OPS-32 | `backup.sh` + `verify-backup.sh` | ✅ dump, tar, metadata y checksums validados |
+| OPS-33 | `restore.sh` con marcador posterior al backup | ✅ marcador eliminado, datos originales conservados |
+| OPS-34 | `restore.sh` sin confirmación no interactiva | ✅ código 3 sin tocar servicios |
+| OPS-35 | `restore.sh` prod sin frase | ✅ bloqueado |
+| OPS-36 | Cuatro servicios exactos | ✅ `web, api, worker, db` |
+| OPS-37 | PostgreSQL no publicado en prod | ✅ override sin `ports` |
+| OPS-38 | Cabeceras de seguridad tras mover Nginx | ✅ CSP/X-Frame-Options presentes |
+| OPS-39 | Fixture de prueba eliminado sin tocar el stack principal | ✅ solo proyecto `terra-first` |
+| OPS-40 | Variable obligatoria ausente (`SESSION_SECRET`) | ✅ `check.sh` falla con nombre de variable |
+| OPS-41 | Servicio Compose extra | ✅ `check.sh` rechaza 5 servicios |
+| OPS-42 | `check.sh prod` con configuración HTTPS temporal | ✅ válido sin iniciar producción |
+| OPS-43 | `migrate.sh dev up` idempotente | ✅ migraciones al día |

@@ -14,23 +14,26 @@
 ## Desarrollo
 
 ```bash
-# Backend
-cd backend && go test ./... && go vet ./...
-
-# Frontend
-cd frontend && npm ci && npm run build
+# Pruebas unitarias (Go + frontend)
+./deploy/scripts/test.sh dev unit
 
 # Stack completo
-mkdir -p data/dev/staging data/dev/areas
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml up -d --build
+./deploy/scripts/init.sh dev
+
+# Operación
+./deploy/scripts/status.sh dev
+./deploy/scripts/logs.sh dev api
 ```
+
+No ejecute comandos manuales de Docker para operar TERRA: use `deploy/scripts/`.
+
 
 Las migraciones son inmutables una vez aplicadas. Cambios de esquema se agregan como un
 nuevo archivo numerado en `backend/migrations/`.
 
 ## Pruebas
 
-- Unitarias sin Docker: `cd backend && go test ./...`.
+- Unitarias: `./deploy/scripts/test.sh dev unit` (contenedores efímeros de toolchain).
 - Integración con PostgreSQL/Google se ejecutan manualmente y se documentan en
   `docs/testing/test-cases.md`.
 - Nunca use credenciales personales reales en CI. Use cuentas de prueba y dobles de Drive.

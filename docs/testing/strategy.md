@@ -10,18 +10,15 @@
 ## Comandos
 
 ```bash
-cd backend
-go test ./...
-go vet ./...
-
-cd ../frontend
-npm ci
-npm run build
-
-# Stack
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml up -d --build
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml ps
+./deploy/scripts/init.sh dev
+./deploy/scripts/test.sh dev unit
+./deploy/scripts/test.sh dev integration
+./deploy/scripts/test.sh dev e2e
+./deploy/scripts/test.sh dev all
+./deploy/scripts/status.sh dev
 ```
+
+Los resultados se registran en `artifacts/tests/`.
 
 ## Unitarias existentes
 

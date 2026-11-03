@@ -97,6 +97,22 @@ frontend servido; API y worker sanos; reinicio conserva datos.
 - [ ] Aprobación institucional del texto de política y de los límites de producción — externa.
 - [ ] Prueba OAuth real con cuentas personales en navegador — pendiente de redirect URIs y consentimiento.
 
+## Fase 7 — Automatización operativa
+
+- [x] Suite `deploy/scripts/` con `_common.sh` y comandos de validación, construcción,
+  inicialización, arranque, detención, reinicio, estado, logs, migraciones, bootstrap,
+  pruebas, backup y restauración.
+- [x] Ambientes separados: `.env`/`terra` y `.env.production`/`terra-prod`.
+- [x] Imágenes y volúmenes aislados por proyecto Docker.
+- [x] `init.sh` por fases con detección de datos previos, autorización para base vacía y
+  reutilización de volúmenes.
+- [x] Healthchecks y verificación de API, Nginx, PostgreSQL, almacenamiento y worker.
+- [x] Nginx versionado en `deploy/nginx/`.
+- [x] Binario `/app/migrate` dentro de la imagen API (sin contenedor adicional).
+- [x] Recuperación tras eliminar contenedores probada conservando usuarios, migraciones y volumen.
+- [x] Backup con metadatos/checksums y restauración con doble confirmación.
+- [x] Documentación operativa completa en `docs/operations/`.
+
 ## Correspondencia requisitos → módulos
 
 | Requisito | Módulo |

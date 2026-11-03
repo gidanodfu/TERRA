@@ -29,7 +29,7 @@ services:
     build:
       context: ../backend
     env_file:
-      - ../.env
+      - ${TERRA_ENV_FILE:-../.env}
     environment:
       STORAGE_ROOT: /var/lib/terra
     volumes:
@@ -61,7 +61,7 @@ services:
       context: ../backend
     command: ["/app/worker"]
     env_file:
-      - ../.env
+      - ${TERRA_ENV_FILE:-../.env}
     environment:
       STORAGE_ROOT: /var/lib/terra
     volumes:
@@ -91,11 +91,12 @@ services:
 
   web:
     build:
-      context: ../frontend
+      context: ..
+      dockerfile: frontend/Dockerfile
       args:
         VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
     ports:
-      - "8080:8080"
+      - "${WEB_PORT:-8080}:8080"
     depends_on:
       api:
         condition: service_healthy
