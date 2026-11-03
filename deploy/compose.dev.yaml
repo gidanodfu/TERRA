@@ -1,0 +1,23 @@
+# Development overrides: docker compose -f deploy/compose.yaml -f deploy/compose.dev.yaml up -d
+services:
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  api:
+    user: "${TERRA_UID:-1000}:${TERRA_GID:-1000}"
+    environment:
+      APP_ENV: development
+    volumes:
+      - ../data/dev:/var/lib/terra:ro
+
+  worker:
+    user: "${TERRA_UID:-1000}:${TERRA_GID:-1000}"
+    environment:
+      APP_ENV: development
+    volumes:
+      - ../data/dev:/var/lib/terra:rw
+
+  web:
+    environment:
+      APP_ENV: development

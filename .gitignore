@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+data/
+node_modules/
+dist/
+*.log
+.DS_Store
+backend/terra-api
+backend/terra-worker
+backend/terra-bootstrap
+coverage.out
+playwright-report/
+test-results/
+
+backups/

@@ -1,0 +1,7 @@
+.env
+.env.*
+*.log
+terra-api
+terra-worker
+terra-bootstrap
+coverage.out

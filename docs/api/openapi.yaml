@@ -1,0 +1,1115 @@
+openapi: 3.1.0
+info:
+  title: TERRA API
+  version: 1.0.0
+  description: |
+    Portal interno de gestión documental. Autenticación por cookie de sesión HttpOnly.
+    Los métodos no seguros requieren el header `X-CSRF-Token` con el valor de la cookie
+    `terra_csrf`. Los endpoints marcados `public` no requieren sesión.
+servers:
+  - url: /api/v1
+security:
+  - cookieAuth: []
+tags:
+  - name: Public
+  - name: Auth
+  - name: Me
+  - name: Drive
+  - name: Jobs
+  - name: Files
+  - name: Admin
+  - name: Audit
+paths:
+  /health:
+    get:
+      tags: [Public]
+      security: []
+      summary: Liveness de la API
+      responses:
+        "200": { description: OK }
+  /ready:
+    get:
+      tags: [Public]
+      security: []
+      summary: Readiness (incluye PostgreSQL)
+      responses:
+        "200": { description: Listo }
+        "503": { description: Base de datos no disponible }
+  /public/areas:
+    get:
+      tags: [Public]
+      security: []
+      summary: Áreas activas
+      responses:
+        "200":
+          description: Lista
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Area" }
+  /public/areas/{areaId}/positions:
+    get:
+      tags: [Public]
+      security: []
+      summary: Cargos activos de un área
+      parameters:
+        - $ref: "#/components/parameters/AreaId"
+      responses:
+        "200":
+          description: Lista
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Position" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /public/policy:
+    get:
+      tags: [Public]
+      security: []
+      summary: Última política institucional publicada
+      responses:
+        "200":
+          description: Política vigente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Policy" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /auth/google/start:
+    get:
+      tags: [Auth]
+      security: []
+      summary: Inicia OAuth de identidad y redirige a Google
+      responses:
+        "302": { description: Redirección a Google }
+  /auth/google/callback:
+    get:
+      tags: [Auth]
+      security: []
+      summary: Callback OAuth de identidad
+      parameters:
+        - { name: code, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { type: string } }
+      responses:
+        "302": { description: Redirección al SPA con cookies de sesión }
+  /auth/google/drive/callback:
+    get:
+      tags: [Auth]
+      security: []
+      summary: Callback OAuth de autorización documental de Drive
+      parameters:
+        - { name: code, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { type: string } }
+      responses:
+        "302": { description: Redirección a /app/drive }
+  /auth/admin/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login local de administrador con Turnstile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password, turnstile_token]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+                turnstile_token: { type: string }
+      responses:
+        "200":
+          description: Sesión creada
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/Validation" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Cierra la sesión actual
+      responses:
+        "200": { description: Sesión cerrada }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Sesión actual, usuario y permisos
+      responses:
+        "200":
+          description: Sesión
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MeResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /auth/password:
+    post:
+      tags: [Auth]
+      summary: Cambia la contraseña local y cierra otras sesiones
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string, format: password }
+                new_password: { type: string, minLength: 12 }
+      responses:
+        "200": { description: Contraseña actualizada }
+        "422": { $ref: "#/components/responses/Validation" }
+
+  /me:
+    get:
+      tags: [Me]
+      summary: Perfil y permisos
+      responses:
+        "200":
+          description: Sesión
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MeResponse" }
+  /me/profile:
+    patch:
+      tags: [Me]
+      summary: Actualiza el perfil obligatorio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [first_name, last_name, area_id, position_id]
+              properties:
+                first_name: { type: string, maxLength: 100 }
+                last_name: { type: string, maxLength: 100 }
+                area_id: { type: string, format: uuid }
+                position_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "422": { $ref: "#/components/responses/Validation" }
+
+  /me/drive/connection:
+    get:
+      tags: [Drive]
+      summary: Conexión Drive propia y política vigente
+      responses:
+        "200":
+          description: Estado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connection:
+                    oneOf:
+                      - $ref: "#/components/schemas/Connection"
+                      - { type: "null" }
+                  policy:
+                    oneOf:
+                      - $ref: "#/components/schemas/Policy"
+                      - { type: "null" }
+    delete:
+      tags: [Drive]
+      summary: Desconecta y revoca la autorización propia
+      responses:
+        "200": { description: Desconectado }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /me/drive/connect:
+    post:
+      tags: [Drive]
+      summary: Inicia la autorización documental de Drive
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                redirect_after: { type: string, description: Ruta relativa permitida }
+      responses:
+        "200":
+          description: URL de autorización
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authorization_url: { type: string, format: uri }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /me/drive/consent:
+    post:
+      tags: [Drive]
+      summary: El trabajador acepta personalmente una versión de la política
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              properties:
+                version: { type: string }
+      responses:
+        "200":
+          description: Consentimiento registrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Connection" }
+        "409":
+          description: La versión no es la vigente o falta conexión
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /me/stored-files:
+    get:
+      tags: [Me]
+      summary: Documentos propios resguardados
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/StoredFile" }
+
+  /download-jobs:
+    get:
+      tags: [Jobs]
+      summary: Trabajos propios (todos para administradores)
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Status"
+        - { name: scope_type, in: query, schema: { type: string, enum: [my_drive_full, selected_folders] } }
+        - { name: area_id, in: query, schema: { type: string, format: uuid } }
+        - { name: position_id, in: query, schema: { type: string, format: uuid } }
+        - { name: user_id, in: query, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Job" }
+  /download-jobs/{id}:
+    get:
+      tags: [Jobs]
+      summary: Detalle de un trabajo
+      parameters: [{ $ref: "#/components/parameters/JobId" }]
+      responses:
+        "200":
+          description: Trabajo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /download-jobs/{id}/items:
+    get:
+      tags: [Jobs]
+      summary: Elementos del trabajo
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Item" }
+  /download-jobs/{id}/events:
+    get:
+      tags: [Jobs]
+      summary: Progreso por Server-Sent Events
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - { name: last_event_id, in: query, schema: { type: integer, format: int64 } }
+      responses:
+        "200":
+          description: |
+            `text/event-stream` con eventos `snapshot`, `job.*`, `item.*` y `done`.
+            También admite el header `Last-Event-ID`.
+          content:
+            text/event-stream:
+              schema: { type: string }
+  /download-jobs/{id}/cancel:
+    post:
+      tags: [Jobs]
+      summary: Solicita cancelación
+      parameters: [{ $ref: "#/components/parameters/JobId" }]
+      responses:
+        "202":
+          description: Cancelación registrada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+        "409": { description: El trabajo ya finalizó }
+  /download-jobs/{id}/retry-failed:
+    post:
+      tags: [Jobs]
+      summary: Reintenta elementos fallidos (solo admin)
+      parameters: [{ $ref: "#/components/parameters/JobId" }]
+      responses:
+        "202":
+          description: Trabajo reencolado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+        "409": { description: Estado no permite reintento }
+
+  /files/{id}/content:
+    get:
+      tags: [Files]
+      summary: Descarga autorizada de un documento
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Contenido binario como attachment
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Métricas y actividad reciente
+      responses:
+        "200":
+          description: Dashboard
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Dashboard" }
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: Lista de trabajadores
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - { name: q, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [pending_profile, active, suspended, disabled] } }
+        - { name: area_id, in: query, schema: { type: string, format: uuid } }
+        - { name: position_id, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/User" }
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Detalle de trabajador, conexión e historial
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Detalle
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkerDetail" }
+    patch:
+      tags: [Admin]
+      summary: Actualiza asignación o estado
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                area_id: { type: string, format: uuid, nullable: true }
+                position_id: { type: string, format: uuid, nullable: true }
+                status: { type: string, enum: [pending_profile, active, suspended, disabled] }
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "409": { description: No puede suspenderse a sí mismo }
+  /admin/areas:
+    get:
+      tags: [Admin]
+      summary: Todas las áreas con conteos
+      responses:
+        "200":
+          description: Lista
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Area" }
+    post:
+      tags: [Admin]
+      summary: Crea un área
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties: { name: { type: string, maxLength: 120 } }
+      responses:
+        "201":
+          description: Creada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Area" }
+  /admin/areas/{id}:
+    patch:
+      tags: [Admin]
+      summary: Edita nombre o estado del área
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                status: { type: string, enum: [active, inactive] }
+      responses:
+        "200":
+          description: Actualizada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Area" }
+  /admin/areas/{areaId}/positions:
+    get:
+      tags: [Admin]
+      summary: Cargos del área (incluye inactivos)
+      parameters:
+        - $ref: "#/components/parameters/AreaId"
+      responses:
+        "200":
+          description: Lista
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Position" }
+    post:
+      tags: [Admin]
+      summary: Crea un cargo en el área
+      parameters:
+        - $ref: "#/components/parameters/AreaId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties: { name: { type: string, maxLength: 120 } }
+      responses:
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Position" }
+        "409": { description: Nombre duplicado en el área }
+  /admin/positions/{id}:
+    patch:
+      tags: [Admin]
+      summary: Edita nombre o estado del cargo
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                status: { type: string, enum: [active, inactive] }
+      responses:
+        "200":
+          description: Actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Position" }
+  /admin/users/{userId}/drive/connection:
+    get:
+      tags: [Admin]
+      summary: Conexión Drive del trabajador
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Conexión y política
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connection: { $ref: "#/components/schemas/Connection" }
+                  policy:
+                    oneOf:
+                      - $ref: "#/components/schemas/Policy"
+                      - { type: "null" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/users/{userId}/drive/folders:
+    get:
+      tags: [Admin]
+      summary: Navega carpetas de Mi unidad del trabajador
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: parentId, in: query, schema: { type: string, default: root } }
+      responses:
+        "200":
+          description: Carpetas hijas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FolderBrowse" }
+        "409":
+          description: Conexión o política no vigentes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /admin/drive-connections:
+    get:
+      tags: [Admin]
+      summary: Lista conexiones Drive
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - { name: status, in: query, schema: { type: string, enum: [connected, reauthorization_required, revoked, error] } }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/AdminConnection" }
+  /admin/policies:
+    post:
+      tags: [Admin]
+      summary: Publica una versión aprobada de la política
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, content]
+              properties:
+                version: { type: string }
+                content: { type: string }
+      responses:
+        "201":
+          description: Publicada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Policy" }
+        "409": { description: Versión duplicada }
+  /admin/users/{userId}/download-jobs:
+    post:
+      tags: [Admin]
+      summary: Crea un trabajo de descarga institucional
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, schema: { type: string, maxLength: 128 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scope_type]
+              properties:
+                scope_type: { type: string, enum: [my_drive_full, selected_folders] }
+                root_folder_ids:
+                  type: array
+                  items: { type: string }
+                  description: Requerido para selected_folders; vacío para my_drive_full.
+      responses:
+        "202":
+          description: Trabajo aceptado
+          headers:
+            Location:
+              schema: { type: string }
+            Idempotent-Replayed:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+        "409":
+          description: Sin conexión/política o capacidad excedida
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/Validation" }
+  /admin/download-jobs:
+    get:
+      tags: [Admin]
+      summary: Todos los trabajos
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Status"
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Job" }
+  /admin/download-jobs/{id}:
+    get:
+      tags: [Admin]
+      summary: Detalle administrativo de un trabajo
+      parameters: [{ $ref: "#/components/parameters/JobId" }]
+      responses:
+        "200":
+          description: Trabajo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+  /admin/download-jobs/{id}/cancel:
+    post:
+      tags: [Admin]
+      summary: Cancela un trabajo
+      parameters: [{ $ref: "#/components/parameters/JobId" }]
+      responses:
+        "202":
+          description: Cancelación registrada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+  /admin/storage:
+    get:
+      tags: [Admin]
+      summary: Documentos almacenados de todos los trabajadores
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/StoredFile" }
+  /admin/audit-events:
+    get:
+      tags: [Audit]
+      summary: Registro de auditoría
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - { name: action, in: query, schema: { type: string } }
+        - { name: actor_id, in: query, schema: { type: string, format: uuid } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/AuditEvent" }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: terra_session
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: page_size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Status:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [queued, scanning, downloading, completed, partially_completed, failed, waiting_authorization, cancel_requested, cancelled]
+    JobId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AreaId:
+      name: areaId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Unauthorized:
+      description: Sin sesión válida
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Permisos insuficientes, CSRF inválido o cuenta no activa
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Validation:
+      description: Datos inválidos con errores por campo
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Demasiados intentos
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            fields:
+              type: object
+              additionalProperties: { type: string }
+        request_id: { type: string }
+    Pagination:
+      type: object
+      properties:
+        page: { type: integer }
+        page_size: { type: integer }
+        total: { type: integer }
+    ListResponse:
+      type: object
+      properties:
+        data: { type: array, items: {} }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        first_name: { type: string }
+        last_name: { type: string }
+        display_name: { type: string }
+        email: { type: string }
+        area_id: { type: string, format: uuid }
+        area_name: { type: string }
+        position_id: { type: string, format: uuid }
+        position_name: { type: string }
+        status: { type: string, enum: [pending_profile, active, suspended, disabled] }
+        roles:
+          type: array
+          items: { type: string, enum: [admin, user] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        last_login_at: { type: string, format: date-time }
+    LoginResponse:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        must_rotate_password: { type: boolean }
+        pending_profile: { type: boolean }
+        permissions:
+          type: array
+          items: { type: string }
+    MeResponse:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        permissions:
+          type: array
+          items: { type: string }
+        must_rotate_password: { type: boolean }
+        pending_profile: { type: boolean }
+    Area:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string, enum: [active, inactive] }
+        position_count: { type: integer }
+        user_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Position:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        area_id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string, enum: [active, inactive] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Policy:
+      type: object
+      properties:
+        version: { type: string }
+        content: { type: string }
+        published_at: { type: string, format: date-time }
+    Connection:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        google_email: { type: string }
+        has_refresh_token: { type: boolean }
+        scopes: { type: string }
+        status: { type: string, enum: [connected, reauthorization_required, revoked, error] }
+        connected_at: { type: string, format: date-time }
+        last_refreshed_at: { type: string, format: date-time }
+        last_error_code: { type: string }
+        policy_consent_version: { type: string }
+        policy_consent_at: { type: string, format: date-time }
+        policy_consent_by_user_id: { type: string, format: uuid }
+    AdminConnection:
+      allOf:
+        - $ref: "#/components/schemas/Connection"
+        - type: object
+          properties:
+            user_name: { type: string }
+            user_status: { type: string }
+            area_name: { type: string }
+            position_name: { type: string }
+    FolderBrowse:
+      type: object
+      properties:
+        parent_id: { type: string }
+        parent_name: { type: string }
+        path:
+          type: array
+          items: { type: string }
+        is_root: { type: boolean }
+        folders:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              mime_type: { type: string }
+    JobRoot:
+      type: object
+      properties:
+        google_folder_id: { type: string }
+        folder_name: { type: string }
+        source_path: { type: string }
+        created_at: { type: string, format: date-time }
+    Job:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        requested_by_user_id: { type: string, format: uuid }
+        requested_by_name: { type: string }
+        drive_owner_user_id: { type: string, format: uuid }
+        drive_owner_name: { type: string }
+        area_id: { type: string, format: uuid }
+        position_id: { type: string, format: uuid }
+        area_name: { type: string }
+        position_name: { type: string }
+        scope_type: { type: string, enum: [my_drive_full, selected_folders] }
+        status:
+          type: string
+          enum: [queued, scanning, downloading, completed, partially_completed, failed, waiting_authorization, cancel_requested, cancelled]
+        total_items: { type: integer }
+        completed_items: { type: integer }
+        skipped_items: { type: integer }
+        failed_items: { type: integer }
+        total_bytes: { type: integer, format: int64 }
+        downloaded_bytes: { type: integer, format: int64 }
+        error_code: { type: string }
+        error_message: { type: string }
+        created_at: { type: string, format: date-time }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time }
+        scan_completed_at: { type: string, format: date-time }
+        cancel_requested_at: { type: string, format: date-time }
+        roots:
+          type: array
+          items: { $ref: "#/components/schemas/JobRoot" }
+    Item:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        job_id: { type: string, format: uuid }
+        drive_node_id: { type: string, format: uuid }
+        google_file_id: { type: string }
+        name: { type: string }
+        mime_type: { type: string }
+        status: { type: string, enum: [pending, downloading, completed, skipped, retrying, failed, cancelled] }
+        attempt_count: { type: integer }
+        size_bytes: { type: integer, format: int64 }
+        sha256: { type: string }
+        error_code: { type: string }
+        error_message: { type: string }
+        next_retry_at: { type: string, format: date-time }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time }
+    StoredFile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        job_id: { type: string, format: uuid }
+        drive_owner_user_id: { type: string, format: uuid }
+        name: { type: string }
+        size_bytes: { type: integer, format: int64 }
+        sha256: { type: string }
+        export_mime_type: { type: string }
+        created_at: { type: string, format: date-time }
+        owner_name: { type: string }
+        area_name: { type: string }
+        position_name: { type: string }
+    AuditEvent:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        actor_user_id: { type: string, format: uuid }
+        actor_name: { type: string }
+        action: { type: string }
+        target_type: { type: string }
+        target_id: { type: string }
+        metadata: { type: object, additionalProperties: true }
+        created_at: { type: string, format: date-time }
+    OrganizationHistory:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        area_name: { type: string }
+        position_name: { type: string }
+        previous_area_name: { type: string }
+        previous_position_name: { type: string }
+        actor_name: { type: string }
+        created_at: { type: string, format: date-time }
+    WorkerDetail:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        drive_connection: { $ref: "#/components/schemas/Connection" }
+        organization_history:
+          type: array
+          items: { $ref: "#/components/schemas/OrganizationHistory" }
+    Dashboard:
+      type: object
+      properties:
+        active_users: { type: integer }
+        pending_profiles: { type: integer }
+        suspended_users: { type: integer }
+        areas: { type: integer }
+        positions: { type: integer }
+        queued_jobs: { type: integer }
+        running_jobs: { type: integer }
+        waiting_authorization_jobs: { type: integer }
+        completed_jobs: { type: integer }
+        failed_jobs: { type: integer }
+        stored_bytes: { type: integer, format: int64 }
+        connected_drives: { type: integer }
+        reauth_drives: { type: integer }
+        oldest_queue_age_seconds: { type: integer, format: int64 }
+        recent_activity:
+          type: array
+          items: { $ref: "#/components/schemas/AuditEvent" }
