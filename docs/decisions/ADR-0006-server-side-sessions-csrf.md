@@ -9,7 +9,7 @@ cliente. Se requiere logout, expiración e invalidación administrativa.
 
 ## Decisión
 
-- Token de sesión aleatorio de 32 bytes en cookie `HttpOnly`, `SameSite=Lax`, `Secure` en producción.
+- Token de sesión aleatorio de 32 bytes en cookie `HttpOnly`, `SameSite=Lax` (`Secure` si se usa HTTPS).
 - Solo SHA-256 del token en PostgreSQL.
 - Token CSRF independiente almacenado en la sesión, replicado en cookie legible `terra_csrf`, y
   exigido en el header `X-CSRF-Token` para métodos no seguros.

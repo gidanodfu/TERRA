@@ -6,11 +6,11 @@
 - JSON UTF-8 en peticiones y respuestas (`Content-Type: application/json`).
 - Fechas ISO-8601 UTC (`2026-11-03T17:00:00Z`).
 - Identificadores UUID v4.
-- Sin CORS: el SPA y la API comparten origen a través de Nginx.
+- Sin CORS: el SPA y la API comparten origen a través del proxy de Vite.
 
 ## Autenticación
 
-- Cookie de sesión `terra_session` (`HttpOnly`, `SameSite=Lax`, `Secure` en producción).
+- Cookie de sesión `terra_session` (`HttpOnly`, `SameSite=Lax`; `Secure` solo si se sirve por HTTPS).
 - Los métodos `POST`, `PATCH`, `DELETE` requieren `X-CSRF-Token` igual al token de la sesión,
   transportado además en la cookie legible `terra_csrf`.
 - El login administrativo exige Turnstile válido y verifica el `Origin` cuando está presente.

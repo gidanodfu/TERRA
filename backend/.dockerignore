@@ -1,7 +1,11 @@
 .env
 .env.*
 *.log
+.git
+.github
+.cache
+coverage/
+
 terra-api
 terra-worker
 terra-bootstrap
-coverage.out

@@ -1,82 +1,92 @@
 # TERRA
 
-Portal interno de gestión documental para una municipalidad. Los trabajadores autorizan
-individualmente su cuenta personal de Google y un administrador inicia copias controladas
-de su Google Drive. Los documentos se guardan en un volumen privado del servidor y se
-clasifican por **área → cargo → trabajador → snapshot**, conservando además la estructura
-original **Mi unidad → carpetas → archivos**.
+Sistema de gestión documental basado en Go, React, PostgreSQL y Google Drive API.
 
-## Stack
+> **Distribución de desarrollo local**
+>
+> Este repositorio proporciona exclusivamente un entorno de desarrollo local de TERRA, ejecutado mediante Docker y Docker Compose.
+>
+> Permite construir, ejecutar, modificar, depurar y probar TERRA sin instalar dependencias del stack en el sistema anfitrión.
+>
+> La infraestructura Docker incluida está destinada exclusivamente al desarrollo local y no constituye una arquitectura de despliegue productivo.
+>
+> TERRA no prescribe ni proporciona una solución universal de despliegue para municipalidades, instituciones, organizaciones o servidores externos.
+>
+> Cada entidad que adopte el proyecto deberá definir independientemente su arquitectura de despliegue, infraestructura, seguridad, almacenamiento, redes, dominios, certificados, monitoreo y procedimientos operativos, según sus propias necesidades y políticas.
+>
+> La distribución local no debe utilizarse directamente como configuración de producción.
 
-| Capa | Tecnología |
-|------|------------|
-| API | Go 1.27, `net/http`, pgx |
-| Worker | Go 1.27, proceso independiente |
-| Base de datos | PostgreSQL 18 |
-| Frontend | React 19, Vite 8, Tailwind CSS 4, Lucide |
-| Servidor web | Nginx 1.29 (misma imagen que el frontend) |
-| Integraciones | Google OAuth 2.0 / OpenID Connect, Google Drive API v3, Cloudflare Turnstile |
-| Infraestructura | Docker Compose, exactamente 4 servicios |
+## 1. Descripción
 
-## Arquitectura
+TERRA permite que trabajadores autoricen individualmente su cuenta personal de Google
+y que un administrador inicie copias controladas de su Google Drive. Los documentos se
+guardan en un volumen local privado y se clasifican por **área → cargo → trabajador →
+snapshot**, conservando la estructura original **Mi unidad → carpetas → archivos**.
+
+## 2. Alcance de la distribución
+
+Incluye un entorno local completo:
+
+- cuatro servicios Docker: `web`, `api`, `worker`, `db`;
+- Vite como servidor de desarrollo con HMR y proxy `/api`;
+- API Go con REST y SSE;
+- worker independiente con cola PostgreSQL;
+- PostgreSQL con volumen persistente;
+- scripts de operación local y comando unificado `./terra`;
+- pruebas unitarias, integración, E2E y CI exclusivamente Docker.
+
+No incluye Nginx de producción, Compose de producción/staging, certificados, dominios,
+VPS, Traefik, Cloudflare Tunnel ni procedimientos de publicación.
+
+## 3. Arquitectura
 
 ```
-web (React + Nginx) ──/api──► api (Go REST + SSE) ──► db (PostgreSQL)
-                                    ▲                    ▲
-                                    │                    │
-                            worker (Go) ─────────────────┘
-                                    │
-                          volumen documental privado
+web (Vite + React) ──/api──► api (Go REST + SSE) ──► db (PostgreSQL)
+                                     ▲                    ▲
+                                     │                    │
+                             worker (Go) ─────────────────┘
+                                     │
+                          data/dev (documentos locales)
 ```
 
-- **web**: sirve el SPA y enruta `/api` y SSE hacia `api`.
-- **api**: autenticación, RBAC, organización, OAuth, creación/cancelación de trabajos, SSE y acceso autorizado a archivos.
-- **worker**: reclama trabajos con leases, recorre Drive, descarga/exporta, valida checksums y escribe atómicamente.
+- **web**: Vite dev server, HMR y proxy REST/SSE hacia `api:8080`.
+- **api**: autenticación, RBAC, OAuth, organización, trabajos, SSE y acceso a archivos.
+- **worker**: cola, leases, Drive, descargas/exportaciones y escritura atómica.
 - **db**: fuente de verdad y cola persistente (`FOR UPDATE SKIP LOCKED`).
 
-No hay Redis ni broker externo. Las migraciones se aplican desde la API y el worker con un
-lock de asesoría de PostgreSQL. El bootstrap del primer administrador es un comando explícito
-dentro del contenedor `api`.
+## 4. Tecnologías
 
-# Instalación y ejecución
+| Capa | Tecnología |
+|---|---|
+| API / worker | Go 1.27, `net/http`, pgx |
+| Frontend | React 19, Vite 8, Tailwind CSS 4, Lucide |
+| Base de datos | PostgreSQL 18 |
+| Integraciones | Google OAuth/OIDC, Google Drive API v3, Cloudflare Turnstile |
+| Pruebas | Go testing, Vitest, React Testing Library, Playwright |
+| Infraestructura | Docker Compose, exactamente 4 servicios |
+| CI | GitHub Actions con Docker |
 
-Los scripts de `deploy/scripts/` son el mecanismo operativo oficial. No hace falta ejecutar
-comandos Docker manuales ni tener Go, Node o PostgreSQL instalados en el host.
+## 5. Requisitos mínimos del host
 
-## 1. Requisitos del sistema
+- Linux/macOS/Windows con Docker Engine o Docker Desktop.
+- Docker Compose v2.
+- Bash, Git, curl, tar, sha256sum.
+- 2 vCPU y 4 GB de RAM recomendados.
+- Espacio para imágenes, PostgreSQL y documentos.
 
-- Linux con Docker Engine **24+** y Docker Compose **2.20+**.
-- 2 vCPU y 4 GB de RAM recomendados como mínimo operativo.
-- Espacio libre suficiente para PostgreSQL, imágenes y documentos.
-- Conectividad HTTPS saliente hacia Google y Cloudflare.
-- `curl`, `tar`, `sha256sum` y utilidades estándar.
-- Puerto 8080 libre en desarrollo (configurable con `WEB_PORT`).
+No se requiere Go, Node, npm, PostgreSQL, Vite, compiladores ni herramientas de
+pruebas en el host.
 
-Detalle: [docs/operations/prerequisites.md](docs/operations/prerequisites.md).
+## 6. Instalación de Docker
 
-## 2. Instalación de Docker
-
-Siga la documentación oficial de Docker para su distribución. Verifique:
+Siga la documentación oficial de Docker para su sistema. Verifique:
 
 ```bash
 docker version
 docker compose version
 ```
 
-Debe existir el plugin `docker compose` (Compose v2). No se admite solo `docker-compose`.
-
-## 3. Clonación del repositorio
-
-```bash
-git clone https://github.com/gidanodfu/TERRA.git
-cd TERRA
-```
-
-Todos los scripts resuelven la raíz automáticamente y funcionan desde cualquier directorio.
-
-## 4. Configuración de `.env`
-
-Desarrollo:
+## 7. Configuración `.env`
 
 ```bash
 cp .env.example .env
@@ -85,231 +95,242 @@ chmod 600 .env
 
 Complete como mínimo:
 
-- `APP_PUBLIC_URL`
-- `DATABASE_URL`, `POSTGRES_PASSWORD`
+- `POSTGRES_PASSWORD`, `DATABASE_URL`
 - `SESSION_SECRET` (`openssl rand -hex 32`)
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URL`, `GOOGLE_DRIVE_REDIRECT_URL`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, redirect URIs locales
 - `TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`)
-- `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `TURNSTILE_HOSTNAME`
-- `STORAGE_HOST_PATH`
+- `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`
 - `BOOTSTRAP_ADMIN_USERNAME`, `BOOTSTRAP_ADMIN_PASSWORD`
-- límites de capacidad aprobados
 
-Producción usa un archivo separado, nunca el mismo:
+`.env.example` contiene únicamente valores locales y marcadores. Nunca se versiona
+`.env`. No existen archivos `.env.production` ni `.env.staging`.
 
-```bash
-cp .env.production.example .env.production
-chmod 600 .env.production
-```
-
-## 5. Preparación de Google OAuth
-
-1. Cree un cliente OAuth **External** (cuentas personales, no Internal).
-2. Habilite Google Drive API v3.
-3. Registre exactamente:
+Google OAuth debe registrar:
 
 ```text
 http://localhost:8080/api/v1/auth/google/callback
 http://localhost:8080/api/v1/auth/google/drive/callback
 ```
 
-En producción use HTTPS y las URLs equivalentes del dominio institucional.
-El scope documental es `https://www.googleapis.com/auth/drive.readonly` y requiere verificación
-de Google antes de uso general. Ver [docs/security/oauth-drive.md](docs/security/oauth-drive.md).
+El scope documental es `https://www.googleapis.com/auth/drive.readonly`.
 
-## 6. Preparación de Turnstile
-
-Cree un widget de Cloudflare Turnstile para el hostname real y configure:
-
-```dotenv
-TURNSTILE_SITE_KEY=...
-TURNSTILE_SECRET_KEY=...
-TURNSTILE_HOSTNAME=localhost
-TURNSTILE_ACTION=admin_login
-```
-
-La site key se compila en el frontend; el secret nunca sale del backend.
-
-## 7. Inicialización del proyecto
-
-Primera instalación en desarrollo:
+## 8. Inicialización
 
 ```bash
-./deploy/scripts/init.sh dev
+./terra init
 ```
 
-Producción (solo con autorización explícita para crear una base vacía):
+El comando valida Docker/Compose/.env, prepara almacenamiento y cachés locales,
+construye imágenes faltantes, inicia PostgreSQL, aplica migraciones, ejecuta el
+bootstrap, inicia worker/web y verifica los cuatro servicios.
+
+Reconstrucción completa:
 
 ```bash
-./deploy/scripts/init.sh prod --allow-empty-db
-# Automatización: CONFIRM_PROD="INIT PROD" ./deploy/scripts/init.sh prod --allow-empty-db
+./terra init --rebuild --no-cache
 ```
 
-El script valida el entorno, prepara el volumen, construye imágenes, inicia PostgreSQL, aplica
-migraciones, ejecuta el bootstrap, inicia worker/web y verifica los cuatro healthchecks.
-
-## 8. Construcción de imágenes
+## 9. Construcción de imágenes
 
 ```bash
-./deploy/scripts/build.sh dev
-./deploy/scripts/build.sh dev --no-cache
+./terra build
+./terra build --no-cache
+./terra build web
+./terra build api
 ```
 
-API y worker comparten la imagen backend; PostgreSQL usa una versión fijada y no se reconstruye.
-La construcción nunca toca volúmenes ni datos.
+API y worker comparten `terra-backend:local`. PostgreSQL usa `postgres:18-alpine`
+fijado y no se reconstruye. BuildKit y los lockfiles se respetan; las dependencias se
+descargan dentro de Docker.
 
-## 9. Creación e inicio de contenedores
-
-Después de la primera inicialización:
+## 10. Arranque
 
 ```bash
-./deploy/scripts/up.sh dev
+./terra up
 ```
 
-Si los contenedores fueron eliminados pero el volumen de PostgreSQL permanece, `up.sh` los
-recrea. La recuperación completa con reconstrucción de imágenes se hace con:
+Si los contenedores fueron eliminados, los recrea reutilizando el volumen. No ejecuta
+bootstrap, no reinicializa la base y no borra datos.
 
-```bash
-./deploy/scripts/init.sh dev --rebuild
-```
-
-## 10. Bootstrap del administrador
-
-`init.sh` lo ejecuta automáticamente. Para ejecutarlo de nuevo de forma idempotente:
-
-```bash
-./deploy/scripts/bootstrap.sh dev
-```
-
-No duplica administradores ni sobrescribe contraseñas. La contraseña inicial debe rotarse en
-el primer acceso. Ver [docs/operations/bootstrap.md](docs/operations/bootstrap.md).
-
-## 11. Acceso a la aplicación
+## 11. Acceso a TERRA
 
 ```text
-http://127.0.0.1:8080
+http://localhost:8080
 ```
 
-El administrador se crea con `BOOTSTRAP_ADMIN_USERNAME` y `BOOTSTRAP_ADMIN_PASSWORD`.
+El puerto del host se configura con `WEB_PORT`. Vite escucha en `5173` dentro del
+contenedor.
 
-## 12. Comprobación de servicios
+## 12. Comandos de ayuda
 
 ```bash
-./deploy/scripts/check.sh dev
-./deploy/scripts/status.sh dev
-curl -fsS http://127.0.0.1:8080/api/v1/health
-curl -fsS http://127.0.0.1:8080/api/v1/ready
+./terra help
+./terra check
+./terra doctor
+./terra status
 ```
 
-Los cuatro servicios deben aparecer `healthy`.
+## 13. Desarrollo frontend
 
-## 13. Consulta de logs
+`../frontend` está montado en `/app`. Vite aplica HMR. `node_modules` vive en un
+volumen Docker y nunca se instala en el host.
 
 ```bash
-./deploy/scripts/logs.sh dev
-./deploy/scripts/logs.sh dev api
-./deploy/scripts/logs.sh dev worker -f
-./deploy/scripts/logs.sh dev db -n 100
+./terra logs web -f
+./terra shell web
+./terra build web   # tras cambiar package.json/lockfile
 ```
 
-## 14. Detención
+Ver [docs/development/frontend-development.md](docs/development/frontend-development.md).
+
+## 14. Desarrollo backend
+
+`../backend` está montado en `/src`; la API ejecuta `go run ./cmd/api` con el
+toolchain incluido en la imagen.
 
 ```bash
-./deploy/scripts/down.sh dev
+./terra logs api -f
+./terra shell api
+go test ./...
 ```
 
-Detiene los contenedores y conserva volúmenes y documentos. `--remove` elimina contenedores y
-red, pero **nunca** los volúmenes.
+Ver [docs/development/backend-development.md](docs/development/backend-development.md).
 
-## 15. Reinicio
+## 15. Worker
+
+Contenedor independiente con la misma imagen backend:
 
 ```bash
-./deploy/scripts/restart.sh dev
-./deploy/scripts/restart.sh dev api
-./deploy/scripts/restart.sh dev worker
+./terra logs worker -f
+./terra restart worker
 ```
 
-## 16. Actualización
+Ver [docs/development/worker-development.md](docs/development/worker-development.md).
+
+## 16. PostgreSQL
 
 ```bash
-./deploy/scripts/backup.sh dev
-./deploy/scripts/build.sh dev
-./deploy/scripts/up.sh dev
+./terra db
+./terra db -c "SELECT status, count(*) FROM download_jobs GROUP BY status;"
 ```
 
-La API aplica migraciones al arrancar. Para cambios de esquema delicados, consulte
-[docs/operations/migrations.md](docs/operations/migrations.md).
+El volumen `terra_terra-db` es persistente. PostgreSQL solo publica en
+`127.0.0.1:${DB_PORT}`.
 
-## 17. Backups
+Ver [docs/development/database-development.md](docs/development/database-development.md).
+
+## 17. Migraciones
 
 ```bash
-./deploy/scripts/backup.sh dev
-./deploy/scripts/verify-backup.sh backups/dev/<timestamp>
+./terra migrate status
+./terra migrate version
+./terra migrate up
 ```
 
-Genera dump de PostgreSQL, archivo del volumen documental, metadatos y checksums, sin sobrescribir
-backups anteriores. `TOKEN_ENCRYPTION_KEY` se respalda por separado.
+Se ejecutan dentro del contenedor `api` (`go run ./cmd/migrate`). No hay contenedor
+de migraciones. Ver [docs/development/database-development.md](docs/development/database-development.md).
 
-## 18. Restauración
+## 18. Testing
+
+Todas las pruebas se ejecutan dentro de Docker.
 
 ```bash
-CONFIRM=yes ./deploy/scripts/restore.sh dev backups/dev/<timestamp>
-CONFIRM=yes CONFIRM_PROD="RESTORE PROD" ./deploy/scripts/restore.sh prod backups/prod/<timestamp>
+./terra test
+./terra test all
+./terra test backend unit
+./terra test backend integration
+./terra test frontend unit
+./terra test frontend integration
+./terra test e2e
 ```
 
-Restaura PostgreSQL, almacenamiento o ambos, con verificación previa y confirmación explícita.
-Procedimiento completo: [docs/operations/backup-restore.md](docs/operations/backup-restore.md).
+Incluye Go testing, `go vet`, Vitest, React Testing Library, PostgreSQL de pruebas y
+Playwright con Chromium dentro de la imagen web. La base de pruebas es `terra_test`,
+temporal. Resultados en `artifacts/`.
 
-## Comandos frecuentes
+Referencia completa: [docs/development/testing.md](docs/development/testing.md).
+
+## 19. Logs
 
 ```bash
-./deploy/scripts/help.sh
-./deploy/scripts/migrate.sh dev status
-./deploy/scripts/migrate.sh dev up
-./deploy/scripts/test.sh dev all
-./deploy/scripts/consistency-check.sh dev
+./terra logs
+./terra logs api
+./terra logs worker -f
+./terra logs db -n 100
 ```
 
-## Documentación operativa
+## 20. Diagnóstico
 
-- [Requisitos](docs/operations/prerequisites.md)
-- [Instalación](docs/operations/installation.md)
-- [Primer arranque](docs/operations/first-start.md)
-- [Operación diaria](docs/operations/daily-operations.md)
-- [Referencia de scripts](docs/operations/scripts-reference.md)
-- [Configuración por ambiente](docs/operations/environment-configuration.md)
-- [Arquitectura Docker](docs/operations/docker-architecture.md)
-- [Migraciones](docs/operations/migrations.md)
-- [Bootstrap](docs/operations/bootstrap.md)
-- [Backup y restauración](docs/operations/backup-restore.md)
-- [Troubleshooting](docs/operations/troubleshooting.md)
-- [Despliegue en producción](docs/operations/production-deployment.md)
+```bash
+./terra check
+./terra doctor
+./terra status
+```
 
-## Documentación del producto
+`doctor` verifica Docker, Compose, contenedores, PostgreSQL, migraciones, API, Vite,
+volúmenes, almacenamiento y errores recientes.
 
-- [Plan de implementación](docs/implementation/PLAN.md)
-- [Progreso y resultados de pruebas](docs/implementation/progress.md)
-- [Bloqueadores externos](docs/implementation/blockers.md)
+## 21. Volúmenes
+
+| Recurso | Uso |
+|---|---|
+| `terra_terra-db` | PostgreSQL |
+| volumen anónimo de `node_modules` | dependencias del frontend en el contenedor |
+| `data/dev` | documentos locales |
+| `.cache/go-*` | cachés de Go |
+
+`./terra down` detiene sin borrar datos. `./terra down --remove` elimina contenedores
+y red, **nunca** volúmenes ni documentos.
+
+## 22. Backups locales
+
+```bash
+./terra backup
+./terra restore
+./terra restore backups/<timestamp>
+```
+
+Genera dump de PostgreSQL, almacenamiento, metadatos y checksums. La clave
+`TOKEN_ENCRYPTION_KEY` se respalda por separado.
+
+Ver [docs/development/local-backups.md](docs/development/local-backups.md).
+
+## 23. Troubleshooting
+
+Consulte [docs/development/troubleshooting.md](docs/development/troubleshooting.md).
+Nunca elimine volúmenes para resolver un problema de arranque.
+
+## 24. Contribución
+
+Consulte [CONTRIBUTING.md](CONTRIBUTING.md). Toda funcionalidad nueva debe incluir
+pruebas y mantener Docker como único entorno de ejecución.
+
+## Documentación
+
+- [Entorno Docker](docs/development/docker-environment.md)
+- [Inicialización y recuperación](docs/development/initialization.md)
+- [Referencia de comandos](docs/development/commands-reference.md)
+- [Testing](docs/development/testing.md)
+- [Integración continua](docs/development/continuous-integration.md)
 - [Arquitectura](docs/architecture/overview.md)
 - [Modelo de datos](docs/architecture/database-design.md)
 - [Pipeline de descarga](docs/architecture/download-pipeline.md)
-- [Contrato OpenAPI](docs/api/openapi.yaml)
+- [OpenAPI](docs/api/openapi.yaml)
 - [Seguridad](docs/security/threat-model.md)
-- [Estrategia de pruebas](docs/testing/strategy.md)
 
 ## Estado
 
-Implementación completa del MVP según la especificación, con integración **real** de Google
-Drive API v3 y OAuth. La autorización OAuth real de una cuenta de Google y la verificación de
-scopes restringidos dependen de acciones externas documentadas en
-`docs/implementation/blockers.md`. **Google no ha aprobado ni verificado TERRA todavía.**
+Distribución de desarrollo local del MVP, con integración real de Google Drive API v3.
+La verificación de Google del scope restringido y el consentimiento con cuentas reales
+son dependencias externas documentadas en
+[docs/implementation/blockers.md](docs/implementation/blockers.md). **Google no ha
+aprobado ni verificado TERRA.**
 
 ## Seguridad esencial
 
-- Los refresh tokens se cifran con AES-256-GCM usando `TOKEN_ENCRYPTION_KEY`, nunca se envían al navegador y nunca se registran.
-- Cookies de sesión `HttpOnly`, `SameSite=Lax`, `Secure` en producción, con token CSRF.
-- Contraseñas locales con Argon2id y rotación obligatoria.
-- Turnstile se valida en el servidor (`Siteverify`); el widget por sí solo no autoriza nada.
-- Rutas documentales sanitizadas por segmento, sin symlinks, con contención dentro de `STORAGE_ROOT`.
-- El volumen documental no se expone por Nginx; toda lectura pasa por la API autenticada y auditada.
-- Los scripts nunca ejecutan `docker compose down -v` ni eliminan volúmenes.
+- Refresh tokens cifrados con AES-256-GCM; nunca llegan al navegador.
+- Cookies de sesión HttpOnly, SameSite=Lax y CSRF.
+- Argon2id para credenciales administrativas locales.
+- Turnstile validado en backend.
+- Rutas documentales sanitizadas, sin traversal ni symlinks.
+- Documentos accesibles solo mediante API autenticada.

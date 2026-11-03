@@ -22,8 +22,8 @@ creados por otras aplicaciones y documentos nativos. `drive.file` solo da acceso
 propia aplicación creó o que el usuario seleccionó explícitamente mediante Picker, y no garantiza el
 recorrido completo. Por eso no se sustituye silenciosamente.
 
-`drive.readonly` es un **scope restringido**. Su uso en producción requiere verificación de Google
-y posiblemente evaluación de seguridad. Hasta completarla, el cliente debe permanecer en modo de
+`drive.readonly` es un **scope restringido**. Su uso general fuera de usuarios de prueba requiere
+verificación de Google y posiblemente evaluación de seguridad. Hasta completarla, el cliente debe permanecer en modo de
 prueba con usuarios de prueba autorizados.
 
 ## Parámetros del flujo
@@ -90,11 +90,11 @@ Si la cuenta no coincide → `drive_account_mismatch` y no se guarda nada.
 - Sin selección de revisiones.
 - El Picker de Google no se usa; el selector es propio y valida pertenencia al árbol.
 
-## Requisitos para producción (externos)
+## Verificación de Google (externa)
 
-1. Registrar redirect URIs exactas.
-2. Configurar pantalla de consentimiento con dominio verificado.
-3. Publicar política de privacidad y términos.
+1. Registrar redirect URIs locales exactas.
+2. Configurar la pantalla de consentimiento.
+3. Publicar política de privacidad y términos si se solicita.
 4. Solicitar verificación del scope restringido.
 5. Completar evaluación de seguridad si Google la exige.
 6. No afirmar aprobación hasta recibirla.

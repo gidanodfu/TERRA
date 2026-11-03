@@ -60,8 +60,14 @@ la fila obtenida por REST; SSE no es autoridad.
 - Navegación lateral fija en escritorio y drawer en móvil.
 - `:focus-visible` global y etiquetas accesibles.
 
-## Build
+## Servidor de desarrollo
 
-`vite build` produce `dist/`, copiado a Nginx. La configuración de Nginx se versiona en
-`deploy/nginx/nginx.conf` y `deploy/nginx/conf.d/terra.conf`. La única variable expuesta es
-`VITE_TURNSTILE_SITE_KEY` (clave pública del widget). Ningún secreto usa prefijo `VITE_`.
+`web` ejecuta `vite` como servidor de desarrollo con HMR en el puerto 5173 del
+contenedor. Compose publica `${WEB_PORT:-8080}` y Vite hace proxy de `/api` (REST y
+SSE) a `http://api:8080`. No se usa Nginx en esta distribución local.
+
+`npm run build` se usa únicamente para validar la compilación y en pruebas; el
+artefacto se escribe en `/tmp` para no ensuciar el host.
+
+La única variable expuesta es `VITE_TURNSTILE_SITE_KEY` (clave pública del widget).
+Ningún secreto usa prefijo `VITE_`.

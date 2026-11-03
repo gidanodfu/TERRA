@@ -74,7 +74,7 @@ sobrescribe el directorio de otro trabajo.
 
 ## Acceso
 
-- Nginx no monta el volumen.
+- El servicio web no monta el volumen documental.
 - `GET /api/v1/files/{id}/content` resuelve por ID interno, verifica propietario/solicitante o
   administrador, verifica que el job corresponda y transmite como `attachment`.
 - Todo acceso administrativo se audita (`file.accessed`).
@@ -84,4 +84,4 @@ sobrescribe el directorio de otro trabajo.
 
 - `MAX_DOWNLOAD_BYTES`, `MAX_JOB_BYTES`, `MAX_USER_STORAGE_BYTES`, `MAX_AREA_STORAGE_BYTES`.
 - `MIN_FREE_DISK_BYTES` se verifica con `statfs` antes de continuar.
-- Los límites se configuran por entorno; los valores de producción requieren aprobación.
+- Los límites son configurables en `.env` y representan valores locales de desarrollo.

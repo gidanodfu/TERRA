@@ -2,53 +2,64 @@
 
 ## Reglas de trabajo
 
-1. Lee `docs/implementation/PLAN.md` y los ADR aplicables antes de cambiar arquitectura.
+1. Lee `docs/implementation/PLAN.md`, `docs/development/` y los ADR aplicables.
 2. La API y el worker comparten dominio, pero **no** se mezclan sus puntos de entrada.
 3. No agregue contenedores. El límite es exactamente `web`, `api`, `worker`, `db`.
 4. No agregue dependencias sin justificarlas en un ADR o en el PR.
 5. Los secretos viven en `.env` (no versionado). Nunca escriba tokens, cookies o contraseñas en logs.
 6. Toda entrada del usuario se valida en el servidor.
 7. Toda operación administrativa sensible debe registrar auditoría.
-8. Mantenga sincronizados `docs/api/openapi.yaml`, los diagramas y el código.
+8. Toda funcionalidad nueva debe incluir pruebas unitarias y, si aplica, de integración.
+9. Mantenga sincronizados `docs/api/openapi.yaml`, los diagramas y el código.
+10. Docker es el único entorno de ejecución; no agregue pasos que requieran Go o Node en el host.
 
 ## Desarrollo
 
 ```bash
-# Pruebas unitarias (Go + frontend)
-./deploy/scripts/test.sh dev unit
-
-# Stack completo
-./deploy/scripts/init.sh dev
-
-# Operación
-./deploy/scripts/status.sh dev
-./deploy/scripts/logs.sh dev api
+./terra init
+./terra status
+./terra logs api
+./terra shell api
 ```
 
-No ejecute comandos manuales de Docker para operar TERRA: use `deploy/scripts/`.
+Opere siempre mediante `./terra` o los scripts de `deploy/scripts/`. No agregue comandos
+de despliegue productivo ni archivos Compose alternativos.
 
-
-Las migraciones son inmutables una vez aplicadas. Cambios de esquema se agregan como un
-nuevo archivo numerado en `backend/migrations/`.
+Las migraciones son inmutables una vez aplicadas. Los cambios de esquema se agregan
+como un nuevo archivo numerado en `backend/migrations/`.
 
 ## Pruebas
 
-- Unitarias: `./deploy/scripts/test.sh dev unit` (contenedores efímeros de toolchain).
-- Integración con PostgreSQL/Google se ejecutan manualmente y se documentan en
-  `docs/testing/test-cases.md`.
-- Nunca use credenciales personales reales en CI. Use cuentas de prueba y dobles de Drive.
+```bash
+./terra test backend unit
+./terra test backend integration
+./terra test frontend unit
+./terra test frontend integration
+./terra test e2e
+./terra test all
+```
+
+Las pruebas se ejecutan dentro de los contenedores. La integración de PostgreSQL usa
+la base temporal `terra_test`; nunca la base de desarrollo. Las pruebas que requieran
+Google/Turnstile reales son manuales, opt-in y no deben usar credenciales personales
+en CI.
+
+Documentación: [docs/development/testing.md](docs/development/testing.md).
 
 ## Estilo
 
 - Go: `gofmt`, errores tipados (`apperr`), `context.Context` propagado, interfaces pequeñas.
 - React: componentes funcionales, separación `features/`, sin lógica de autorización definitiva en el navegador.
 - SQL: migraciones con restricciones e índices; sin borrados en cascada del historial documental.
+- Infraestructura: un único `deploy/compose.yaml` y scripts bajo `deploy/scripts/`.
 
 ## Checklist de PR
 
-- [ ] Pruebas ejecutadas y resultados reales incluidos.
+- [ ] `./terra test all` ejecutado y resultados reales incluidos.
 - [ ] Sin secretos nuevos en el repositorio.
+- [ ] Sin archivos `.env.production`/staging ni instrucciones de despliegue.
 - [ ] Permisos verificados en backend.
 - [ ] Auditoría agregada si la operación es sensible.
-- [ ] Documentación y OpenAPI actualizados.
+- [ ] Documentación, OpenAPI y `docs/development/` actualizados.
 - [ ] Cuatro servicios conservados.
+- [ ] Contenedores e imágenes no incluyen `.git` ni credenciales.

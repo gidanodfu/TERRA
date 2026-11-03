@@ -14,7 +14,6 @@ Fecha de revisión de versiones: **2026-11-03**.
 | Tailwind CSS / plugin Vite | 4.3.4 | npm registry |
 | React Router | 7.18.5 | npm registry |
 | Lucide React | 1.67.0 | npm registry |
-| Nginx | 1.29-alpine | Docker Hub |
 | Node (build) | 24-alpine | Docker Hub |
 | Docker / Compose | 29.9.2 / v5.6.1 | entorno de construcción |
 | pgx | v5.8.0 | `go.mod` |
@@ -82,8 +81,8 @@ Decisiones derivadas:
 
 - Multi-stage para Go y frontend.
 - Healthchecks y `depends_on: condition: service_healthy`.
-- `read_only`, `tmpfs`, `no-new-privileges`, usuario no root.
-- Separación dev/prod con archivos de override.
+- Healthchecks, volúmenes persistentes y usuario del host para API/worker.
+- Un único Compose de desarrollo local.
 - Secretos fuera de la imagen.
 
 ## Google OAuth
@@ -137,7 +136,7 @@ Decisiones derivadas:
 ## Notas de verificación
 
 - No se afirma que Google haya verificado ni aprobado TERRA.
-- Las claves OAuth/Turnstile entregadas para desarrollo deben rotarse antes de producción.
+- Las claves de desarrollo deben rotarse si se reutilizan fuera de este entorno local.
 - Las versiones se fijaron en `go.mod`, `package-lock.json`, Dockerfiles y Compose.
 - Las pruebas de integración reales con Google requieren redirect URIs registradas y consentimiento
   del propietario de la cuenta; ver `docs/implementation/blockers.md`.

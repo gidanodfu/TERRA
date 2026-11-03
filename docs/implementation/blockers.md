@@ -1,92 +1,71 @@
 # Bloqueadores y dependencias externas
 
-TERRA está implementado. Los siguientes puntos **no** pueden resolverse solo con código y no
-deben declararse terminados hasta contar con evidencia institucional.
+TERRA está implementado como distribución local. Los siguientes puntos requieren
+acciones fuera del repositorio y no deben declararse resueltos sin evidencia.
 
 ## 1. Redirect URIs de Google OAuth
 
-El cliente OAuth de desarrollo debe tener registradas exactamente:
+El cliente OAuth local debe registrar exactamente:
 
-```
+```text
 http://localhost:8080/api/v1/auth/google/callback
 http://localhost:8080/api/v1/auth/google/drive/callback
 ```
 
-En producción, las URLs HTTPS equivalentes bajo el dominio institucional. Si no coinciden
-exactamente, Google devuelve `redirect_uri_mismatch` y ni el login ni la conexión de Drive
-pueden completarse.
+Si el puerto local cambia (`WEB_PORT`), las URIs deben actualizarse en Google Cloud
+y en `.env`.
 
-Responsable: propietario del proyecto Google Cloud / TI municipal.
+## 2. Cliente OAuth External
 
-## 2. Tipo de aplicación OAuth External y pantalla de consentimiento
+Los trabajadores usan cuentas personales. El cliente debe ser **External**, no
+Internal. Debe incluir `openid`, `email`, `profile` y:
 
-TERRA usa cuentas personales, por lo que el cliente debe ser **External**, no Internal. La
-pantalla de consentimiento debe incluir:
-
-- `openid`, `email`, `profile` para inicio de sesión.
-- `https://www.googleapis.com/auth/drive.readonly` para documentación.
+```text
+https://www.googleapis.com/auth/drive.readonly
+```
 
 No se usa cuenta de servicio, delegación de dominio ni unidades compartidas.
 
 ## 3. Verificación de scope restringido
 
-`drive.readonly` es un scope restringido. Para uso fuera de usuarios de prueba, Google exige
-verificación de la aplicación, política de privacidad pública, justificación del scope y, según
-el caso, evaluación de seguridad. Hasta completarla:
+`drive.readonly` es un scope restringido. Para uso fuera de usuarios de prueba,
+Google exige verificación de la aplicación, política de privacidad pública,
+justificación del scope y posiblemente evaluación de seguridad. Mientras no esté
+completada:
 
-- la app funciona en modo de prueba con usuarios de prueba autorizados;
+- la app funciona con usuarios de prueba autorizados;
 - **no debe afirmarse que Google aprobó TERRA**;
-- el número de usuarios puede estar limitado por Google.
+- el número de usuarios puede estar limitado.
 
-Responsable: institución + propietario del proyecto. Ver
-`docs/security/oauth-drive.md`.
+Cada entidad que adopte el proyecto deberá gestionar su propia verificación si decide
+usar TERRA fuera del entorno local.
 
-## 4. Claves Turnstile por ambiente
+## 4. Claves Turnstile
 
-Las claves entregadas son de desarrollo. Para producción:
-
-- crear un widget Turnstile para el dominio institucional;
-- configurar `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `TURNSTILE_HOSTNAME` y `TURNSTILE_ACTION`;
-- verificar que el hostname emitido por Siteverify coincide exactamente;
-- no reutilizar claves de desarrollo en producción.
+Las claves entregadas para desarrollo deben corresponder al hostname local
+(`localhost`) y action `admin_login`. Si se usan claves de otro widget, el login
+administrativo fallará de forma segura. No se deben inventar claves.
 
 ## 5. Texto de la política institucional
 
-TERRA implementa el mecanismo de versionado y aceptación, pero **no inventa el contenido legal**.
-La institución debe proporcionar el texto aprobado y publicarlo desde
-`/app/admin/policy` (o `POST /api/v1/admin/policies`). Sin una versión publicada, la exploración
-y las descargas quedan bloqueadas por diseño.
+El mecanismo de versionado y aceptación está implementado. El contenido legal debe
+ser proporcionado y aprobado por la entidad; no se incluye texto ficticio. Sin una
+versión publicada, la exploración y las descargas quedan bloqueadas.
 
-## 6. Límites de capacidad de producción
+## 6. Pruebas con cuentas reales
 
-Los valores de `.env.example` son ilustrativos. Antes del despliegue, la institución debe aprobar:
-
-- tamaño máximo por archivo y por trabajo;
-- almacenamiento por trabajador y por área;
-- trabajos activos globales y por trabajador;
-- espacio libre mínimo;
-- retención de snapshots.
-
-No se deben inventar estos valores ni asumir cuotas de Google.
-
-## 7. Infraestructura de producción
-
-Pendiente de decisión institucional:
-
-- hostname y certificado TLS;
-- ruta del volumen (`/srv/terra-data/prod`);
-- política de backups, cifrado y retención;
-- monitoreo/alertas;
-- procedimiento de rotación de la clave de cifrado de tokens y su resguardo separado.
-
-## 8. Pruebas con cuentas reales
-
-Para cerrar la aceptación de la Fase 3 se necesitan al menos dos cuentas personales de prueba
-con:
+Para validar el adaptador de Drive se necesitan cuentas personales de prueba con:
 
 - archivos binarios y documentos nativos;
-- estructuras profundas, nombres repetidos y carpetas vacías;
-- atajos a archivo y a carpeta;
-- elementos no descargables y papelera.
+- carpetas vacías, nombres repetidos y estructuras profundas;
+- atajos a archivo y carpeta;
+- archivos no descargables y papelera;
+- revocación y reconexión OAuth.
 
-Esas pruebas deben hacerse en un entorno controlado y no con datos personales reales.
+Estas pruebas son manuales, opt-in y no deben usar datos personales reales.
+
+## 7. Límites locales
+
+Los límites de `.env.example` son valores de desarrollo. No representan cuotas de
+Google ni límites institucionales. Cada entidad ajustará los suyos si adopta el
+proyecto fuera de esta distribución local.

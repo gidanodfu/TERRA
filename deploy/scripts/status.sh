@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
 # TERRA - status.sh
-# Versión: 1.0.0
-# Descripción: muestra estado de servicios, salud, imágenes, puertos, redes,
+# Versión: 2.0.0
+# Descripción: muestra estado de servicios, salud, imágenes, puertos, red,
 #              volúmenes, almacenamiento, PostgreSQL, API y worker.
-# Uso: ./deploy/scripts/status.sh <dev|prod>
-# Requisitos: Docker y configuración legibles.
-# Efectos: solo lectura. No imprime secretos.
+# Uso: ./deploy/scripts/status.sh
+# Efectos: solo lectura.
 # Códigos: 0 consulta realizada · 1 error de infraestructura · 2 uso incorrecto.
 # =============================================================================
 set -Eeuo pipefail
@@ -15,32 +14,19 @@ set -Eeuo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 terra_enable_traps
 
-usage() {
-  cat <<'EOF'
-Uso: status.sh <dev|prod>
-
-Muestra el estado operativo completo. Es seguro ejecutarlo con TERRA detenido.
-EOF
-}
-
-if (($# == 0)); then usage; exit 2; fi
-terra_parse_environment "$1"
-shift
-while (($# > 0)); do
-  case "$1" in
-    -h|--help) usage; exit 0 ;;
-    *) terra_error "Opción desconocida: $1"; usage; exit 2 ;;
-  esac
-  shift
-done
+case "${1:-}" in
+  -h|--help) printf 'Uso: status.sh\nMuestra el estado del entorno local.\n'; exit 0 ;;
+  "") ;;
+  *) terra_error "Argumentos no permitidos."; exit 2 ;;
+esac
 
 terra_check_env_file
 terra_check_commands
 terra_compose config >/dev/null
 
-printf '\n%s\n' "TERRA STATUS — $TERRA_ENV ($TERRA_ENV_SHORT)"
+printf '\n%s\n' "TERRA STATUS — desarrollo local"
 printf 'Proyecto Docker: %s\n' "$TERRA_PROJECT"
-printf 'Archivo de configuración: %s\n\n' "$(basename "$TERRA_ENV_FILE")"
+printf 'Archivo de configuración: .env\n\n'
 
 printf '%-8s %-14s %-14s %-24s\n' "SERVICIO" "ESTADO" "HEALTH" "IMAGEN"
 printf '%s\n' "----------------------------------------------------------------------------"
@@ -59,8 +45,8 @@ done
 printf '\n%s\n' "Puertos publicados"
 terra_compose ps --format 'table {{.Service}}\t{{.Ports}}' 2>/dev/null || true
 
-printf '\n%s\n' "Redes del proyecto"
-"$TERRA_DOCKER_BIN" network ls --filter "name=$TERRA_NETWORK" --format '  {{.Name}} ({{.Driver}})' 2>/dev/null || true
+printf '\n%s\n' "Red del proyecto"
+"$TERRA_DOCKER_BIN" network ls --filter "label=com.docker.compose.project=$TERRA_PROJECT" --format '  {{.Name}} ({{.Driver}})' 2>/dev/null || true
 
 printf '\n%s\n' "Volúmenes del proyecto"
 if terra_volume_exists; then
@@ -96,18 +82,22 @@ else
   printf '  Servicio no disponible\n'
 fi
 
-printf '\n%s\n' "API y worker"
+printf '\n%s\n' "API, worker y Vite"
 port="$(terra_web_port)"
 if curl -fsS --max-time 5 "http://127.0.0.1:$port/api/v1/health" >/dev/null 2>&1; then
-  printf '  API /health: OK (a través de web)\n'
+  printf '  API /health vía Vite proxy: OK\n'
 else
-  printf '  API /health: FAIL\n'
+  printf '  API /health vía Vite proxy: FAIL\n'
 fi
 if curl -fsS --max-time 5 "http://127.0.0.1:$port/api/v1/ready" >/dev/null 2>&1; then
-  printf '  API /ready: OK (PostgreSQL)\n'
+  printf '  API /ready: OK\n'
 else
   printf '  API /ready: FAIL\n'
 fi
+if curl -fsS --max-time 5 "http://127.0.0.1:$port/" >/dev/null 2>&1; then
+  printf '  Vite dev server: OK (http://127.0.0.1:%s)\n' "$port"
+else
+  printf '  Vite dev server: FAIL\n'
+fi
 heartbeat="$(terra_db_psql "SELECT COALESCE(to_char(max(heartbeat_at), 'YYYY-MM-DD HH24:MI:SS'), 'sin trabajos recientes') FROM download_jobs;" 2>/dev/null || echo '?')"
-printf '  Último heartbeat registrado: %s\n' "$heartbeat"
-printf '\n'
+printf '  Último heartbeat registrado: %s\n\n' "$heartbeat"

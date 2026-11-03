@@ -16,9 +16,9 @@
 | RNF-12 | Cuotas | Limitación compartida por cuenta y control de 429. | `AccountLimiter` |
 | RNF-13 | Capacidad | Límites configurables por archivo, trabajo, usuario, área y disco. | `config.Limits` |
 | RNF-14 | Observabilidad | Logs estructurados con `request_id`, `job_id`, `service`. | `logx`, `httpx.Logger` |
-| RNF-15 | Operación | Configuración por entorno y fail-fast en producción. | `config.Load` |
+| RNF-15 | Operación | Configuración local y validación fail-fast. | `config.Load` |
 | RNF-16 | Portabilidad | Sin instalaciones locales de Go/Node/PostgreSQL para ejecutar. | imágenes multi-stage |
-| RNF-17 | Seguridad de contenedores | Usuario no root, read-only, límites y healthchecks. | compose + Dockerfiles |
+| RNF-17 | Contenedores | Herramientas dentro de Docker, healthchecks y volúmenes persistentes. | compose + Dockerfiles |
 | RNF-18 | UI | Responsive, accesible, estados completos y focus visible. | Tailwind + componentes |
 | RNF-19 | Localización | Interfaz y mensajes de error en español. | frontend/backend |
 | RNF-20 | Mantenibilidad | Módulos por capacidad, sin lógica de negocio en handlers. | estructura backend |
@@ -32,5 +32,5 @@
 
 - El volumen documental está en un sistema de archivos local al contenedor worker (rename atómico).
 - El proxy web es el único punto de entrada HTTP.
-- La institución proporciona TLS en producción (terminación en el host o proxy institucional).
+- La distribución local no prescribe TLS ni infraestructura externa.
 - Los límites definitivos y textos legales son decisiones administrativas.

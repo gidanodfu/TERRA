@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Save } from 'lucide-react'
-import { api, queryString } from '../../services/api'
+import { api } from '../../services/api'
 import { useAuth } from '../../app/AuthContext'
 import { Alert, Button, Field, Input, Select, Spinner } from '../../components/ui'
 

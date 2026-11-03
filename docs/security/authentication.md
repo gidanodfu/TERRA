@@ -33,7 +33,7 @@ del código intercambiado. No se almacenan access tokens de identidad.
 ## Sesiones
 
 - Token aleatorio de 32 bytes (base64url); en PostgreSQL solo se guarda SHA-256.
-- Cookie principal `terra_session`: `HttpOnly`, `SameSite=Lax`, `Secure` en producción, `Path=/`,
+- Cookie principal `terra_session`: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` solo bajo HTTPS,
   expiración `SESSION_TTL_HOURS`.
 - Cookie CSRF `terra_csrf` legible por el SPA; el header `X-CSRF-Token` debe igualar el valor
   almacenado en la sesión.

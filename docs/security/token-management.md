@@ -70,8 +70,8 @@ URL firmada de descarga.
 
 ## Recomendaciones operativas
 
-- Usar un gestor de secretos (Docker secrets, Vault, SOPS) en producción.
+- Mantener `.env` con permisos 600 y fuera de Git.
 - Restringir lectura de `.env` al usuario de despliegue.
 - Rotar credenciales que hayan estado expuestas (incluidas las de desarrollo compartidas por chat).
 - Configurar alertas ante errores de autenticación y reconexiones masivas.
-- No reutilizar claves entre desarrollo y producción.
+- No reutilizar claves de desarrollo fuera de esta distribución local.

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # TERRA - help.sh
-# Versión: 1.0.0
-# Descripción: referencia rápida de comandos operativos oficiales.
+# Versión: 2.0.0
+# Descripción: referencia rápida del entorno local.
 # Uso: ./deploy/scripts/help.sh
 # Efectos: solo lectura.
 # =============================================================================
@@ -11,76 +11,72 @@ set -Eeuo pipefail
 # shellcheck disable=SC1091
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
-cat <<'EOF'
-TERRA — comandos operativos oficiales
-=====================================
+cat <<'HELP'
+TERRA — distribución de desarrollo local
+========================================
 
-Los ambientes son explícitos: dev | prod. Ejecute desde cualquier directorio.
+Comando principal:
+  ./terra <comando>
 
 PRIMERA INSTALACIÓN
-  ./deploy/scripts/init.sh dev
+  ./terra init
+  ./terra init --rebuild --no-cache
 
-RECONSTRUIR IMÁGENES
-  ./deploy/scripts/build.sh dev
-  ./deploy/scripts/build.sh dev --no-cache
+CONSTRUCCIÓN
+  ./terra build
+  ./terra build --no-cache
+  ./terra build web
+  ./terra build api
 
-RECONSTRUIR Y ARRANCAR TRAS ELIMINAR CONTENEDORES
-  ./deploy/scripts/init.sh dev --rebuild --no-cache
+ARRANQUE Y DETENCIÓN
+  ./terra up
+  ./terra down
+  ./terra down --remove      # elimina contenedores, NO volúmenes
+  ./terra restart
+  ./terra restart api
 
-ARRANQUE HABITUAL
-  ./deploy/scripts/up.sh dev
+DIAGNÓSTICO
+  ./terra check
+  ./terra doctor
+  ./terra status
+  ./terra logs
+  ./terra logs api
+  ./terra logs worker -f
 
-DETENER (conserva datos)
-  ./deploy/scripts/down.sh dev
-  ./deploy/scripts/down.sh dev --remove   # elimina contenedores, NO volúmenes
+SHELLS
+  ./terra shell api
+  ./terra shell worker
+  ./terra shell web
+  ./terra shell db
+  ./terra db
+  ./terra db -c "SELECT now();"
 
-REINICIAR
-  ./deploy/scripts/restart.sh dev
-  ./deploy/scripts/restart.sh dev api
-  ./deploy/scripts/restart.sh dev worker
-
-ESTADO
-  ./deploy/scripts/status.sh dev
-
-LOGS
-  ./deploy/scripts/logs.sh dev
-  ./deploy/scripts/logs.sh dev api -n 200
-  ./deploy/scripts/logs.sh dev worker -f
-
-VALIDACIÓN
-  ./deploy/scripts/check.sh dev
-
-MIGRACIONES
-  ./deploy/scripts/migrate.sh dev status
-  ./deploy/scripts/migrate.sh dev version
-  ./deploy/scripts/migrate.sh dev up
-
-BOOTSTRAP
-  ./deploy/scripts/bootstrap.sh dev
+MIGRACIONES Y BOOTSTRAP
+  ./terra migrate up
+  ./terra migrate status
+  ./terra migrate version
+  ./terra bootstrap
 
 PRUEBAS
-  ./deploy/scripts/test.sh dev unit
-  ./deploy/scripts/test.sh dev integration
-  ./deploy/scripts/test.sh dev e2e
-  ./deploy/scripts/test.sh dev all
+  ./terra test
+  ./terra test all
+  ./terra test backend unit
+  ./terra test backend integration
+  ./terra test frontend unit
+  ./terra test frontend integration
+  ./terra test e2e
 
-BACKUP
-  ./deploy/scripts/backup.sh dev
-  BACKUP_GPG_RECIPIENT=cuenta@example.org ./deploy/scripts/backup.sh dev
-
-RESTAURACIÓN
-  ./deploy/scripts/restore.sh dev backups/dev/<timestamp>
-  CONFIRM=yes ./deploy/scripts/restore.sh dev backups/dev/<timestamp> --db
-
-PRODUCCIÓN
-  ./deploy/scripts/init.sh prod --allow-empty-db   # solo primera instalación autorizada
-  CONFIRM=yes CONFIRM_PROD="RESTORE PROD" ./deploy/scripts/restore.sh prod <backup>
-  cp .env.production.example .env.production
+BACKUP Y RESTAURACIÓN
+  ./terra backup
+  ./terra restore
+  ./terra restore backups/<timestamp>
+  ./terra restore backups/<timestamp> --db
 
 REGLAS
-  - Nunca se ejecuta docker compose down -v.
-  - Nunca se eliminan volúmenes desde estos scripts.
-  - down.sh conserva los datos.
-  - init.sh reutiliza volúmenes existentes.
-  - La clave TOKEN_ENCRYPTION_KEY se respalda por separado.
-EOF
+  - Todo el stack se ejecuta en Docker.
+  - No se requieren Go, Node, npm ni PostgreSQL en el host.
+  - Los scripts nunca eliminan volúmenes automáticamente.
+  - Los documentos y la base de datos se conservan al detener o eliminar contenedores.
+
+Documentación: docs/development/
+HELP

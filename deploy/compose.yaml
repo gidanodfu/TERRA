@@ -1,5 +1,7 @@
 name: terra
 
+# TERRA local development distribution.
+# Exactly four services: web (Vite), api, worker and db.
 services:
   db:
     image: postgres:18-alpine
@@ -9,6 +11,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - terra-db:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -16,23 +20,27 @@ services:
       retries: 10
       start_period: 20s
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          memory: 768M
-    networks:
-      - terra
 
   api:
+    image: terra-backend:local
     build:
       context: ../backend
+    user: "${TERRA_UID:-1000}:${TERRA_GID:-1000}"
     env_file:
-      - ${TERRA_ENV_FILE:-../.env}
+      - ../.env
     environment:
+      APP_ENV: development
       STORAGE_ROOT: /var/lib/terra
+      HOME: /tmp
+      GOCACHE: /tmp/gocache
+      GOMODCACHE: /go/pkg/mod
+      GOPATH: /tmp/gopath
+    working_dir: /src
+    command: ["go", "run", "./cmd/api"]
     volumes:
+      - ../backend:/src
+      - ../.cache/go-mod:/go/pkg/mod
+      - ../.cache/go-build:/tmp/gocache
       - ${STORAGE_HOST_PATH:-../data/dev}:/var/lib/terra:ro
     depends_on:
       db:
@@ -41,86 +49,64 @@ services:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/api/v1/health"]
       interval: 15s
       timeout: 5s
-      retries: 5
-      start_period: 20s
-    read_only: true
-    tmpfs:
-      - /tmp
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    networks:
-      - terra
 
   worker:
-    build:
-      context: ../backend
-    command: ["/app/worker"]
+    image: terra-backend:local
+    user: "${TERRA_UID:-1000}:${TERRA_GID:-1000}"
     env_file:
-      - ${TERRA_ENV_FILE:-../.env}
+      - ../.env
     environment:
+      APP_ENV: development
       STORAGE_ROOT: /var/lib/terra
+      HOME: /tmp
+      GOCACHE: /tmp/gocache
+      GOMODCACHE: /go/pkg/mod
+      GOPATH: /tmp/gopath
+    working_dir: /src
+    command: ["go", "run", "./cmd/worker"]
     volumes:
+      - ../backend:/src
+      - ../.cache/go-mod:/go/pkg/mod
+      - ../.cache/go-build:/tmp/gocache
       - ${STORAGE_HOST_PATH:-../data/dev}:/var/lib/terra:rw
     depends_on:
       db:
         condition: service_healthy
       api:
         condition: service_healthy
-    read_only: true
-    tmpfs:
-      - /tmp
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-    networks:
-      - terra
     healthcheck:
       test: ["CMD-SHELL", "kill -0 1"]
       interval: 30s
       timeout: 5s
       retries: 3
+    restart: unless-stopped
 
   web:
+    image: terra-web:local
     build:
-      context: ..
-      dockerfile: frontend/Dockerfile
-      args:
-        VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
+      context: ../frontend
+    environment:
+      VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
+      VITE_API_PROXY: http://api:8080
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
     ports:
-      - "${WEB_PORT:-8080}:8080"
+      - "${WEB_PORT:-8080}:5173"
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
     depends_on:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5173/"]
       interval: 15s
       timeout: 5s
-      retries: 5
-    read_only: true
-    tmpfs:
-      - /tmp
+      retries: 10
+      start_period: 20s
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-    networks:
-      - terra
 
 volumes:
   terra-db:
-
-networks:
-  terra:
-    driver: bridge

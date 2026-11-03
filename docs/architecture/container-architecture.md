@@ -1,80 +1,74 @@
-# Arquitectura de contenedores
+# Arquitectura de contenedores (desarrollo local)
 
 ## Servicios
 
 ```yaml
-web:    # React compilado + Nginx (misma imagen)
-api:    # Go, REST + SSE, usuario 10001
-worker: # Go, mismo binario base, comando /app/worker
+web:    # Vite dev server + React
+api:    # Go, REST + SSE
+worker: # Go, mismo backend, proceso independiente
 db:     # PostgreSQL 18
 ```
 
-No hay servicios auxiliares, broker, scheduler ni contenedor de migraciones.
+No hay Nginx, Traefik, broker, scheduler, contenedor de migraciones ni servicios
+adicionales.
+
+## Imágenes
+
+| Servicio | Imagen | Construcción |
+|---|---|---|
+| web | `terra-web:local` | `frontend/Dockerfile` |
+| api / worker | `terra-backend:local` | `backend/Dockerfile` |
+| db | `postgres:18-alpine` | imagen fijada, no se reconstruye |
+
+Los Dockerfiles incluyen las herramientas de desarrollo: Go en backend y Node,
+Vite, Vitest, Playwright y Chromium en web.
 
 ## Redes y puertos
 
 | Servicio | Puerto interno | Publicado |
 |---|---|---|
-| web | 8080 | `${WEB_PORT:-8080}` en dev; TLS/proxy en prod |
+| web | 5173 | `${WEB_PORT:-8080}:5173` |
 | api | 8080 | No |
 | worker | — | No |
-| db | 5432 | Solo `127.0.0.1` en `compose.dev.yaml`; nunca en prod |
+| db | 5432 | `127.0.0.1:${DB_PORT:-5432}:5432` |
 
-Nginx enruta:
+Vite proxy:
 
-```nginx
-location /api/ {
-    proxy_pass http://api:8080;
-    proxy_buffering off;
-    proxy_read_timeout 3600s;
-}
+```js
+'/api': { target: 'http://api:8080' }
 ```
 
-La configuración vive en `deploy/nginx/nginx.conf` y `deploy/nginx/conf.d/terra.conf`.
+Esto cubre REST y SSE. Los contenedores se comunican por nombre de servicio
+(`db`, `api`); nunca por `localhost`.
 
-El backend sirve directamente `/api/v1/...`, sin reescritura de path.
+## Montajes
 
-## Persistencia
-
-| Recurso | Montaje | Modo |
+| Recurso | Tipo | Uso |
 |---|---|---|
-| `terra-db` | `/var/lib/postgresql` | lectura/escritura |
-| Volumen documental | `/var/lib/terra` | `api`: ro; `worker`: rw |
+| `terra_terra-db` | volumen | PostgreSQL |
+| `/app/node_modules` | volumen anónimo | dependencias del frontend |
+| `../backend:/src` | bind | source Go |
+| `../frontend:/app` | bind | source React + HMR |
+| `../data/dev:/var/lib/terra` | bind | documentos: api ro, worker rw |
+| `../.cache/go-mod`, `../.cache/go-build` | bind | cachés Go |
 
-`web` y `db` no montan documentos. La API de solo lectura sigue necesitando que existan
-`staging/` y `areas/`; `storage.NewReadOnly` no crea directorios.
+`web` y `db` no montan documentos. `.git` no se monta en ningún servicio.
 
-## Endurecimiento
+## Healthchecks
 
-- Imágenes multi-stage y Alpine.
-- API/worker como UID 10001; Nginx como usuario `nginx`.
-- `read_only: true` con `tmpfs /tmp`.
-- `no-new-privileges`.
-- Límites de memoria.
-- Healthchecks:
-  - db: `pg_isready`
-  - api: `GET /api/v1/health`
-  - web: `GET /healthz`
-  - worker: proceso vivo (`kill -0 1`)
-- Secretos solo por `.env`; nunca dentro de la imagen.
+- db: `pg_isready`.
+- api: `GET /api/v1/health`.
+- worker: proceso vivo (`kill -0 1`).
+- web: `GET /` en Vite.
 
 ## Orden de arranque
 
-`init.sh` respeta el orden: `db` healthy → `api` migra y queda healthy → bootstrap → `worker` y
-`web`. El worker también aplica migraciones con advisory lock, por lo que puede arrancar de forma
-segura aunque la API se reinicie.
+`./terra init`: db healthy → api healthy (migraciones) → bootstrap → worker/web.
+El worker también puede aplicar migraciones con advisory lock, pero el flujo oficial
+las aplica desde api.
 
-## Proyectos por ambiente
+## Persistencia
 
-| Ambiente | Proyecto | Imágenes |
-|---|---|---|
-| dev | `terra` | `terra-web/api/worker` |
-| prod | `terra-prod` | `terra-prod-web/api/worker` |
-
-Esto evita compartir volúmenes, red o imágenes entre desarrollo y producción.
-
-## Volúmenes de desarrollo y producción
-
-- Desarrollo: `data/dev` (bind, usuario de desarrollo).
-- Producción: `/srv/terra-data/prod` o `STORAGE_HOST_PATH_PROD`.
-- La ruta del host se configura en `.env`; nunca se expone al frontend.
+- Detener o eliminar contenedores no elimina el volumen PostgreSQL ni `data/dev`.
+- `./terra down --remove` no usa `-v`.
+- La recuperación tras eliminar contenedores está probada.

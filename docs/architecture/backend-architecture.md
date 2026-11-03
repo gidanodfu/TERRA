@@ -90,5 +90,5 @@ administrativa; eso vive en `downloads.Create` y en las políticas HTTP.
 
 ## Configuración
 
-`config.Load()` valida todo al arrancar. En producción exige HTTPS y claves Turnstile; siempre
-exige `DATABASE_URL`, `SESSION_SECRET`, OAuth y una clave AES de 32 bytes.
+`config.Load()` valida todo al arrancar: `DATABASE_URL`, `SESSION_SECRET`, OAuth, Turnstile
+y una clave AES de 32 bytes. La distribución local no exige HTTPS.

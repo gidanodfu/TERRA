@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terra-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Docker-only quality checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Validate required repository structure
+        run: |
+          set -eu
+          test -f deploy/compose.yaml
+          test -f deploy/scripts/_common.sh
+          test -x terra
+          test -f backend/Dockerfile
+          test -f frontend/Dockerfile
+          test -f .env.example
+          test -f docs/development/testing.md
+          echo "Estructura requerida presente."
+
+      - name: Prepare controlled local .env
+        run: |
+          set -eu
+          cp .env.example .env
+          chmod 600 .env
+          SESSION_SECRET="$(openssl rand -hex 32)"
+          TOKEN_KEY="$(openssl rand -base64 32)"
+          sed -i \
+            -e 's|^APP_ENV=.*|APP_ENV=development|' \
+            -e 's|^APP_PUBLIC_URL=.*|APP_PUBLIC_URL=http://localhost:8080|' \
+            -e 's|^POSTGRES_DB=.*|POSTGRES_DB=terra|' \
+            -e 's|^POSTGRES_USER=.*|POSTGRES_USER=terra|' \
+            -e 's|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=ci-local-db-password|' \
+            -e 's|^DATABASE_URL=.*|DATABASE_URL=postgres://terra:ci-local-db-password@db:5432/terra?sslmode=disable|' \
+            -e "s|^SESSION_SECRET=.*|SESSION_SECRET=$SESSION_SECRET|" \
+            -e 's|^GOOGLE_CLIENT_ID=.*|GOOGLE_CLIENT_ID=ci-local-client-id|' \
+            -e 's|^GOOGLE_CLIENT_SECRET=.*|GOOGLE_CLIENT_SECRET=ci-local-client-secret|' \
+            -e 's|^GOOGLE_REDIRECT_URL=.*|GOOGLE_REDIRECT_URL=http://localhost:8080/api/v1/auth/google/callback|' \
+            -e 's|^GOOGLE_DRIVE_REDIRECT_URL=.*|GOOGLE_DRIVE_REDIRECT_URL=http://localhost:8080/api/v1/auth/google/drive/callback|' \
+            -e "s|^TOKEN_ENCRYPTION_KEY=.*|TOKEN_ENCRYPTION_KEY=$TOKEN_KEY|" \
+            -e 's|^TURNSTILE_SITE_KEY=.*|TURNSTILE_SITE_KEY=ci-local-site-key|' \
+            -e 's|^TURNSTILE_SECRET_KEY=.*|TURNSTILE_SECRET_KEY=ci-local-turnstile-secret|' \
+            -e 's|^TURNSTILE_HOSTNAME=.*|TURNSTILE_HOSTNAME=localhost|' \
+            -e 's|^STORAGE_HOST_PATH=.*|STORAGE_HOST_PATH=../data/dev|' \
+            -e 's|^WEB_PORT=.*|WEB_PORT=8080|' \
+            -e 's|^DB_PORT=.*|DB_PORT=55432|' \
+            -e 's|^MIN_FREE_DISK_BYTES=.*|MIN_FREE_DISK_BYTES=104857600|' \
+            -e 's|^BOOTSTRAP_ADMIN_USERNAME=.*|BOOTSTRAP_ADMIN_USERNAME=admin|' \
+            -e 's|^BOOTSTRAP_ADMIN_PASSWORD=.*|BOOTSTRAP_ADMIN_PASSWORD=ci-local-admin-password|' \
+            .env
+          echo "Archivo .env de CI generado con valores ficticios (no secretos reales)."
+
+      - name: Validate environment
+        run: ./terra check
+
+      - name: Build Docker images
+        run: ./terra build
+
+      - name: Initialize TERRA
+        run: ./terra init
+
+      - name: Run all frontend and backend tests
+        run: ./terra test all
+
+      - name: Collect diagnostics on failure
+        if: failure()
+        run: |
+          mkdir -p artifacts
+          ./terra status > artifacts/ci-status.txt 2>&1 || true
+          ./terra doctor > artifacts/ci-doctor.txt 2>&1 || true
+          ./terra logs > artifacts/ci-logs.txt 2>&1 || true
+
+      - name: Upload test and diagnostic artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: terra-quality-artifacts
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop containers
+        if: always()
+        run: ./terra down --remove || true

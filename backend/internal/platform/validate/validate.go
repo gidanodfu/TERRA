@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
@@ -21,12 +23,18 @@ func MaxLen(fields map[string]string, key, value string, max int) {
 	}
 }
 
+// Slug produces an ASCII slug safe for database constraints and storage paths.
+// Accents are folded through NFD so "Área" and "Area" produce the same identifier.
 func Slug(value string) string {
+	lower := norm.NFD.String(strings.ToLower(strings.TrimSpace(value)))
 	var b strings.Builder
 	prevDash := false
-	for _, r := range strings.ToLower(strings.TrimSpace(value)) {
+	for _, r := range lower {
+		if unicode.Is(unicode.Mn, r) {
+			continue
+		}
 		switch {
-		case unicode.IsLetter(r) || unicode.IsDigit(r):
+		case r >= 'a' && r <= 'z' || r >= '0' && r <= '9':
 			b.WriteRune(r)
 			prevDash = false
 		case r == ' ' || r == '-' || r == '_':

@@ -1,76 +1,88 @@
-# Criterios de aceptación
+# Criterios de aceptación — distribución local
 
 ## Arquitectura
 
-- [x] `docker compose config` reconoce exactamente `web`, `api`, `worker`, `db`.
-- [x] API y worker usan la misma imagen con comandos distintos.
-- [x] PostgreSQL no publica puertos en producción.
-- [x] API monta documentos en solo lectura; worker en escritura; web/db no los montan.
-- [x] Reiniciar el stack conserva la base y los documentos.
-- [x] Migraciones y bootstrap se ejecutan dentro del servicio `api` existente.
+- [x] Un único `deploy/compose.yaml`.
+- [x] Exactamente `web`, `api`, `worker`, `db`.
+- [x] API y worker comparten imagen con comandos independientes.
+- [x] `web` usa Vite dev server y proxy `/api`/SSE.
+- [x] API monta documentos en solo lectura; worker en escritura.
+- [x] PostgreSQL usa volumen persistente.
+- [x] Reiniciar el stack conserva base y documentos.
+- [x] Migraciones y bootstrap se ejecutan dentro de `api`.
+- [x] No se requieren Go, Node, npm ni PostgreSQL en el host.
 
 ## Identidad
 
-- [ ] Un trabajador completa login Google y onboarding en navegador real (pendiente de redirect URIs).
-- [x] Login administrativo emite sesión y cookies; CSRF es obligatorio.
+- [ ] Login Google y onboarding con una cuenta real (requiere redirect URIs).
+- [x] Login administrativo emite sesión y cookies; CSRF obligatorio.
 - [x] Turnstile inválido es rechazado.
-- [x] Rate limit responde 429 tras el límite.
-- [x] El primer administrador se crea una vez; el bootstrap repetido no lo modifica.
-- [x] Suspensión/desactivación invalida sesiones.
-- [x] Un cargo de otra área o inactivo es rechazado.
+- [x] Rate limit responde 429.
+- [x] Bootstrap idempotente; no sobrescribe credenciales.
+- [x] Suspensión invalida sesiones.
+- [x] Cargo de otra área o inactivo rechazado.
 
 ## Drive
 
-- [ ] Dos cuentas personales reales conectadas y árboles reconstruidos (requiere consentimiento real).
-- [x] La URL de autorización de Drive solicita `drive.readonly`, `offline`, `consent`, PKCE y state.
-- [x] La cuenta autorizada debe coincidir con el `sub` de Google del usuario.
-- [x] Un refresh token inválido cambia la conexión a `reauthorization_required` y el trabajo a `waiting_authorization`.
-- [x] El adaptador pagina con `nextPageToken` y excluye papelera.
+- [ ] Dos cuentas reales conectadas y árboles reconstruidos (manual).
+- [x] Autorización con `drive.readonly`, `offline`, `consent`, PKCE y state.
+- [x] Verificación del `sub` de Google.
+- [x] Token inválido → `reauthorization_required` y `waiting_authorization`.
+- [x] Paginación y exclusión de papelera.
 - [x] Exportación nativa y descarga binaria implementadas.
-- [x] Atajos no generan ciclos ni segunda copia.
+- [x] Shortcuts sin ciclos ni duplicación.
 
 ## Descargas
 
-- [x] Creación responde HTTP 202 y no descarga en la petición.
-- [x] Un trabajo sobrevive al cierre del navegador.
-- [x] El worker reclama con `SKIP LOCKED`, renueva lease y recupera trabajos vencidos.
+- [x] Creación HTTP 202 sin descargar en la petición.
+- [x] Trabajo independiente del navegador.
+- [x] Cola con `SKIP LOCKED`, lease y recuperación.
 - [x] Idempotency-Key repetida devuelve el mismo trabajo.
-- [x] Cancelación funciona en cola y se propaga al worker.
-- [x] Fallos parciales producen `partially_completed`; no se marca completado con pendientes.
-- [ ] Prueba de reinicio a mitad de transferencia con Drive real (pendiente de cuenta).
-- [x] Estructura original y carpetas vacías preservadas por diseño y pruebas de rutas.
-- [x] Snapshots de trabajos distintos no comparten directorio.
+- [x] Cancelación en cola y transferencia.
+- [x] Estados parciales/completados correctos.
+- [ ] Reinicio a mitad de transferencia con Drive real (manual).
+- [x] Estructura original y carpetas vacías.
+- [x] Snapshots independientes.
 
 ## Almacenamiento
 
-- [x] `../`, rutas absolutas, separadores inválidos y symlinks son rechazados por pruebas.
-- [x] Colisiones de nombres se resuelven con sufijo determinista.
-- [x] `.part` no se publica como archivo final.
-- [x] SHA-256 se calcula y almacena; MD5 se compara cuando existe.
-- [x] Acceso sin sesión devuelve 401; usuario ajeno devuelve 403.
-- [x] Acceso administrativo a documento genera auditoría.
+- [x] Traversal, rutas absolutas y symlinks rechazados por pruebas.
+- [x] Colisiones con sufijo determinista.
+- [x] `.part` no se publica como final.
+- [x] SHA-256 y MD5 cuando existe.
+- [x] Acceso 401/403 correcto.
+- [x] Acceso administrativo auditado.
 
 ## Interfaz
 
-- [x] Rutas del trabajador y del administrador separadas por rol.
-- [x] Selector de carpetas con navegación, selección y advertencia de solapamiento.
-- [x] Dashboard, historial, almacenamiento y auditoría funcionales.
+- [x] Rutas separadas por rol.
+- [x] Selector de carpetas y solapamiento.
+- [x] Dashboard, historial, almacenamiento y auditoría.
 - [x] SSE y fallback REST.
 - [x] Estados loading/empty/error/partial/completed.
-- [x] Layout responsive con menú móvil.
-- [ ] Pruebas E2E automatizadas en navegador (recomendado, no implementado).
+- [x] Responsive.
+- [x] E2E Playwright dentro de Docker.
+
+## Pruebas
+
+- [x] Backend unit + `go vet` en `api`.
+- [x] Backend integration con `terra_test` aislado.
+- [x] Frontend unit e integration con Vitest/RTL.
+- [x] Frontend lint, build y cobertura.
+- [x] E2E Playwright + Chromium en `web`.
+- [x] `./terra test all` ejecutado.
+- [x] Resultados en `artifacts/`.
 
 ## Operación
 
-- [x] Healthchecks para los cuatro servicios.
-- [x] Un solo comando de inicialización (`init.sh dev`).
-- [x] Scripts oficiales de check/build/init/up/down/restart/status/logs/migrate/bootstrap/test/backup/restore/help.
-- [x] Ambientes dev/prod con archivos, proyectos, imágenes y volúmenes separados.
-- [x] `down.sh` e `init.sh` conservan volúmenes y datos.
-- [x] Recuperación tras eliminar los cuatro contenedores probada en desarrollo.
-- [x] Primera instalación aislada probada con proyecto y almacenamiento propios.
-- [x] Backup verificado y restauración ensayada con marcador.
-- [x] Scripts validados con `bash -n` y ShellCheck.
-- [x] Documentación operativa completa en `docs/operations/`.
-- [ ] Restauración completa ensayada por la institución (requiere entorno productivo).
-- [ ] Aprobación de límites y política institucional (externa).
+- [x] `./terra` con check, doctor, build, init, up, down, restart, status, logs,
+  shell, db, migrate, bootstrap, test, backup, restore, help.
+- [x] Recuperación tras eliminar contenedores conservando el volumen.
+- [x] `down --remove` conserva volúmenes.
+- [x] Backup/verificación/restauración local.
+- [x] `bash -n` y ShellCheck sin advertencias.
+- [x] Documentación en `docs/development/`.
+- [x] Dockerfile y Compose sin configuraciones de producción.
+- [x] `.env.example` exclusivamente local.
+- [x] `.env.production.example` eliminado.
+- [x] CI Docker-only sin deploy.

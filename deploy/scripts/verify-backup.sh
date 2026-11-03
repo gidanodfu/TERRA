@@ -47,12 +47,8 @@ fi
 if [[ "$dump" == *.gpg ]]; then
   terra_warn "Dump cifrado: no se puede validar con pg_restore sin la clave."
 else
-  if command -v pg_restore >/dev/null 2>&1; then
-    pg_restore --list "$dump" >/dev/null || terra_die "pg_restore no reconoce el dump."
-  else
-    terra_info "pg_restore local no disponible; validando con la imagen oficial…"
-    "$TERRA_DOCKER_BIN" run --rm -i postgres:18-alpine pg_restore --list < "$dump" >/dev/null \
-      || terra_die "pg_restore no reconoce el dump."
-  fi
+  terra_require_db_running
+  terra_compose exec -T db pg_restore --list < "$dump" >/dev/null \
+    || terra_die "pg_restore no reconoce el dump."
 fi
 terra_ok "Backup válido: $dir"

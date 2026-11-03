@@ -1,134 +1,83 @@
 # Progreso de implementación
 
-Actualizado: 2026-11-03.
+Actualizado: refactorización de distribución exclusivamente local.
 
-## Implementado
+## Estado
 
-### Backend
+TERRA funciona como distribución de desarrollo local mediante Docker. Un único
+`deploy/compose.yaml` define exactamente `web`, `api`, `worker` y `db`. El host solo
+necesita Docker, Compose, Bash y Git.
 
-- API Go modular con módulos `auth`, `users`, `organization`, `drive`, `downloads`, `storage`, `admin`, `audit` y `platform`.
-- Worker independiente (`cmd/worker`) con cola PostgreSQL, leases, heartbeat y recuperación.
-- Bootstrap idempotente (`cmd/bootstrap`).
-- Migraciones embebidas (4 archivos) con lock de asesoría.
-- Autenticación Google (OAuth/OIDC), login local Argon2id, Turnstile, sesiones y CSRF.
-- RBAC `admin`/`user`; cargos organizativos sin permisos de sistema.
-- OAuth Drive separado, refresh token cifrado, estados de conexión y consentimiento institucional.
-- Drive API v3 real: metadatos, paginación, carpetas, shortcuts, exportación y descarga.
-- Cola persistente con idempotencia, normalización de raíces, cancelación y reintentos.
-- Almacenamiento privado con sanitización por segmento, contención, anti-symlink y rename atómico.
-- SSE con snapshot/eventos y fallback REST.
-- Auditoría de operaciones sensibles y acceso administrativo a documentos.
+## Infraestructura
 
-### Frontend
+- Vite dev server en `web`, con HMR y proxy `/api`/SSE a `api:8080`.
+- API y worker con imagen backend compartida y comandos independientes.
+- Go, Node, npm, PostgreSQL y herramientas de pruebas dentro de contenedores.
+- PostgreSQL 18 con volumen `terra_terra-db`.
+- Dependencias del frontend en un volumen anónimo y cachés Go en `.cache/`.
+- Sin Nginx, sin Compose de producción/staging, sin `.env.production`.
+- `.env.example` exclusivamente local.
+- Comando unificado `./terra` y scripts en `deploy/scripts/`.
 
-- SPA React con rutas protegidas por sesión y rol.
-- Panel trabajador: inicio, perfil/onboarding, Drive + política, descargas, documentos, seguridad.
-- Panel administrativo: dashboard, trabajadores, organización, conexiones, asistente de descarga, trabajos, almacenamiento, auditoría y política.
-- Selector de carpetas con navegación, selección múltiple y advertencia de solapamiento.
-- Visualización de progreso por SSE y polling.
-- Estados loading/empty/error/partial y diseño responsive.
+## Funcionalidad
 
-### Infraestructura
+- OAuth Google, administración local, Turnstile, sesiones/CSRF y RBAC.
+- Perfiles, áreas, cargos, historial, política institucional y auditoría.
+- OAuth Drive separado, refresh tokens cifrados y estados de conexión.
+- Exploración de Mi unidad, shortcuts, exportación y descarga.
+- Cola persistente, leases, cancelaciones, reintentos y snapshots.
+- Paneles trabajador/administrador, SSE y exploradores.
 
-- Cuatro servicios: `web`, `api`, `worker`, `db`.
-- Nginx integrado en `web`, SSE sin buffering, CSP y cabeceras de seguridad.
-- Contenedores no root; API con volumen documental de solo lectura; worker con escritura.
-- PostgreSQL sin puerto publicado en producción; API/worker solo en la red Docker.
-- Healthchecks y límites de recursos.
-- Scripts de backup/restauración/consistencia/retención.
+## Pruebas ejecutadas
 
-## Automatización operativa (Fase 7)
+### Automatizadas dentro de Docker
 
-- `deploy/scripts/_common.sh` centraliza rutas, ambientes, validaciones, Compose, healthchecks,
-  confirmaciones y mensajes.
-- Scripts: `check`, `build`, `init`, `up`, `down`, `restart`, `status`, `logs`, `migrate`,
-  `bootstrap`, `test`, `backup`, `restore`, `verify-backup`, `consistency-check`, `retention`,
-  `help`.
-- Ambientes aislados por archivo y proyecto Docker: `terra`/`.env` y `terra-prod`/`.env.production`.
-- `init.sh` detecta volumen/datos previos, exige autorización para bases vacías y reutiliza datos.
-- `down.sh` no elimina volúmenes; `restore.sh` exige confirmación y doble confirmación en prod.
-- Nginx movido a `deploy/nginx/`; el build web usa contexto raíz y `.dockerignore`.
-- Nuevo binario `/app/migrate` ejecutado dentro de `api`.
-- Pruebas ShellCheck (`-S warning`) y `bash -n` sin hallazgos.
-- Recuperación tras eliminar los cuatro contenedores verificada: volumen conservado, `init.sh`
-  recreó servicios y se mantuvieron 2 usuarios y 4 migraciones.
-- Primera instalación aislada verificada en un proyecto de prueba (`terra-first`), puerto 8081,
-  almacenamiento temporal y bootstrap propio; fixture eliminado al finalizar.
-- Backup, verificación y restauración con marcador verificados; el marcador desapareció y los
-  datos originales permanecieron.
-- `test.sh dev all` ejecutado con unitarias Go, build frontend, integración PostgreSQL y E2E HTTP.
-- Validaciones negativas comprobadas: `.env` ausente, variable obligatoria ausente, Docker ausente,
-  ambiente inválido, servicio inválido, servicio Compose extra y restauración sin confirmación.
-- `check.sh prod` validado con un archivo de producción temporal (sin iniciar producción).
-
-## Pruebas ejecutadas y resultados reales
-
-### Automatizadas
-
-```text
-go test ./...
-ok  terra/internal/auth
-ok  terra/internal/downloads
-ok  terra/internal/drive
-ok  terra/internal/platform/crypto
-ok  terra/internal/platform/oauthstate
-ok  terra/internal/platform/password
-ok  terra/internal/storage
+```bash
+./terra test backend unit
+./terra test backend integration
+./terra test frontend unit
+./terra test frontend integration
+./terra test e2e
+./terra test frontend
+./terra test all
 ```
 
-También `go vet ./...` sin hallazgos y `npm run build` exitoso (Vite 8, 2087 módulos).
+Resultados:
 
-### Integración manual (stack Docker real)
+- Backend unit + `go vet`: correcto.
+- Backend integration contra `terra_test`: correcto (migraciones, FK compuesta,
+  cola/lease/cancelación/idempotencia, sesiones/CSRF, auditoría).
+- Frontend unit: 14 pruebas correctas.
+- Frontend integration: 6 pruebas correctas.
+- Frontend lint/build/coverage: correcto.
+- E2E Playwright: 3 pruebas correctas (login, proxy Vite, ruta protegida).
+- `./terra test all`: correcto.
 
-| Prueba | Resultado |
-|---|---|
-| `docker compose config` con 4 servicios | OK |
-| Migraciones al iniciar API/worker | OK (`0001`, `0002`, `0003`, `0004`) |
-| Bootstrap idempotente crea administrador | OK |
-| Login administrativo + cookies + CSRF | OK |
-| POST sin `X-CSRF-Token` rechazado (403) | OK |
-| Creación de área, cargo y política | OK |
-| Login con Turnstile inválido rechazado (403) | OK |
-| Rate limit de login: 7.º intento → 429 | OK |
-| Google OAuth start: `client_id`, redirect URI, PKCE, state, scopes | OK |
-| Creación de trabajo administrativo → HTTP 202 | OK |
-| Worker reclama trabajo y renueva lease | OK |
-| Refresh token inválido → conexión `reauthorization_required`, trabajo `waiting_authorization` | OK |
-| Idempotency-Key repetida → mismo job, header `Idempotent-Replayed` | OK |
-| Validación `selected_folders` vacío → 422 | OK |
-| SSE entrega snapshot + eventos y mantiene conexión | OK |
-| Dashboard, auditoría y changelog de eventos | OK |
-| Contraseña actual incorrecta → 422 con campo específico | OK |
-| Logout invalida sesión | OK |
+### Infraestructura local
 
-La prueba de login con Turnstile se realizó temporalmente con claves de prueba oficiales de
-Cloudflare y un arnés local; después se restauraron las claves reales del `.env`, se reconstruyó
-la API y se verificó que un token inválido vuelve a ser rechazado. No se conservó ningún bypass.
+- `./terra init --rebuild --no-cache`: cuatro servicios healthy, Vite proxy, API,
+  PostgreSQL, migraciones y bootstrap verificados.
+- Volumen PostgreSQL y usuarios conservados al eliminar contenedores.
+- Recuperación con `./terra init` tras eliminar los cuatro contenedores.
+- `./terra down --remove` conservó el volumen.
+- Backup local, verificación y restauración con marcador comprobados.
+- `bash -n` y ShellCheck sin advertencias.
+- Build de imágenes sin dependencias de Go/Node en el host.
+- Imágenes sin `.git` ni `.env`.
 
-### Smoke de interfaz en navegador (Playwright headless)
+## Pendiente externo
 
-- Se creó una sesión de administrador de prueba directamente en PostgreSQL y se recorrieron
-  `/app/admin`, trabajadores, organización, conexiones, descargas, trabajos, almacenamiento,
-  auditoría, política y seguridad.
-- Todos los encabezados esperados renderizaron; no hubo errores de página.
-- Se verificó el menú móvil (390×844) y el drawer de navegación.
-- El smoke detectó un bug real: `/auth/me` devolvía `principal.Identity` con claves JSON en
-  mayúsculas (`ID`, `Roles`), por lo que el SPA no reconocía el rol. Se corrigió para devolver el
-  `User` completo desde el repositorio y se revalidó el recorrido.
-- La sesión y el estado de prueba se eliminaron; `must_rotate_password` se restauró a `true`.
-- El script E2E no se versionó; se recomienda incorporarlo con Playwright en CI.
+- Consentimiento OAuth real con cuentas personales de prueba.
+- Verificación de Google del scope `drive.readonly`.
+- Texto aprobado de política institucional.
+- Pruebas con archivos reales de Drive (Docs/Sheets/Slides, shortcuts, revocaciones).
+- Ejecución remota real del workflow de GitHub Actions (se validó localmente).
 
 ## Limitaciones conocidas
 
-- No se completó un consentimiento OAuth real en navegador con una cuenta personal porque el
-  cliente de desarrollo aún debe registrar los redirect URIs exactos y la pantalla de
-  consentimiento debe habilitar los scopes. Ver `blockers.md`.
-- La verificación de Google para scope restringido no está realizada. **TERRA no está verificada
-  por Google.**
-- Las pruebas de descarga E2E con archivos reales (Docs/Sheets/Slides, shortcuts, árbol profundo)
-  requieren una cuenta de prueba autorizada; el adaptador implementa los endpoints oficiales y
-  está cubierto por pruebas unitarias de clasificación, pero no se ejecutó contra Drive real.
-- La retención es un script operativo explícito, no un borrado automático, para evitar pérdida
-  silenciosa de snapshots.
-- El frontend no tiene suite E2E automatizada versionada; se ejecutó un smoke headless descrito
-  arriba y se verificó la compilación. Se recomienda añadir Playwright con un usuario semilla a CI.
+- Los contenedores de desarrollo ejecutan las herramientas y el servidor Vite; no
+  representan una configuración de producción.
+- Las pruebas de integración de Drive usan fixtures y no contactan Google.
+- El E2E cubre humo de interfaz, proxy y autenticación anónima; no automatiza el
+  consentimiento Google/Turnstile real.
+- La restauración debe respetar la `TOKEN_ENCRYPTION_KEY` correspondiente.

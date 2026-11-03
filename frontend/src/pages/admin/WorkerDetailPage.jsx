@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Database, Save, UserRound } from 'lucide-react'
 import { api } from '../../services/api'
@@ -9,7 +9,6 @@ import {
   CardBody,
   DetailRow,
   Field,
-  Input,
   LoadingBlock,
   PageHeader,
   Select,
@@ -28,7 +27,7 @@ export default function WorkerDetailPage() {
   const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const data = await api.get(`/admin/users/${id}`)
       setDetail(data)
@@ -41,7 +40,7 @@ export default function WorkerDetailPage() {
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     load()
@@ -49,7 +48,7 @@ export default function WorkerDetailPage() {
       .get('/admin/areas')
       .then((data) => setAreas(data.data || []))
       .catch((err) => setError(err.message))
-  }, [id])
+  }, [load])
 
   useEffect(() => {
     if (!form.area_id) {

@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
 # TERRA - build.sh
-# Versión: 1.0.0
-# Descripción: construye las imágenes de frontend y backend (API/worker).
-# Uso: ./deploy/scripts/build.sh <dev|prod> [--no-cache] [--no-pull] [servicio...]
-# Requisitos: entorno validado; Docker BuildKit.
-# Efectos: crea imágenes para el proyecto del ambiente. No toca volúmenes,
-#          contenedores, documentos ni bases de datos.
-# Códigos: 0 correcto · 1 fallo de construcción · 2 uso incorrecto.
+# Versión: 2.0.0
+# Descripción: construye las imágenes locales de Vite y del backend.
+# Uso: ./deploy/scripts/build.sh [--no-cache] [--no-pull] [web|api|worker ...]
+# Requisitos: Docker con BuildKit.
+# Efectos: crea/actualiza imágenes. No toca contenedores, volúmenes ni datos.
+# Códigos: 0 correcto · 1 fallo · 2 uso incorrecto.
 # =============================================================================
 set -Eeuo pipefail
 # shellcheck source=_common.sh
@@ -16,23 +15,19 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 terra_enable_traps
 
 usage() {
-  cat <<'EOF'
-Uso: build.sh <dev|prod> [opciones] [web|api|worker ...]
+  cat <<'USAGE'
+Uso: build.sh [--no-cache] [--no-pull] [web|api|worker ...]
 
-Construye las imágenes del ambiente seleccionado. API y worker comparten la
-misma imagen backend; PostgreSQL usa una imagen fijada y no se reconstruye.
+Construye imágenes locales. api y worker comparten terra-backend:local.
+PostgreSQL usa una imagen fijada y no se reconstruye.
 
 Opciones:
   --no-cache    reconstruye sin caché
   --no-pull     no actualiza imágenes base
-  --skip-check  omite la prevalidación (uso interno)
+  --skip-check  omite prevalidación (uso interno)
   -h, --help    muestra esta ayuda
-EOF
+USAGE
 }
-
-if (($# == 0)); then usage; exit 2; fi
-terra_parse_environment "$1"
-shift
 
 no_cache=0
 pull=1
@@ -44,34 +39,35 @@ while (($# > 0)); do
     --no-pull) pull=0 ;;
     --skip-check) skip_check=1 ;;
     -h|--help) usage; exit 0 ;;
-    web|api|worker) services+=("$1") ;;
-    db) terra_die "La imagen de PostgreSQL está fijada y no se reconstruye desde el código." 2 ;;
+    web) services+=(web) ;;
+    api|worker) services+=(api) ;;
+    db) terra_die "La imagen de PostgreSQL está fijada y no se reconstruye." 2 ;;
     *) terra_error "Argumento inválido: $1"; usage; exit 2 ;;
   esac
   shift
 done
-if ((${#services[@]} == 0)); then services=(web api worker); fi
+if ((${#services[@]} == 0)); then services=(web api); fi
+# Deduplicar api si se pidieron api y worker.
+mapfile -t services < <(printf '%s\n' "${services[@]}" | sort -u)
 
 if [[ "$skip_check" != "1" ]]; then
-  bash "$TERRA_SCRIPT_DIR/check.sh" "$TERRA_ENV_SHORT" -q
+  bash "$TERRA_SCRIPT_DIR/check.sh" -q
 fi
 
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
-
 build_args=(build)
 [[ "$pull" == "1" ]] && build_args+=(--pull)
 [[ "$no_cache" == "1" ]] && build_args+=(--no-cache)
 build_args+=("${services[@]}")
 
 terra_step "Construyendo imágenes: ${services[*]}"
-terra_dim "Proyecto Docker: $TERRA_PROJECT · Ambiente: $TERRA_ENV_SHORT"
 if ! terra_compose "${build_args[@]}"; then
-  terra_error "La construcción falló. Revise la salida anterior."
+  terra_error "La construcción falló."
   exit 1
 fi
 
-terra_step "Verificando imágenes construidas"
+terra_step "Verificando imágenes"
 failed=0
 for service in "${services[@]}"; do
   image="$(terra_image_name "$service")"
@@ -83,8 +79,5 @@ for service in "${services[@]}"; do
     failed=1
   fi
 done
-if ((failed != 0)); then
-  exit 1
-fi
-
-terra_ok "Construcción completada sin modificar datos persistentes."
+if ((failed != 0)); then exit 1; fi
+terra_ok "Construcción completada sin modificar datos."

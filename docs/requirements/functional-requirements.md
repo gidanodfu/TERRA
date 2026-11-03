@@ -12,7 +12,7 @@ Convención: `RF-xx` se referencia en pruebas y criterios de aceptación.
 | RF-04 | Errores específicos por campo y cargo dependiente del área. | Validación backend + UI |
 | RF-05 | Administradores usan credenciales locales con Argon2id y Turnstile. | `/auth/admin/login` |
 | RF-06 | Rotación obligatoria de la contraseña inicial. | `must_rotate_password` |
-| RF-07 | Sesiones server-side con cookie HttpOnly, Secure en producción y CSRF. | `sessions`, `RequireAuth` |
+| RF-07 | Sesiones server-side con cookie HttpOnly, SameSite y CSRF. | `sessions`, `RequireAuth` |
 | RF-08 | Suspender/desactivar invalida sesiones y conserva historial. | Trigger PostgreSQL |
 | RF-09 | Primer administrador por bootstrap idempotente de un solo uso. | `cmd/bootstrap` |
 

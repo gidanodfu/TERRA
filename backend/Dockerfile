@@ -1,24 +1,11 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.27-alpine AS build
+# Development image: includes the Go toolchain so tests run inside Docker.
+FROM golang:1.27-alpine
+RUN apk add --no-cache ca-certificates git tzdata
 WORKDIR /src
-RUN apk add --no-cache ca-certificates
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \
-    && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker \
-    && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/bootstrap ./cmd/bootstrap \
-    && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
-
-FROM alpine:3.23
-RUN apk add --no-cache ca-certificates tzdata \
-    && addgroup -S -g 10001 terra \
-    && adduser -S -u 10001 -G terra terra
-WORKDIR /app
-COPY --from=build /out/api /app/api
-COPY --from=build /out/worker /app/worker
-COPY --from=build /out/bootstrap /app/bootstrap
-COPY --from=build /out/migrate /app/migrate
-USER 10001:10001
+RUN go build ./...
 EXPOSE 8080
-CMD ["/app/api"]
+CMD ["go", "run", "./cmd/api"]

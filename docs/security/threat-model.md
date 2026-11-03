@@ -9,7 +9,7 @@ sesiones, historial/auditoría, integridad de snapshots.
 |---|---|---|---|
 | **Spoofing** | Robo de sesión o login CSRF | Cookie HttpOnly + SameSite=Lax + CSRF token + state OAuth de un solo uso + PKCE | XSS en el origen podría actuar en nombre del usuario |
 | **Spoofing** | Conectar una cuenta Google ajena | Comparación `sub` de Drive con identidad de sesión; una conexión por usuario; `UNIQUE(google_subject)` | Requiere que el trabajador no comparta su sesión |
-| **Spoofing** | Bypass de Turnstile | Siteverify servidor, acción y hostname, rate limit, fallo cerrado | Claves de desarrollo no deben usarse en producción |
+| **Spoofing** | Bypass de Turnstile | Siteverify servidor, acción y hostname, rate limit, fallo cerrado | Usar claves del widget local correcto |
 | **Tampering** | Modificar documentos en disco | Volumen privado, permisos, rutas por UUID, checksums, rename atómico | Un administrador del host puede modificarlos; se recomienda monitoreo de integridad |
 | **Tampering** | Alterar el estado de un trabajo | PostgreSQL como fuente de verdad; transiciones en servicio; lease | Acceso directo a la BD por administradores de infraestructura |
 | **Repudiation** | Negar una descarga/consulta | Auditoría de creación, cancelación, conexión, política y acceso administrativo | La retención de logs/BD depende de la operación |
@@ -17,7 +17,7 @@ sesiones, historial/auditoría, integridad de snapshots.
 | **Information disclosure** | Fuga de refresh token | AES-256-GCM, nunca al frontend/logs, clave externa | Compromiso del host o de la clave |
 | **Information disclosure** | Path traversal/symlink | Sanitización por segmento, rechazo de `..`/absolutas, `Lstat`, `O_NOFOLLOW`, contención | Bugs futuros deben cubrirse con tests |
 | **Denial of service** | Descarga masiva agota disco | Límites por archivo/trabajo/usuario/área, `MIN_FREE_DISK_BYTES`, trabajos activos máximos | Valores deben aprobarse para el entorno real |
-| **Denial of service** | Abuso de login/Drive | Turnstile, rate limit, backoff, límite por cuenta | Rate limit en memoria por réplica; usar límites de borde en producción |
+| **Denial of service** | Abuso de login/Drive | Turnstile, rate limit, backoff, límite por cuenta | Rate limit en memoria por contenedor |
 | **Elevation of privilege** | Cargo “Administración” accede al panel | Roles de sistema separados; `RequireAdmin` en backend | Configuración incorrecta de roles por el administrador |
 | **Elevation of privilege** | CSRF en operación admin | Token CSRF de sesión + Origin | Navegadores muy antiguos sin soporte |
 | **SSRF/injection** | IDs manipulados hacia Google | Validación `^[A-Za-z0-9_-]+$` antes de construir consultas | Nuevos endpoints deben mantener la validación |

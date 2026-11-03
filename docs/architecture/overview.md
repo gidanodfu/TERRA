@@ -5,7 +5,7 @@ masivamente y el worker nunca sirve HTTP.
 
 ```mermaid
 flowchart LR
-    U[Trabajador / Administrador] -->|HTTPS| W[web<br/>React + Nginx]
+    U[Trabajador / Administrador] -->|HTTP local| W[web<br/>React + Vite]
     W -->|/api REST| A[api<br/>Go]
     W -->|/api SSE| A
     A <-->|SQL| D[(db<br/>PostgreSQL)]

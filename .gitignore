@@ -1,7 +1,6 @@
 .env
 .env.*
 !.env.example
-!.env.production.example
 data/
 node_modules/
 dist/
@@ -17,3 +16,5 @@ test-results/
 backups/
 
 artifacts/
+
+.cache/
