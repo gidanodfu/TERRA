@@ -69,3 +69,10 @@ Estas pruebas son manuales, opt-in y no deben usar datos personales reales.
 Los límites de `.env.example` son valores de desarrollo. No representan cuotas de
 Google ni límites institucionales. Cada entidad ajustará los suyos si adopta el
 proyecto fuera de esta distribución local.
+
+## 8. Rutas legales
+
+La distribución no incluye páginas de política de privacidad, términos y condiciones,
+aviso legal ni política de cookies. El login muestra esos documentos como pendientes
+de publicación institucional para no inventar rutas ni contenido legal. Cuando la
+entidad los publique, deben enlazarse a sus rutas reales.

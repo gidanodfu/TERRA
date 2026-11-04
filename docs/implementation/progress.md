@@ -50,7 +50,7 @@ Resultados:
 - Frontend unit: 14 pruebas correctas.
 - Frontend integration: 6 pruebas correctas.
 - Frontend lint/build/coverage: correcto.
-- E2E Playwright: 6 pruebas correctas (login, montaje React, @vite/client, React Refresh, proxy, HMR WebSocket).
+- E2E Playwright: 9 pruebas correctas (login, Inter, responsive, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
 - `./terra test all`: correcto.
 
 ### Infraestructura local
@@ -65,6 +65,7 @@ Resultados:
 - Build de imágenes sin dependencias de Go/Node en el host.
 - Imágenes sin `.git` ni `.env`.
 - Corregida la carga del frontend: `node_modules` visible en la imagen web, bind mounts individuales, `up` recrea web y doctor/verify detectan `/@vite/client` incorrecto.
+- Rediseñado el login como composición centrada de una columna, con paneles de trabajadores/administración, tarjeta legal y tipografía Inter local.
 
 ## Pendiente externo
 

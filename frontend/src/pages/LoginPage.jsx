@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Building2, LockKeyhole, ShieldCheck } from 'lucide-react'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowRight, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../app/AuthContext'
 import { api } from '../services/api'
-import { Alert, Button, Card, CardBody, Field, Input } from '../components/ui'
+import { Alert, Button, Field, Input, Spinner } from '../components/ui'
 import { Turnstile } from '../features/auth/Turnstile'
 
 const OAUTH_ERRORS = {
@@ -15,6 +15,15 @@ const OAUTH_ERRORS = {
   drive_connect_failed: 'No fue posible conectar Google Drive. Intente nuevamente.',
 }
 
+// No legal routes exist in this local distribution. The documents are shown as
+// pending institutional publications instead of inventing destinations.
+const LEGAL_DOCUMENTS = [
+  'Política de privacidad',
+  'Términos y condiciones',
+  'Aviso legal',
+  'Política de cookies',
+]
+
 export default function LoginPage() {
   const { user, loading, apply } = useAuth()
   const [params] = useSearchParams()
@@ -24,6 +33,7 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [error, setError] = useState(params.get('error') ? OAUTH_ERRORS[params.get('error')] || 'No fue posible iniciar sesión.' : '')
   const [submitting, setSubmitting] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   if (!loading && user) {
     if (user.status === 'pending_profile') return <Navigate to="/onboarding" replace />
@@ -62,53 +72,32 @@ export default function LoginPage() {
     }
   }
 
+  const connectWithGoogle = () => {
+    setGoogleLoading(true)
+    window.location.assign('/api/v1/auth/google/start')
+  }
+
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden bg-brand-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="relative z-10 flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10 text-lg font-bold">T</span>
-          <div>
-            <p className="text-lg font-semibold tracking-tight">TERRA</p>
-            <p className="text-xs text-brand-100">Gestión documental municipal</p>
-          </div>
-        </div>
-        <div className="relative z-10 max-w-md">
-          <h1 className="text-3xl font-semibold leading-tight">
-            Respaldo documental institucional, con trazabilidad y control.
-          </h1>
-          <p className="mt-4 text-sm leading-relaxed text-brand-100">
-            TERRA conserva la estructura original de Google Drive y clasifica cada snapshot por área, cargo y
-            trabajador. Los documentos permanecen en el servidor institucional.
-          </p>
-          <ul className="mt-8 space-y-3 text-sm text-brand-50">
-            <li className="flex items-center gap-3">
-              <ShieldCheck className="h-5 w-5 text-brand-300" /> Autorización individual del propietario del Drive.
-            </li>
-            <li className="flex items-center gap-3">
-              <LockKeyhole className="h-5 w-5 text-brand-300" /> Credenciales y tokens fuera del navegador.
-            </li>
-            <li className="flex items-center gap-3">
-              <Building2 className="h-5 w-5 text-brand-300" /> Clasificación administrativa municipal.
-            </li>
-          </ul>
-        </div>
-        <p className="relative z-10 text-xs text-brand-200">Portal interno · Acceso restringido</p>
-        <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-brand-700/60 blur-2xl" />
-        <div className="absolute -bottom-24 -left-10 h-72 w-72 rounded-full bg-brand-800/80 blur-2xl" />
-      </div>
+    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10 sm:px-6">
+      <div className="w-full max-w-[460px]">
+        <header className="mb-6 flex flex-col items-center text-center">
+          <span
+            className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-700 text-lg font-bold text-white shadow-sm"
+            aria-hidden="true"
+          >
+            T
+          </span>
+          <h1 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">TERRA</h1>
+          <p className="mt-1 text-sm text-slate-500">Gestión documental municipal</p>
+        </header>
 
-      <div className="flex items-center justify-center px-4 py-10 sm:px-8">
-        <div className="w-full max-w-md">
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-700 font-bold text-white">T</span>
-            <div>
-              <p className="font-semibold text-slate-900">TERRA</p>
-              <p className="text-xs text-slate-500">Gestión documental municipal</p>
-            </div>
+        <section className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Iniciar sesión</h2>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
+              Acceda al sistema utilizando su cuenta institucional o sus credenciales administrativas.
+            </p>
           </div>
-
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Iniciar sesión</h2>
-          <p className="mt-1 text-sm text-slate-500">Acceda con su cuenta institucional o como administrador.</p>
 
           {error ? (
             <div className="mt-5">
@@ -118,71 +107,96 @@ export default function LoginPage() {
             </div>
           ) : null}
 
-          <Card className="mt-5">
-            <CardBody>
-              <p className="text-sm font-semibold text-slate-900">Trabajadores</p>
-              <p className="mt-1 text-xs text-slate-500">Use su cuenta personal de Google autorizada por la institución.</p>
-              <a href="/api/v1/auth/google/start" className="btn-secondary mt-4 w-full">
-                <GoogleMark /> Continuar con Google
-              </a>
-            </CardBody>
-          </Card>
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+            <div className="text-center">
+              <h3 className="text-sm font-semibold text-slate-900">Trabajadores</h3>
+              <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
+                Utilice su cuenta personal de Google autorizada por la institución.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-secondary mt-4 w-full justify-center"
+              onClick={connectWithGoogle}
+              disabled={googleLoading}
+              aria-busy={googleLoading}
+            >
+              {googleLoading ? <Spinner className="h-4 w-4" /> : <GoogleMark />}
+              {googleLoading ? 'Redirigiendo a Google…' : 'Continuar con Google'}
+            </button>
+          </section>
 
-          <div className="my-6 flex items-center gap-3">
-            <span className="h-px flex-1 bg-slate-200" />
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Administración</span>
-            <span className="h-px flex-1 bg-slate-200" />
-          </div>
+          <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="text-center">
+              <h3 className="text-sm font-semibold text-slate-900">Administración</h3>
+              <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
+                Acceso al sistema mediante credenciales administrativas.
+              </p>
+            </div>
 
-          <form onSubmit={submit} noValidate>
-            <Card>
-              <CardBody className="space-y-4">
-                <Field label="Usuario" htmlFor="username" error={fieldErrors.username}>
-                  <Input
-                    id="username"
-                    autoComplete="username"
-                    value={form.username}
-                    onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    error={fieldErrors.username}
-                    placeholder="admin"
-                  />
-                </Field>
-                <Field label="Contraseña" htmlFor="password" error={fieldErrors.password}>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    error={fieldErrors.password}
-                    placeholder="••••••••••••"
-                  />
-                </Field>
-                <Field error={fieldErrors.turnstile}>
+            <form onSubmit={submit} noValidate className="mt-5 space-y-4">
+              <Field label="Usuario" htmlFor="username" error={fieldErrors.username}>
+                <Input
+                  id="username"
+                  autoComplete="username"
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  error={fieldErrors.username}
+                  placeholder="admin"
+                  disabled={submitting}
+                />
+              </Field>
+              <Field label="Contraseña" htmlFor="password" error={fieldErrors.password}>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  error={fieldErrors.password}
+                  placeholder="••••••••••••"
+                  disabled={submitting}
+                />
+              </Field>
+              <Field error={fieldErrors.turnstile}>
+                <div className="flex justify-center">
                   <Turnstile onToken={setTurnstileToken} />
-                </Field>
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? 'Verificando…' : 'Entrar como administrador'}
-                  {!submitting ? <ArrowRight className="h-4 w-4" /> : null}
-                </Button>
-              </CardBody>
-            </Card>
-          </form>
+                </div>
+              </Field>
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? <Spinner className="h-4 w-4" /> : null}
+                {submitting ? 'Verificando…' : 'Entrar como administrador'}
+                {!submitting ? <ArrowRight className="h-4 w-4" /> : null}
+              </Button>
+            </form>
+          </section>
+        </section>
 
-          <p className="mt-6 text-center text-xs text-slate-400">
+        <div className="mt-5 space-y-1.5 text-center text-xs leading-relaxed text-slate-500">
+          <p className="flex items-center justify-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
             TERRA no solicita ni almacena contraseñas personales de Google.
           </p>
-          <p className="mt-2 text-center text-xs text-slate-400">
-            ¿Problemas de acceso? Contacte al administrador del sistema.
-          </p>
-          <div className="mt-4 text-center">
-            <Link to="/" className="text-xs text-slate-400 hover:text-slate-600">
-              Portal interno
-            </Link>
-          </div>
+          <p>¿Problemas de acceso? Contacte al administrador del sistema.</p>
         </div>
+
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          <h2 className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Información legal
+          </h2>
+          <ul className="mt-2 grid gap-x-4 gap-y-1.5 text-center text-xs text-slate-500 sm:grid-cols-2 sm:text-left">
+            {LEGAL_DOCUMENTS.map((document) => (
+              <li key={document} className="truncate" title="Documento pendiente de publicación institucional">
+                {document}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-center text-[11px] text-slate-400 sm:text-left">
+            Documentos pendientes de publicación institucional.
+          </p>
+        </section>
       </div>
-    </div>
+    </main>
   )
 }
 

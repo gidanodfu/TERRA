@@ -106,7 +106,7 @@ adicional y sin rollback automático.
 - `./terra test frontend unit`: 14 pruebas correctas.
 - `./terra test frontend integration`: 6 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 6 pruebas Playwright correctas (montaje React, Vite client, React Refresh, proxy, HMR).
+- `./terra test e2e`: 9 pruebas Playwright correctas (login, Inter, responsive, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Backup local, verificación y restauración con marcador.
@@ -150,3 +150,14 @@ Corrección:
 - `./terra doctor` y `terra_verify_stack` comprueban puerto, dependencias, Vite client,
   React Refresh y módulos;
 - E2E comprueba montaje de React y WebSocket HMR.
+
+## 16. Rediseño del login
+
+La pantalla `/` se reconstruyó como composición centrada de una columna: identidad
+TERRA, tarjeta de autenticación con paneles independientes para trabajadores y
+administración, textos informativos y tarjeta legal inferior. Se eliminó el bloque
+verde lateral y se aplicó Inter local (400–700) a todo el frontend.
+
+No se modificaron backend, OAuth, Turnstile, sesiones, rutas funcionales ni otras
+páginas. No existían rutas legales en el repositorio, por lo que los cuatro documentos
+se muestran como pendientes de publicación institucional, sin inventar destinos.
