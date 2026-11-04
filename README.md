@@ -172,14 +172,16 @@ contenedor.
 
 ## 13. Desarrollo frontend
 
-Los directorios `src/`, `public/`, `tests/` y las configuraciones de desarrollo se
-montan en `/app`; Vite aplica HMR. `node_modules` se instala dentro de la imagen web y
-nunca en el host.
+Las dependencias del frontend se instalan con `npm ci` dentro de la imagen `web` y no
+se montan desde el host. Un `frontend/node_modules` local es residual, no forma parte
+del flujo operativo y no es necesario para ejecutar TERRA. Los comandos npm deben
+ejecutarse dentro del contenedor; Node.js en el host no es un requisito.
 
 ```bash
 ./terra logs web -f
-./terra shell web
-./terra build web   # tras cambiar package.json/lockfile
+./terra shell web                                  # shell interactivo
+docker compose exec -T web npm run test:unit       # comando individual
+./terra build web && ./terra up                    # tras cambiar package.json/lockfile
 ```
 
 Ver [docs/development/frontend-development.md](docs/development/frontend-development.md).

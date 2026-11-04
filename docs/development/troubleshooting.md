@@ -57,8 +57,9 @@ volume.
 ## Blank page / /@vite/client errors
 
 **Identify:** blank UI; browser requests `/@vite/client` and receives 404 or HTML.
-**Cause:** the web container cannot see `node_modules/vite` (stale mount/volume) or a
-static server is serving development HTML.
+**Cause:** the web container cannot see its image-layer `node_modules/vite`
+(incomplete or outdated image), or a static server is serving development HTML.
+`node_modules` is not mounted from the host.
 **Diagnose:**
 
 ```bash
@@ -123,7 +124,7 @@ Chromium is installed in the web image. Rebuild the web image:
 ./terra up
 ```
 
-Run `./terra shell web` and then `npm run test:e2e` for details.
+Run `./terra test e2e` or `docker compose exec -T web npm run test:e2e` for details.
 
 ## Container removed accidentally
 

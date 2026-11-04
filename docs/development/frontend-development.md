@@ -23,16 +23,26 @@ port with `WEB_PORT` in `.env`.
 
 ## Live editing
 
-Source files under `src/`, `public/`, `tests/` and development configs are bind-mounted into `/app`. Changes to `src/` are reflected through
-Vite HMR. `node_modules` is installed in the web image and never on the host. Rebuild and recreate
-the web service after changing `package.json`/`package-lock.json`.
+Source files under `src/`, `public/`, `tests/` and development configs are bind-mounted into `/app`. Changes to `src/` are reflected through Vite HMR.
 
-After changing `package.json` or `package-lock.json`, rebuild the web image:
+`node_modules` is installed in the web image with `npm ci` during the build and is not bind-mounted from the host. A local `frontend/node_modules` is not part of TERRA's operational flow; if it exists, it is a residual from a manual host install and does not affect Docker.
+
+`npm`, Vite, Vitest and Playwright run inside the `web` container:
+
+```bash
+./terra shell web                                  # interactive shell
+docker compose exec -T web npm run test:unit       # one-off command
+docker compose exec -T web npm run lint
+```
+
+After changing `package.json` or `package-lock.json`, rebuild and recreate the web service:
 
 ```bash
 ./terra build web
 ./terra up
 ```
+
+Node.js is not required on the host; it is only part of the web image.
 
 ## Vite client y React Refresh
 
