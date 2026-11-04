@@ -23,8 +23,8 @@ export default function OnboardingPage() {
   if (!user) return <Navigate to="/" replace />
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-surface">
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-slate-200 bg-card">
         <div className="mx-auto flex h-16 max-w-4xl items-center gap-3 px-4 sm:px-6">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-700 font-bold text-white">T</span>
           <div>
@@ -56,7 +56,7 @@ export default function OnboardingPage() {
 
         <Card>
           <CardBody>
-            <div className="mb-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+            <div className="mb-5 rounded-xl bg-muted p-4 text-sm text-slate-600">
               Cuenta de Google verificada: <strong className="text-slate-800">{user.email || '—'}</strong>
             </div>
             <ProfileForm

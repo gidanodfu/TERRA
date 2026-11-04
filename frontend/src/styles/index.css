@@ -7,8 +7,12 @@
   --foreground: #1e293b;
   --surface: #ffffff;
   --surface-secondary: #f8fafc;
+  --surface-tertiary: #ffffff;
+  --card: #ffffff;
+  --shell: #f1f5f9;
+  --table-head: #f8fafc;
   --border: #e2e8f0;
-  --muted: #64748b;
+  --muted: #f8fafc;
   --muted-foreground: #94a3b8;
   --primary: #047857;
   --primary-foreground: #ffffff;
@@ -21,33 +25,37 @@
 
 .dark {
   color-scheme: dark;
-  --background: #080d16;
-  --foreground: #f8fafc;
-  --surface: #111827;
-  --surface-secondary: #0b1220;
-  --border: #1e293b;
-  --muted: #8b9bb1;
-  --muted-foreground: #8b9bb1;
+  --background: #000000;
+  --foreground: #ffffff;
+  --surface: #080808;
+  --surface-secondary: #101010;
+  --surface-tertiary: #181818;
+  --card: #101010;
+  --shell: #000000;
+  --table-head: #181818;
+  --border: #262626;
+  --muted: #171717;
+  --muted-foreground: #a3a3a3;
   --primary: #047857;
   --primary-foreground: #ffffff;
-  --sidebar-background: #111827;
-  --sidebar-foreground: #f8fafc;
-  --input-background: #0b1220;
-  --input-border: #334155;
+  --sidebar-background: #050505;
+  --sidebar-foreground: #ffffff;
+  --input-background: #080808;
+  --input-border: #5c5c5c;
   --focus-ring: #10b981;
 
-  /* Escala slate reinterpretada como superficies y texto oscuro. */
-  --color-slate-50: #080d16;
-  --color-slate-100: #0b1220;
-  --color-slate-200: #1e293b;
-  --color-slate-300: #334155;
-  --color-slate-400: #8b9bb1;
-  --color-slate-500: #a7b6c8;
-  --color-slate-600: #c7d2e0;
-  --color-slate-700: #dde5ef;
-  --color-slate-800: #eef2f7;
-  --color-slate-900: #f8fafc;
-  --color-slate-950: #020617;
+  /* Escala slate reinterpretada sobre negro puro. */
+  --color-slate-50: var(--surface-secondary);
+  --color-slate-100: var(--muted);
+  --color-slate-200: var(--border);
+  --color-slate-300: var(--input-border);
+  --color-slate-400: var(--muted-foreground);
+  --color-slate-500: #b8b8b8;
+  --color-slate-600: #d4d4d4;
+  --color-slate-700: #e5e5e5;
+  --color-slate-800: #f2f2f2;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #000000;
 
   /* Verde institucional: fondos profundos, acentos luminosos. */
   --color-brand-50: #052e21;
@@ -114,6 +122,10 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-card: var(--card);
+  --color-shell: var(--shell);
+  --color-table-head: var(--table-head);
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
@@ -138,14 +150,14 @@
     @apply outline-2 outline-offset-2 outline-focus-ring;
   }
   .dark option {
-    background-color: var(--surface);
+    background-color: var(--surface-tertiary);
     color: var(--foreground);
   }
 }
 
 @layer components {
   .card {
-    @apply min-w-0 rounded-2xl border border-border bg-surface shadow-sm;
+    @apply min-w-0 rounded-2xl border border-border bg-card shadow-sm;
   }
   .card-body {
     @apply p-5 sm:p-6;
@@ -172,7 +184,8 @@
   }
   .input {
     @apply block w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm text-slate-900
-      placeholder:text-muted-foreground focus:border-brand-600 focus:ring-0 disabled:bg-slate-100;
+      placeholder:text-muted-foreground focus:border-brand-600 focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-100
+      disabled:text-slate-500;
   }
   .label {
     @apply mb-1.5 block text-sm font-medium text-slate-700;
@@ -192,7 +205,7 @@
     @apply min-w-full divide-y divide-slate-200 text-sm;
   }
   .table thead {
-    @apply bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+    @apply bg-table-head text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
   }
   .table th {
     @apply whitespace-nowrap px-4 py-3;
@@ -204,8 +217,8 @@
     @apply divide-y divide-slate-100 bg-surface;
   }
   .code-block {
-    background-color: #060b14;
-    color: #dbeafe;
+    background-color: #0a0a0a;
+    color: #e5e5e5;
   }
 }
 

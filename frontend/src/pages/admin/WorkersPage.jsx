@@ -98,7 +98,7 @@ export default function AdminWorkers() {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50">
+                  <tr key={user.id} className="hover:bg-muted">
                     <td>
                       <Link to={`/app/admin/workers/${user.id}`} className="font-medium text-brand-800 hover:underline">
                         {user.display_name || `${user.first_name} ${user.last_name}`}

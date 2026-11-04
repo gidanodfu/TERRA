@@ -78,7 +78,7 @@ export default function PolicyPage() {
                 <span className="rounded-full bg-brand-50 px-3 py-1 font-medium text-brand-800">{current.version}</span>
                 <span>Publicada el {formatDate(current.published_at)}</span>
               </div>
-              <div className="mt-3 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
+              <div className="mt-3 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-muted p-4 text-sm leading-relaxed text-slate-700">
                 {current.content}
               </div>
             </>

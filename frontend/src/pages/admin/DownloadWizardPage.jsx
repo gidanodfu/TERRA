@@ -249,21 +249,21 @@ export default function DownloadWizardPage() {
           )}
 
           <div className="mt-4 grid gap-3 text-sm @lg:grid-cols-2">
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-muted p-3">
               <p className="text-xs text-slate-500">Trabajador</p>
               <p className="font-medium text-slate-800">{worker?.display_name || '—'}</p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-muted p-3">
               <p className="text-xs text-slate-500">Alcance</p>
               <p className="font-medium text-slate-800">
                 {scope === 'my_drive_full' ? 'Mi unidad completa' : `${folders.length} carpeta(s) seleccionada(s)`}
               </p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-muted p-3">
               <p className="text-xs text-slate-500">Clasificación</p>
               <p className="font-medium text-slate-800">{worker?.area_name || '—'} / {worker?.position_name || '—'}</p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-muted p-3">
               <p className="text-xs text-slate-500">Destino</p>
               <p className="break-all font-medium text-slate-800">Snapshot independiente por trabajo</p>
             </div>

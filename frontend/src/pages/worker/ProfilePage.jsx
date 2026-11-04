@@ -16,7 +16,7 @@ export default function WorkerProfile() {
       />
       <Card>
         <CardBody>
-          <div className="mb-5 flex items-center gap-3 rounded-xl bg-slate-50 p-4">
+          <div className="mb-5 flex items-center gap-3 rounded-xl bg-muted p-4">
             <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-100 text-brand-800">
               <UserRound className="h-5 w-5" />
             </span>

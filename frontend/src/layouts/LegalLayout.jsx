@@ -4,7 +4,7 @@ import { LEGAL_LINKS } from '../features/legal/links'
 
 export default function LegalLayout({ title, intro, sections, currentPath }) {
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 sm:py-12">
+    <div className="min-h-screen bg-shell px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto w-full max-w-[900px]">
         <header className="mb-6 text-center">
           <Link to="/" className="inline-block focus:rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">
@@ -13,7 +13,7 @@ export default function LegalLayout({ title, intro, sections, currentPath }) {
           </Link>
         </header>
 
-        <article className="rounded-[20px] border border-slate-200 bg-surface p-6 shadow-sm sm:p-10">
+        <article className="rounded-[20px] border border-slate-200 bg-card p-6 shadow-sm sm:p-10">
           <header className="border-b border-slate-200 pb-6">
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Información legal</p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>

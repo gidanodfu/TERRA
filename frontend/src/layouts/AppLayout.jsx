@@ -88,7 +88,7 @@ function Sidebar({ nav, user, onLogout, onNavigate }) {
       </nav>
 
       <div className="border-t border-slate-200 p-3">
-        <div className="rounded-xl bg-slate-50 px-3 py-3">
+        <div className="rounded-xl bg-muted px-3 py-3">
           <p className="truncate text-sm font-medium text-slate-800" title={user?.display_name || user?.email}>{user?.display_name || user?.email}</p>
           <p className="truncate text-xs text-slate-500">{roleLabels[user?.roles?.[0]] || 'Usuario'}</p>
           {user?.area_name ? <p className="mt-1 truncate text-xs text-slate-400" title={user.area_name}>{user.area_name}</p> : null}
@@ -131,7 +131,7 @@ export default function AppLayout() {
   )
 
   return (
-    <div className="h-dvh bg-slate-100 p-3 sm:p-4">
+    <div className="h-dvh bg-shell p-3 sm:p-4">
       <div className="mx-auto flex h-full w-full max-w-[1920px] gap-3 sm:gap-4">
         <aside
           data-testid={testIds.sidebar}

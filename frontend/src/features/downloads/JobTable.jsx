@@ -21,7 +21,7 @@ export default function JobTable({ jobs, basePath, showOwner = false }) {
         </thead>
         <tbody>
           {jobs.map((job) => (
-            <tr key={job.id} className="hover:bg-slate-50">
+            <tr key={job.id} className="hover:bg-muted">
               <td>
                 <Link to={`${basePath}/${job.id}`} className="font-medium text-brand-800 hover:underline">
                   {job.id.slice(0, 8).toUpperCase()}

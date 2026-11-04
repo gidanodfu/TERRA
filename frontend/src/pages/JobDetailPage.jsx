@@ -198,7 +198,7 @@ export default function JobDetailPage({ basePath }) {
                 <p className="text-xs text-red-700">Fallidos</p>
                 <p className="text-xl font-semibold text-red-900">{job.failed_items}</p>
               </div>
-              <div className="rounded-xl bg-slate-50 p-3">
+              <div className="rounded-xl bg-muted p-3">
                 <p className="text-xs text-slate-600">Tamaño total</p>
                 <p className="text-xl font-semibold text-slate-900">{formatBytes(job.total_bytes)}</p>
               </div>
@@ -232,7 +232,7 @@ export default function JobDetailPage({ basePath }) {
           ) : job.roots?.length ? (
             <ul className="mt-2 space-y-2">
               {job.roots.map((root) => (
-                <li key={root.google_folder_id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm">
+                <li key={root.google_folder_id} className="rounded-xl bg-muted px-3 py-2 text-sm">
                   <p className="font-medium text-slate-800">Mi unidad / {root.source_path}</p>
                   <p className="text-xs text-slate-500">Drive ID: {root.google_folder_id}</p>
                 </li>

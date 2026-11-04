@@ -29,7 +29,7 @@ import { Spinner } from '../components/ui'
 
 function FullScreenLoader() {
   return (
-    <div className="grid min-h-screen place-items-center bg-slate-50">
+    <div className="grid min-h-screen place-items-center bg-background">
       <div className="flex items-center gap-3 text-sm text-slate-500">
         <Spinner /> Verificando sesión…
       </div>

@@ -58,7 +58,7 @@ export default function WorkerDocuments() {
               </thead>
               <tbody>
                 {files.map((file) => (
-                  <tr key={file.id} className="hover:bg-slate-50">
+                  <tr key={file.id} className="hover:bg-muted">
                     <td>
                       <p className="max-w-xs truncate font-medium text-slate-800" title={file.name}>
                         {file.name}

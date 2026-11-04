@@ -73,14 +73,20 @@ parpadeos. `ThemeToggle` es el único control de cambio y aparece junto a «Cerr
 sesión» en las sidebars administrativa y del trabajador; ambos comparten el mismo
 estado y la misma clave persistida.
 
-Los tokens semánticos (`--background`, `--foreground`, `--surface`,
-`--surface-secondary`, `--border`, `--muted`, `--input-*`, `--sidebar-*`,
-`--focus-ring`) viven en `:root` y `.dark`. Además, la escala `slate`, los acentos
-`brand` y las paletas de estado (`emerald`, `amber`, `red`, `orange`, `sky`) se
-reinterpretan bajo `.dark`, de modo que las utilidades existentes adoptan el tema sin
-duplicar reglas por página. Las tarjetas y paneles usan `bg-surface`; los inputs usan
-`bg-input-background`; el foco global usa `--focus-ring`. `color-scheme: dark` adapta
-selects, date pickers y barras nativas, y Cloudflare Turnstile recibe el tema activo.
+Los tokens semánticos viven en `:root` y `.dark`: fondo `#000000`, texto `#ffffff`,
+superficies `#080808`/`#101010`/`#181818`, tarjetas `#101010`, sidebar `#050505`,
+cabecera de tabla `#181818`, borde `#262626`, muted `#171717`, muted-foreground
+`#a3a3a3`, input `#080808`, borde de input `#5c5c5c` y focus-ring verde `#10b981`.
+El borde de input se elevó desde el valor base `#353535` para cumplir contraste no
+textual 3:1. El tema claro conserva sus valores blancos y grises actuales.
+
+La escala `slate`, los acentos `brand` y las paletas de estado (`emerald`, `amber`,
+`red`, `orange`, `sky`) se reinterpretan bajo `.dark`, de modo que las utilidades
+existentes adoptan el tema sin duplicar reglas por página. El shell usa `bg-shell`;
+el workspace `bg-surface`; las tarjetas `bg-card`; las cabeceras de tabla
+`bg-table-head`; los inputs `bg-input-background`; los modales, tooltips y opciones
+`bg-surface-tertiary`. `color-scheme: dark` adapta selects, date pickers y barras
+nativas, y Cloudflare Turnstile recibe el tema activo.
 
 ## Sesión y CSRF
 

@@ -74,7 +74,7 @@ export default function SecurityPage() {
             </DetailRow>
             <DetailRow label="Último acceso">{formatDate(user?.last_login_at)}</DetailRow>
           </dl>
-          <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
+          <p className="mt-4 rounded-xl bg-muted p-3 text-xs text-slate-500">
             La sesión se mantiene en una cookie HttpOnly y no es accesible desde JavaScript. No se almacenan tokens de
             Google en el navegador.
           </p>

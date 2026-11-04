@@ -208,7 +208,7 @@ export default function WorkerDetailPage() {
               {history?.length ? (
                 <ul className="mt-3 space-y-3">
                   {history.map((entry) => (
-                    <li key={entry.id} className="rounded-xl bg-slate-50 p-3 text-sm">
+                    <li key={entry.id} className="rounded-xl bg-muted p-3 text-sm">
                       <p className="font-medium text-slate-800">
                         {entry.area_name || 'Sin área'} / {entry.position_name || 'Sin cargo'}
                       </p>

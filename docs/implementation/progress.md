@@ -74,6 +74,7 @@ Resultados:
 - Homologado el panel del trabajador con el shell administrativo: sidebar y workspace independientes, header interno, scroll propio, drawer móvil y test IDs worker-*.
 - Centrado y equilibrado el footer legal del login: encabezado, enlaces en 2 columnas 2×2 y aviso institucional; 1 columna en 320 px.
 - Implementado el modo oscuro global con tokens semánticos, persistencia en localStorage, preferencia del sistema y selector en ambas sidebars.
+- Refinado el modo oscuro a True Black con jerarquía #000000/#050505/#080808/#101010/#181818, inputs y selects oscuros, tablas, modales, tooltips y alertas legibles.
 - Ajustado el campo «Contenido aprobado» de Política: ancho completo, borde, radio, altura 192–208 px, resize vertical y foco verde.
 - Rediseñado el login como composición centrada de una columna, con paneles de trabajadores/administración, tarjeta legal y tipografía Inter local.
 

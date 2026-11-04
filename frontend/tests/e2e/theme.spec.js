@@ -140,7 +140,7 @@ test('el tema oscuro se activa desde administración, persiste y se comparte con
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe('dark')
 
   const inactiveNav = page.locator('[data-testid="admin-sidebar"] nav a').nth(1)
-  await expect(inactiveNav).toHaveCSS('color', 'rgb(199, 210, 224)')
+  await expect(inactiveNav).toHaveCSS('color', 'rgb(212, 212, 212)')
 
   const darkColors = await page.evaluate(() => {
     const workspace = document.querySelector('[data-testid="admin-workspace"]')
@@ -148,13 +148,19 @@ test('el tema oscuro se activa desde administración, persiste y se comparte con
     return {
       body: getComputedStyle(document.body).backgroundColor,
       workspace: getComputedStyle(workspace).backgroundColor,
+      card: getComputedStyle(document.querySelector('.card')).backgroundColor,
       navText: getComputedStyle(nav).color,
       navBackground: getComputedStyle(document.querySelector('[data-testid="admin-sidebar"]')).backgroundColor,
       heading: getComputedStyle(document.querySelector('h1')).color,
     }
   })
+  expect(darkColors.body).toBe('rgb(0, 0, 0)')
+  expect(darkColors.workspace).toBe('rgb(8, 8, 8)')
+  expect(darkColors.card).toBe('rgb(16, 16, 16)')
+  expect(darkColors.heading).toBe('rgb(255, 255, 255)')
   expect(luminance(darkColors.body)).toBeLessThan(0.05)
   expect(luminance(darkColors.workspace)).toBeLessThan(0.1)
+  expect(luminance(darkColors.card)).toBeLessThan(0.1)
   expect(luminance(darkColors.heading)).toBeGreaterThan(0.7)
   expect(contrast(darkColors.navText, darkColors.navBackground)).toBeGreaterThanOrEqual(4.5)
 
@@ -172,14 +178,48 @@ test('el tema oscuro se activa desde administración, persiste y se comparte con
   await expect(page.locator('html')).toHaveClass(/dark/)
   expect(await page.evaluate(() => localStorage.getItem('terra-theme'))).toBe('dark')
 
+  const loginColors = await page.evaluate(() => ({
+    body: getComputedStyle(document.body).backgroundColor,
+    card: getComputedStyle(document.querySelector('section')).backgroundColor,
+  }))
+  expect(loginColors.body).toBe('rgb(0, 0, 0)')
+  expect(loginColors.card).toBe('rgb(16, 16, 16)')
+
+  await page.goto('/politica-de-privacidad')
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  const legalColors = await page.evaluate(() => ({
+    body: getComputedStyle(document.body).backgroundColor,
+    article: getComputedStyle(document.querySelector('article')).backgroundColor,
+  }))
+  expect(legalColors.body).toBe('rgb(0, 0, 0)')
+  expect(legalColors.article).toBe('rgb(16, 16, 16)')
+
   currentUser = workerUser
   await page.goto('/app')
   await expect(page.locator('html')).toHaveClass(/dark/)
+  const workerDarkColors = await page.evaluate(() => ({
+    body: getComputedStyle(document.body).backgroundColor,
+    workspace: getComputedStyle(document.querySelector('[data-testid="worker-workspace"]')).backgroundColor,
+    card: getComputedStyle(document.querySelector('.card')).backgroundColor,
+  }))
+  expect(workerDarkColors.body).toBe('rgb(0, 0, 0)')
+  expect(workerDarkColors.workspace).toBe('rgb(8, 8, 8)')
+  expect(workerDarkColors.card).toBe('rgb(16, 16, 16)')
   const workerToggle = page.getByRole('button', { name: 'Activar modo claro' })
   await expect(workerToggle).toBeVisible()
   await workerToggle.click()
   await expect(page.locator('html')).not.toHaveClass(/dark/)
   expect(await page.evaluate(() => localStorage.getItem('terra-theme'))).toBe('light')
+
+  const lightColors = await page.evaluate(() => ({
+    body: getComputedStyle(document.body).backgroundColor,
+    workspace: getComputedStyle(document.querySelector('[data-testid="worker-workspace"]')).backgroundColor,
+    card: getComputedStyle(document.querySelector('.card')).backgroundColor,
+  }))
+  expect(lightColors.body).toBe('rgb(248, 250, 252)')
+  expect(lightColors.workspace).toBe('rgb(255, 255, 255)')
+  expect(lightColors.card).toBe('rgb(255, 255, 255)')
 })
 
 test('sin preferencia se usa inicialmente el tema del sistema', async ({ browser }) => {
@@ -189,6 +229,7 @@ test('sin preferencia se usa inicialmente el tema del sistema', async ({ browser
   await darkPage.goto('/app/admin')
   await expect(darkPage.locator('html')).toHaveClass(/dark/)
   expect(await darkPage.evaluate(() => localStorage.getItem('terra-theme'))).toBeNull()
+  expect(await darkPage.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(0, 0, 0)')
   await darkContext.close()
 
   const lightContext = await browser.newContext({ colorScheme: 'light' })
@@ -197,6 +238,7 @@ test('sin preferencia se usa inicialmente el tema del sistema', async ({ browser
   await lightPage.goto('/app/admin')
   await expect(lightPage.locator('html')).not.toHaveClass(/dark/)
   expect(await lightPage.evaluate(() => localStorage.getItem('terra-theme'))).toBeNull()
+  expect(await lightPage.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(248, 250, 252)')
   await lightContext.close()
 })
 
@@ -244,33 +286,76 @@ test('modales, tablas, formularios y controles adoptan superficies oscuras', asy
     const tableHead = document.querySelector('table thead')
     const input = document.querySelector('input[aria-label="Buscar trabajadores"]')
     const select = document.querySelector('select[aria-label="Filtrar por estado"]')
+    const option = select?.querySelector('option')
+    const badge = document.querySelector('table tbody .badge')
     return {
       tableHead: getComputedStyle(tableHead).backgroundColor,
       row: getComputedStyle(document.querySelector('table tbody')).backgroundColor,
       input: getComputedStyle(input).backgroundColor,
+      inputBorder: getComputedStyle(input).borderTopColor,
       inputText: getComputedStyle(input).color,
+      selectBg: getComputedStyle(select).backgroundColor,
       selectScheme: getComputedStyle(select).colorScheme,
+      optionBg: option ? getComputedStyle(option).backgroundColor : null,
+      badgeBg: badge ? getComputedStyle(badge).backgroundColor : null,
+      badgeColor: badge ? getComputedStyle(badge).color : null,
     }
   })
-  expect(luminance(surfaces.tableHead)).toBeLessThan(0.05)
-  expect(luminance(surfaces.row)).toBeLessThan(0.1)
-  expect(luminance(surfaces.input)).toBeLessThan(0.05)
-  expect(luminance(surfaces.inputText)).toBeGreaterThan(0.7)
+  expect(surfaces.tableHead).toBe('rgb(24, 24, 24)')
+  expect(surfaces.row).toBe('rgb(8, 8, 8)')
+  expect(surfaces.input).toBe('rgb(8, 8, 8)')
+  expect(surfaces.inputBorder).toBe('rgb(92, 92, 92)')
+  expect(surfaces.inputText).toBe('rgb(255, 255, 255)')
+  expect(surfaces.selectBg).toBe('rgb(8, 8, 8)')
   expect(surfaces.selectScheme).toBe('dark')
+  expect(surfaces.optionBg).toBe('rgb(24, 24, 24)')
+  expect(surfaces.badgeBg).toBeTruthy()
+  expect(contrast(surfaces.badgeColor, surfaces.badgeBg)).toBeGreaterThanOrEqual(4.5)
+
+  const brightBackgrounds = await page.evaluate(() => {
+    const luminance = (color) => {
+      const match = color.match(/[\d.]+/g)
+      if (!match || match.length < 3) return 0
+      const [r, g, b] = match.map(Number)
+      const linear = (value) => {
+        const channel = value / 255
+        return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+      }
+      return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+    }
+    return [...document.querySelectorAll('body *')].filter((element) => {
+      if (element.tagName === 'IFRAME' || element.closest('iframe')) return false
+      const style = getComputedStyle(element)
+      const match = style.backgroundColor.match(/[\d.]+/g)
+      if (!match || match.length < 3) return false
+      const alpha = match[3] !== undefined ? Number(match[3]) : 1
+      if (alpha < 0.5) return false
+      const rect = element.getBoundingClientRect()
+      return luminance(style.backgroundColor) > 0.65 && rect.width > 30 && rect.height > 15
+    }).length
+  })
+  expect(brightBackgrounds).toBe(0)
+
+  const tooltip = page.getByRole('tooltip')
+  await page.getByRole('button', { name: 'Activar modo claro' }).hover()
+  await expect(tooltip).toHaveCSS('background-color', 'rgb(24, 24, 24)')
 
   await page.goto('/app/admin/organization')
   await expect(page.getByRole('heading', { name: 'Áreas y cargos', level: 1 })).toBeVisible()
+  const cardColors = await page.evaluate(() => [...document.querySelectorAll('.card')].map((element) => getComputedStyle(element).backgroundColor))
+  expect(cardColors.length).toBeGreaterThan(0)
+  expect(cardColors.every((color) => color === 'rgb(16, 16, 16)')).toBeTruthy()
   await page.getByRole('button', { name: 'Nueva área' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
   const dialogColors = await dialog.evaluate((element) => ({
     background: getComputedStyle(element).backgroundColor,
-    body: getComputedStyle(element.querySelector('[data-testid="modal-body"]')).backgroundColor,
-    text: getComputedStyle(element.querySelector('h2')).color,
+    wordmark: getComputedStyle(element.querySelector('h2')).color,
   }))
+  expect(dialogColors.background).toBe('rgb(24, 24, 24)')
+  expect(dialogColors.wordmark).toBe('rgb(255, 255, 255)')
   expect(luminance(dialogColors.background)).toBeLessThan(0.1)
-  expect(luminance(dialogColors.body)).toBeLessThan(0.1)
-  expect(luminance(dialogColors.text)).toBeGreaterThan(0.7)
+  expect(luminance(dialogColors.wordmark)).toBeGreaterThan(0.7)
 
   await page.goto('/app/admin/policy')
   await expect(page.getByRole('heading', { name: 'Política institucional', level: 1 })).toBeVisible()
@@ -281,7 +366,27 @@ test('modales, tablas, formularios y controles adoptan superficies oscuras', asy
     text: getComputedStyle(element).color,
     border: getComputedStyle(element).borderTopColor,
   }))
+  expect(textareaColors.background).toBe('rgb(8, 8, 8)')
+  expect(textareaColors.text).toBe('rgb(255, 255, 255)')
+  expect(textareaColors.border).toBe('rgb(92, 92, 92)')
   expect(luminance(textareaColors.background)).toBeLessThan(0.05)
   expect(luminance(textareaColors.text)).toBeGreaterThan(0.7)
   expect(luminance(textareaColors.border)).toBeGreaterThan(0.02)
+
+  await page.route('**/api/v1/admin/users**', (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: { code: 'internal_error', message: 'Error de prueba' } }),
+    }),
+  )
+  await page.goto('/app/admin/workers')
+  const alert = page.getByRole('alert')
+  await expect(alert).toBeVisible()
+  const alertColors = await alert.evaluate((element) => ({
+    background: getComputedStyle(element).backgroundColor,
+    text: getComputedStyle(element).color,
+  }))
+  expect(alertColors.background).toBe('rgb(42, 15, 20)')
+  expect(contrast(alertColors.text, alertColors.background)).toBeGreaterThanOrEqual(4.5)
 })

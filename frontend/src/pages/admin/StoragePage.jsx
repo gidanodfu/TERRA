@@ -55,7 +55,7 @@ export default function StoragePage() {
               </thead>
               <tbody>
                 {files.map((file) => (
-                  <tr key={file.id} className="hover:bg-slate-50">
+                  <tr key={file.id} className="hover:bg-muted">
                     <td>
                       <p className="max-w-xs truncate font-medium text-slate-800" title={file.name}>{file.name}</p>
                       <p className="text-xs text-slate-500">Job {file.job_id?.slice(0, 8)}</p>

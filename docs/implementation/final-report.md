@@ -210,8 +210,11 @@ El tema se centraliza en `ThemeContext` y `ThemeToggle`, con preferencia en
 el parpadeo. El selector aparece junto a «Cerrar sesión» en las dos sidebars. Los
 tokens semánticos y la reinterpretación de las escalas de color en `.dark` cubren
 sidebar, workspace, tarjetas, tablas, formularios, modales, alertas, estados vacíos y
-Turnstile. Validado en todas las rutas admin y worker, sin superficies claras ni textos
-oscuros olvidados.
+Turnstile. El tema oscuro se refinó a True Black: fondo `#000000`, sidebar `#050505`,
+workspace `#080808`, tarjetas `#101010`, tablas/modales `#181818`, bordes `#262626` y
+texto muted `#a3a3a3`. El borde de input `#5c5c5c` cumple contraste no textual 3:1.
+Validado en todas las rutas admin y worker, sin superficies claras ni textos oscuros
+olvidados.
 
 El campo «Contenido aprobado» de Política ocupa el 100 % del ancho de la tarjeta,
 coincide con «Identificador de versión», tiene borde de 1 px, radio de 12 px, altura

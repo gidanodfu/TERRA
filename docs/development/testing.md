@@ -143,7 +143,7 @@ installed on the host.
 | Admin layout / responsive | frontend | Browser | — | Playwright (320–2560 px, 500–1080 px height, zoom 200 %, container queries) | Covered |
 | Worker shell / scroll / drawer | frontend | Browser | — | Playwright (320–1920 px, two surfaces, independent scroll) | Covered |
 | Tables, forms, modals, long text | frontend | Browser | — | Playwright | Covered |
-| Theme light/dark, persistence, system preference | frontend | Browser + localStorage | — | Playwright | Covered |
+| Theme True Black / light, surfaces, dropdowns, persistence | frontend | Browser + localStorage | — | Playwright | Covered |
 | Legal footer alignment and legal routes | frontend | Browser | — | Playwright (2/1 columns, 320–1920 px) | Covered |
 | Policy content textarea width/focus/resize | frontend | Browser | — | Playwright | Covered |
 | SSE | downloads/API | HTTP | client hook | browser/proxy smoke | Partial |

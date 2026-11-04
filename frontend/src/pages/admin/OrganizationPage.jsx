@@ -135,7 +135,7 @@ export default function OrganizationPage() {
                       type="button"
                       onClick={() => setSelectedArea(area)}
                       className={`min-w-0 flex-1 rounded-lg px-2 py-1 text-left ${
-                        selectedArea?.id === area.id ? 'bg-brand-50' : 'hover:bg-slate-50'
+                        selectedArea?.id === area.id ? 'bg-brand-50' : 'hover:bg-muted'
                       }`}
                     >
                       <p className={`truncate text-sm font-medium ${selectedArea?.id === area.id ? 'text-brand-900' : 'text-slate-800'}`}>
@@ -260,7 +260,7 @@ export default function OrganizationPage() {
       >
         {positionModal ? (
           <form onSubmit={savePosition} className="space-y-4">
-            <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">Área: {selectedArea?.name}</p>
+            <p className="rounded-xl bg-muted p-3 text-sm text-slate-600">Área: {selectedArea?.name}</p>
             <Field label="Nombre del cargo" htmlFor="position-name">
               <Input
                 id="position-name"

@@ -71,7 +71,7 @@ export default function ConnectionsPage() {
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50">
+                  <tr key={row.id} className="hover:bg-muted">
                     <td>
                       <Link to={`/app/admin/workers/${row.user_id}`} className="font-medium text-brand-800 hover:underline">
                         {row.user_name || 'Trabajador'}

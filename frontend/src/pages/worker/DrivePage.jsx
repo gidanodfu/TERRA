@@ -196,7 +196,7 @@ export default function WorkerDrive() {
                     Versión vigente <strong className="text-slate-700">{policy.version}</strong> · publicada el{' '}
                     {formatDate(policy.published_at)}
                   </p>
-                  <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <details className="mt-3 rounded-xl border border-slate-200 bg-muted p-3">
                     <summary className="cursor-pointer text-sm font-medium text-slate-700">
                       Leer el contenido de la política
                     </summary>
