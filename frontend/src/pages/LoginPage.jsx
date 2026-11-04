@@ -166,23 +166,23 @@ export default function LoginPage() {
           <p>¿Problemas de acceso? Contacte al administrador del sistema.</p>
         </div>
 
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-surface px-4 py-4 shadow-sm">
+        <section className="@container mt-4 rounded-2xl border border-slate-200 bg-surface px-4 py-5 shadow-sm">
           <h2 className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
             Información legal
           </h2>
-          <ul className="mt-2 grid gap-x-4 gap-y-1.5 text-center text-xs text-slate-500 sm:grid-cols-2 sm:text-left">
+          <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-center text-xs text-slate-500 @[18rem]:grid-cols-2">
             {LEGAL_LINKS.map((link) => (
-              <li key={link.to} className="truncate">
+              <li key={link.to} className="min-w-0">
                 <Link
                   to={link.to}
-                  className="rounded underline decoration-slate-300 underline-offset-4 hover:text-brand-800 hover:decoration-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                  className="inline-block max-w-full rounded py-0.5 text-center underline decoration-slate-300 underline-offset-4 hover:text-brand-800 hover:decoration-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                 >
                   {link.title}
                 </Link>
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-center text-[11px] text-slate-400 sm:text-left">
+          <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-400">
             Contenido pendiente de aprobación institucional.
           </p>
         </section>

@@ -50,7 +50,7 @@ Resultados:
 - Frontend unit: 14 pruebas correctas.
 - Frontend integration: 6 pruebas correctas.
 - Frontend lint/build/coverage: correcto.
-- E2E Playwright: 28 pruebas correctas (layout admin, matriz responsive, tablas, formularios, modal, textos largos, panel del trabajador, tema claro/oscuro, persistencia, textarea de política, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
+- E2E Playwright: 30 pruebas correctas (layout admin, matriz responsive, tablas, formularios, modal, textos largos, panel del trabajador, tema claro/oscuro, persistencia, textarea de política, footer legal, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
 - `./terra test all`: correcto.
 
 ### Infraestructura local
@@ -71,6 +71,7 @@ Resultados:
 - Corregido el aprovechamiento de ancho: shell `max-w-[1920px]` (16 px de margen en 1920) y grids por container queries en dashboard y módulos.
 - Corregidos desbordamientos de tablas (`contain: layout` + scroll interno), selects/inputs (`min-w-0` y anchos acotados), textos largos (`wrap-anywhere`) y modales (`92dvh` con cuerpo desplazable).
 - Auditado en 320, 375, 430, 768, 960, 1024, 1152, 1280, 1440, 1920 px y alturas de 500–560 px; cuadrículas por container queries y sin scroll horizontal.
+- Centrado y equilibrado el footer legal del login: encabezado, enlaces en 2 columnas 2×2 y aviso institucional; 1 columna en 320 px.
 - Implementado el modo oscuro global con tokens semánticos, persistencia en localStorage, preferencia del sistema y selector en ambas sidebars.
 - Ajustado el campo «Contenido aprobado» de Política: ancho completo, borde, radio, altura 192–208 px, resize vertical y foco verde.
 - Rediseñado el login como composición centrada de una columna, con paneles de trabajadores/administración, tarjeta legal y tipografía Inter local.

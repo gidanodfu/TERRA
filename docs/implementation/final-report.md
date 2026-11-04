@@ -106,7 +106,7 @@ adicional y sin rollback automático.
 - `./terra test frontend unit`: 14 pruebas correctas.
 - `./terra test frontend integration`: 6 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 28 pruebas Playwright correctas (layout admin, matriz responsive, tablas, formularios, modal, textos largos, panel del trabajador, tema claro/oscuro, persistencia, textarea de política, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
+- `./terra test e2e`: 30 pruebas Playwright correctas (layout admin, matriz responsive, tablas, formularios, modal, textos largos, panel del trabajador, tema claro/oscuro, persistencia, textarea de política, footer legal, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Backup local, verificación y restauración con marcador.
@@ -217,3 +217,12 @@ El campo «Contenido aprobado» de Política ocupa el 100 % del ancho de la tarj
 coincide con «Identificador de versión», tiene borde de 1 px, radio de 12 px, altura
 mínima de 192–208 px, `resize: vertical` y foco verde institucional. Se validó a 320,
 390, 768, 1024 y 1440 px y en ambos temas.
+
+## 19. Footer legal del inicio de sesión
+
+El footer de información legal se mantiene como tarjeta independiente bajo el
+formulario. El encabezado y el aviso institucional están centrados; los cuatro
+enlaces se distribuyen en una cuadrícula 2×2 de columnas iguales y cada enlace queda
+centrado en su celda. En 320 px la cuadrícula pasa a una columna mediante container
+query, sin comprimir textos ni provocar scroll horizontal. Se validaron las cuatro
+rutas legales y los estados hover/focus.
