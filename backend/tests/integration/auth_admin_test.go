@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -57,6 +58,41 @@ func newTurnstileFixture(t *testing.T, status int, body map[string]any) *turnsti
 		Hostname:  "localhost",
 		VerifyURL: server.URL,
 		Client:    server.Client(),
+	}
+	return fixture
+}
+
+func newReplayTurnstileFixture(t *testing.T) *turnstileFixture {
+	t.Helper()
+	fixture := &turnstileFixture{}
+	var mu sync.Mutex
+	used := map[string]bool{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fixture.calls.Add(1)
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("parse siteverify form: %v", err)
+			return
+		}
+		token := r.Form.Get("response")
+		mu.Lock()
+		replay := used[token]
+		used[token] = true
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		if replay {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"success": false, "error-codes": []string{"timeout-or-duplicate"},
+			})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"success": true, "action": "admin_login", "hostname": "localhost",
+		})
+	}))
+	t.Cleanup(server.Close)
+	fixture.turnstile = &auth.Turnstile{
+		SecretKey: "secret", Action: "admin_login", Hostname: "localhost",
+		VerifyURL: server.URL, Client: server.Client(),
 	}
 	return fixture
 }
@@ -230,5 +266,79 @@ func TestAdminLoginRateLimitKeepsBlocking(t *testing.T) {
 	}
 	if turnstile.calls.Load() != 6 {
 		t.Fatalf("el rate limit no ocurrió antes de siteverify: calls=%d", turnstile.calls.Load())
+	}
+}
+
+func TestAdminLoginRejectsMissingTurnstileToken(t *testing.T) {
+	turnstile := newTurnstileFixture(t, 0, map[string]any{
+		"success": true, "action": "admin_login", "hostname": "localhost",
+	})
+	fixture := newAdminLoginFixture(t, turnstile.turnstile)
+
+	rec := fixture.login(t, "correct-password-123", "")
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("token ausente: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if turnstile.calls.Load() != 0 {
+		t.Fatalf("token ausente llegó a Siteverify: calls=%d", turnstile.calls.Load())
+	}
+	if count := fixture.sessions(t); count != 0 {
+		t.Fatalf("sesión creada sin token Turnstile: %d", count)
+	}
+}
+
+func TestAdminLoginRejectsExpiredTurnstileToken(t *testing.T) {
+	turnstile := newTurnstileFixture(t, 0, map[string]any{
+		"success": false, "error-codes": []string{"timeout-or-duplicate"},
+	})
+	fixture := newAdminLoginFixture(t, turnstile.turnstile)
+
+	rec := fixture.login(t, "correct-password-123", "token-expired")
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("token expirado: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if count := fixture.sessions(t); count != 0 {
+		t.Fatalf("sesión creada con token expirado: %d", count)
+	}
+}
+
+func TestAdminLoginRejectsReusedTurnstileToken(t *testing.T) {
+	turnstile := newReplayTurnstileFixture(t)
+	fixture := newAdminLoginFixture(t, turnstile.turnstile)
+
+	rec := fixture.login(t, "correct-password-123", "token-reused")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("primer uso: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if count := fixture.sessions(t); count != 1 {
+		t.Fatalf("sesiones tras primer uso: %d", count)
+	}
+
+	rec = fixture.login(t, "correct-password-123", "token-reused")
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("token reutilizado: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if count := fixture.sessions(t); count != 1 {
+		t.Fatalf("el token reutilizado creó otra sesión: %d", count)
+	}
+	if turnstile.calls.Load() != 2 {
+		t.Fatalf("Siteverify no recibió ambos intentos: calls=%d", turnstile.calls.Load())
+	}
+}
+
+func TestAdminLoginTurnstileConnectionError(t *testing.T) {
+	turnstile := &auth.Turnstile{
+		SecretKey: "secret", Action: "admin_login", Hostname: "localhost",
+		VerifyURL: "http://127.0.0.1:1",
+		Client:    &http.Client{Timeout: 2 * time.Second},
+	}
+	fixture := newAdminLoginFixture(t, turnstile)
+
+	rec := fixture.login(t, "correct-password-123", "token-1")
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("error de conexión: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if count := fixture.sessions(t); count != 0 {
+		t.Fatalf("sesión creada sin conexión a Cloudflare: %d", count)
 	}
 }

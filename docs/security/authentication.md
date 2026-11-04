@@ -61,6 +61,8 @@ reduce el riesgo de envío cross-site; la verificación de token es la defensa p
 - Tokens inválidos, expirados, reutilizados o de otro hostname se rechazan.
 - Si Cloudflare no responde, el login falla cerrado (`502`).
 - El rate limit se aplica incluso con Turnstile válido.
+- Cada validación emite `turnstile_verify` con `request_id`, resultado, código, duración,
+  `action`, `hostname` y `error_codes`; nunca incluye el token ni la clave secreta.
 
 ## Bootstrap
 

@@ -82,6 +82,7 @@ func main() {
 	turnstile := &auth.Turnstile{
 		SecretKey: cfg.Turnstile.SecretKey, Hostname: cfg.Turnstile.Hostname,
 		Action: cfg.Turnstile.Action, VerifyURL: cfg.Turnstile.VerifyURL,
+		Logger: log,
 	}
 	authSvc := auth.NewService(cfg, authRepo, usersRepo, google, states, turnstile, auditRepo)
 	downloadSvc := downloads.NewService(cfg, downloadRepo, driveSvc, usersRepo, store, auditRepo)
