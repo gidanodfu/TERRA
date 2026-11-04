@@ -21,6 +21,15 @@ async function mockAnonymous(context) {
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
   })
+  // Aísla el footer legal del widget externo: no debe depender de la red de
+  // Cloudflare ni del momento en que Turnstile inserta su iframe.
+  await context.route('https://challenges.cloudflare.com/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/javascript',
+      body: 'window.turnstile = { render() { return 0 }, remove() {} }',
+    }),
+  )
 }
 
 test('el footer legal distribuye y centra sus elementos', async ({ page }) => {

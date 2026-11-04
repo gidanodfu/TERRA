@@ -178,14 +178,16 @@ e2e() {
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T web npm run test:e2e; then
     terra_ok "E2E correcto."
-    rm -rf "$TERRA_ROOT_DIR/artifacts/playwright-report"
-    "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
-      -f "$TERRA_COMPOSE_FILE" cp web:/tmp/playwright-report "$TERRA_ROOT_DIR/artifacts/playwright-report" >/dev/null 2>&1 || true
-    "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
-      -f "$TERRA_COMPOSE_FILE" cp web:/tmp/playwright-results "$TERRA_ROOT_DIR/artifacts/playwright-results" >/dev/null 2>&1 || true
   else
     fail "E2E falló."
   fi
+  # Conserva reporte y resultados también cuando la suite falla, para que el
+  # artefacto de CI incluya captura, error-context y trace.
+  rm -rf "$TERRA_ROOT_DIR/artifacts/playwright-report"
+  "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
+    -f "$TERRA_COMPOSE_FILE" cp web:/tmp/playwright-report "$TERRA_ROOT_DIR/artifacts/playwright-report" >/dev/null 2>&1 || true
+  "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
+    -f "$TERRA_COMPOSE_FILE" cp web:/tmp/playwright-results "$TERRA_ROOT_DIR/artifacts/playwright-results" >/dev/null 2>&1 || true
 }
 
 section "TERRA TEST — $suite${detail:+ $detail}"

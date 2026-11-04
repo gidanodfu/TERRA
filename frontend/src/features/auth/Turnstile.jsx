@@ -81,10 +81,10 @@ export function Turnstile({ onToken, onExpire, action = 'admin_login' }) {
     )
   }
   return (
-    <div>
+    <div className="flex min-h-[65px] flex-col items-center justify-center">
       <div ref={container} />
       {failure ? (
-        <p className="mt-1 text-sm text-red-600">
+        <p className="mt-1 text-center text-sm text-red-600">
           No fue posible cargar la verificación de seguridad. Recargue la página.
         </p>
       ) : null}
