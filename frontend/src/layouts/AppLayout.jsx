@@ -44,8 +44,14 @@ const adminNav = [
   { to: '/app/security', label: 'Seguridad', icon: ShieldCheck },
 ]
 
+// Future administrative profiles have no worker modules until their explicit
+// permissions and screens are defined.
+const restrictedAdminNav = [{ to: '/app/security', label: 'Seguridad', icon: ShieldCheck }]
+
 const roleLabels = {
   admin: 'Administrador',
+  moderator: 'Moderador',
+  read_only: 'Solo lectura',
   user: 'Trabajador',
 }
 
@@ -110,22 +116,22 @@ function Sidebar({ nav, user, onLogout, onNavigate }) {
 }
 
 export default function AppLayout() {
-  const { user, isAdmin, logout } = useAuth()
+  const { user, isAdmin, isAdministrative, isWorker, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
-  const nav = isAdmin ? adminNav : workerNav
+  const nav = isAdmin ? adminNav : isWorker ? workerNav : restrictedAdminNav
 
   const handleLogout = async () => {
     await logout()
     navigate('/', { replace: true })
   }
 
-  const headerLabel = isAdmin ? 'Panel administrativo' : 'Panel del trabajador'
+  const headerLabel = isAdmin || isAdministrative ? 'Panel administrativo' : isWorker ? 'Panel del trabajador' : 'Panel restringido'
   const sectionLabel = currentSection(nav, location.pathname, headerLabel)
-  const testIds = isAdmin
-    ? { sidebar: 'admin-sidebar', workspace: 'admin-workspace', scroll: 'admin-scroll', drawer: 'admin-drawer' }
-    : { sidebar: 'worker-sidebar', workspace: 'worker-workspace', scroll: 'worker-scroll', drawer: 'worker-drawer' }
+  const testIds = isWorker
+    ? { sidebar: 'worker-sidebar', workspace: 'worker-workspace', scroll: 'worker-scroll', drawer: 'worker-drawer' }
+    : { sidebar: 'admin-sidebar', workspace: 'admin-workspace', scroll: 'admin-scroll', drawer: 'admin-drawer' }
   const sidebar = (
     <Sidebar nav={nav} user={user} onLogout={handleLogout} onNavigate={() => setOpen(false)} />
   )

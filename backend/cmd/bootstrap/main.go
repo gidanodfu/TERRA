@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"terra/internal/bootstrap"
 	"terra/internal/platform/config"
 	"terra/internal/platform/db"
 	"terra/internal/platform/logx"
@@ -72,9 +73,10 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	if exists {
+		if err := bootstrap.EnsureExistingPrincipal(ctx, pool, username, log); err != nil {
+			return err
+		}
 		log.Info("bootstrap_admin_exists", "username", username, "action", "left_untouched")
-		_, _ = pool.Exec(ctx, `INSERT INTO bootstrap_state (id, details) VALUES (1, $1)
-			ON CONFLICT (id) DO UPDATE SET details = bootstrap_state.details`, `{"admin":"already_exists"}`)
 		return nil
 	}
 	if err := password.ValidateStrength(cfg.Bootstrap.Password); err != nil {

@@ -19,8 +19,10 @@ const (
 type Role string
 
 const (
-	RoleAdmin Role = "admin"
-	RoleUser  Role = "user"
+	RoleAdmin     Role = "admin"
+	RoleModerator Role = "moderator"
+	RoleReadOnly  Role = "read_only"
+	RoleUser      Role = "user"
 )
 
 type User struct {
@@ -42,6 +44,9 @@ type User struct {
 	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
 }
 
+// HasRole and the classification helpers centralise account separation. A
+// worker is an account whose only role is RoleUser; unknown or mixed roles are
+// never treated as workers (deny by default).
 func (u User) HasRole(role Role) bool {
 	for _, r := range u.Roles {
 		if r == string(role) {
@@ -49,6 +54,34 @@ func (u User) HasRole(role Role) bool {
 		}
 	}
 	return false
+}
+
+func (u User) HasAnyRole(roles ...Role) bool {
+	for _, role := range roles {
+		if u.HasRole(role) {
+			return true
+		}
+	}
+	return false
+}
+
+func (u User) IsAdministrative() bool {
+	return u.HasAnyRole(RoleAdmin, RoleModerator, RoleReadOnly)
+}
+
+func (u User) IsWorker() bool {
+	worker := false
+	for _, r := range u.Roles {
+		switch Role(r) {
+		case RoleUser:
+			worker = true
+		case RoleAdmin, RoleModerator, RoleReadOnly:
+			return false
+		default:
+			return false
+		}
+	}
+	return worker
 }
 
 func (u User) IsAdmin() bool { return u.HasRole(RoleAdmin) }

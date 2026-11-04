@@ -110,7 +110,11 @@ func (s *Service) CompleteLogin(ctx context.Context, rawState, code, userAgent, 
 			if attachErr := s.users.AttachGoogleIdentity(ctx, existing.ID, identity.Subject); attachErr != nil {
 				return nil, attachErr
 			}
-			_ = s.users.EnsureRole(ctx, existing.ID, string(users.RoleUser))
+			// Never mix an administrative (or unknown) account into the worker
+			// role. Mixed accounts are classified as administrative and excluded.
+			if existing.IsWorker() || len(existing.Roles) == 0 {
+				_ = s.users.EnsureRole(ctx, existing.ID, string(users.RoleUser))
+			}
 			user = existing
 		case isNotFound(findByEmailErr):
 			display := identity.Name

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { api } from '../services/api'
+import { isAdministrativeAccount, isWorkerAccount } from '../features/auth/roles'
 
 const AuthContext = createContext(null)
 
@@ -70,6 +71,8 @@ export function AuthProvider({ children }) {
       logout,
       clear,
       isAdmin: Boolean(user?.roles?.includes('admin')),
+      isAdministrative: isAdministrativeAccount(user),
+      isWorker: isWorkerAccount(user),
       can: (permission) => permissions.includes(permission),
     }),
     [user, permissions, mustRotate, pendingProfile, loading, error, refresh, apply, logout, clear],

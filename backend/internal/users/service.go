@@ -28,6 +28,13 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*User, error) {
 
 // UpdateOwnProfile validates both fields and the area/position relationship before writing.
 func (s *Service) UpdateOwnProfile(ctx context.Context, userID uuid.UUID, in UpdateProfileInput, ipHash string) (*User, error) {
+	current, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !current.IsWorker() {
+		return nil, apperr.Forbidden("Solo las cuentas de trabajador pueden actualizar su perfil organizativo.")
+	}
 	in.FirstName = strings.TrimSpace(in.FirstName)
 	in.LastName = strings.TrimSpace(in.LastName)
 	fields := map[string]string{}

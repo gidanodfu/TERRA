@@ -16,6 +16,8 @@ function AuthProbe() {
     <div>
       <p>{auth.user.display_name}</p>
       <p>{auth.isAdmin ? 'admin' : 'worker'}</p>
+      <p>{auth.isAdministrative ? 'administrativa' : 'no administrativa'}</p>
+      <p>{auth.isWorker ? 'trabajador' : 'no trabajador'}</p>
       <p>{auth.can('admin.dashboard.read') ? 'puede dashboard' : 'sin permiso'}</p>
       <button type="button" onClick={auth.logout}>salir</button>
     </div>
@@ -33,6 +35,8 @@ describe('AuthProvider', () => {
     render(<AuthProvider><AuthProbe /></AuthProvider>)
     expect(await screen.findByText('Ada Admin')).toBeInTheDocument()
     expect(screen.getByText('admin')).toBeInTheDocument()
+    expect(screen.getByText('administrativa')).toBeInTheDocument()
+    expect(screen.getByText('no trabajador')).toBeInTheDocument()
     expect(screen.getByText('puede dashboard')).toBeInTheDocument()
   })
 

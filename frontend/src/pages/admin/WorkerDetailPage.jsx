@@ -15,6 +15,7 @@ import {
   Spinner,
 } from '../../components/ui'
 import { StatusBadge } from '../../features/downloads/StatusBadge'
+import { isWorkerAccount } from '../../features/auth/roles'
 import { formatDate } from '../../utils/format'
 
 export default function WorkerDetailPage() {
@@ -92,6 +93,21 @@ export default function WorkerDetailPage() {
   if (!detail) return <Alert tone="error">{error}</Alert>
 
   const { user, drive_connection: connection, organization_history: history } = detail
+  const isWorker = isWorkerAccount(user)
+
+  if (!isWorker) {
+    return (
+      <div>
+        <Link to="/app/admin/workers" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+          <ArrowLeft className="h-4 w-4" /> Volver a trabajadores
+        </Link>
+        <Alert tone="error">
+          Esta cuenta es administrativa y no forma parte del módulo de trabajadores. Su estado se gestiona
+          desde la administración de cuentas.
+        </Alert>
+      </div>
+    )
+  }
 
   return (
     <div>

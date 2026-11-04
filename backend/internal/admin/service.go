@@ -4,8 +4,12 @@ package admin
 
 import (
 	"context"
-	"github.com/google/uuid"
+	"errors"
+	"net/http"
+	"strings"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"terra/internal/audit"
@@ -86,7 +90,7 @@ type UserDetail struct {
 }
 
 func (s *Service) User(ctx context.Context, id uuid.UUID) (*UserDetail, error) {
-	user, err := s.users.GetByID(ctx, id)
+	user, err := s.users.GetWorkerByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -108,10 +112,11 @@ type UpdateUserInput struct {
 }
 
 func (s *Service) UpdateUser(ctx context.Context, actor uuid.UUID, target uuid.UUID, in UpdateUserInput, ipHash string) (*users.User, error) {
-	current, err := s.users.GetByID(ctx, target)
+	current, err := s.users.GetWorkerByID(ctx, target)
 	if err != nil {
 		return nil, err
 	}
+	previousStatus := current.Status
 	areaID, positionID := current.AreaID, current.PositionID
 	if in.AreaID != nil || in.PositionID != nil {
 		if in.AreaID == nil || in.PositionID == nil {
@@ -151,8 +156,123 @@ func (s *Service) UpdateUser(ctx context.Context, actor uuid.UUID, target uuid.U
 		return nil, err
 	}
 	s.audit.Record(ctx, audit.Event{ActorUserID: &actor, Action: "admin.user.updated", TargetType: "user",
-		TargetID: target.String(), Metadata: map[string]any{"status": string(status)}, IPHash: ipHash})
+		TargetID: target.String(), Metadata: map[string]any{
+			"kind":            "worker",
+			"previous_status": string(previousStatus),
+			"status":          string(status),
+			"area_id":         areaID,
+			"position_id":     positionID,
+			"result":          "applied",
+		}, IPHash: ipHash})
 	return updated, nil
+}
+
+func (s *Service) AdministrativeAccounts(ctx context.Context, f users.ListFilter) ([]users.User, int, error) {
+	list, total, err := s.users.ListAdministrative(ctx, f)
+	if list == nil {
+		list = []users.User{}
+	}
+	return list, total, err
+}
+
+// UpdateAdministrativeAccount changes the status of an administrative account.
+// Only the admin role can reach this use case (route guard); the principal
+// administrator is protected and a missing identifier fails closed.
+func (s *Service) UpdateAdministrativeAccount(ctx context.Context, actor, target uuid.UUID, rawStatus, ipHash string) (*users.User, error) {
+	status := users.Status(strings.TrimSpace(rawStatus))
+	switch status {
+	case users.StatusActive, users.StatusDisabled:
+	default:
+		return nil, apperr.Invalid("Estado de cuenta administrativa inválido.",
+			map[string]string{"status": "Use active o disabled."})
+	}
+	current, err := s.users.GetAdministrativeByID(ctx, target)
+	if err != nil {
+		return nil, err
+	}
+	if target == actor && status == users.StatusDisabled {
+		s.recordAccountEvent(ctx, actor, target, "admin.account.status_rejected",
+			current.Status, status, "cannot_disable_self", ipHash)
+		return nil, apperr.Conflict("cannot_suspend_self", "No puede desactivar su propia cuenta.")
+	}
+	if status == users.StatusDisabled {
+		principalID, resolved, err := s.principalAdminID(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if !resolved {
+			s.recordAccountEvent(ctx, actor, target, "admin.account.status_rejected",
+				current.Status, status, "principal_admin_unresolved", ipHash)
+			return nil, apperr.New(http.StatusServiceUnavailable, "principal_admin_unresolved",
+				"No se pudo verificar el administrador principal; la desactivación está bloqueada.")
+		}
+		if target == principalID {
+			s.recordAccountEvent(ctx, actor, target, "admin.account.status_rejected",
+				current.Status, status, "principal_admin_protected", ipHash)
+			return nil, apperr.Conflict("principal_admin_protected",
+				"El administrador principal no puede desactivarse.")
+		}
+	}
+	updated, err := s.users.SetAdministrativeStatus(ctx, target, status)
+	if err != nil {
+		return nil, err
+	}
+	action := "admin.account.reactivated"
+	if status == users.StatusDisabled {
+		action = "admin.account.disabled"
+	}
+	s.audit.Record(ctx, audit.Event{ActorUserID: &actor, Action: action, TargetType: "user",
+		TargetID: target.String(), Metadata: map[string]any{
+			"kind":            "administrative",
+			"previous_status": string(current.Status),
+			"status":          string(status),
+			"roles":           current.Roles,
+			"result":          "applied",
+		}, IPHash: ipHash})
+	return updated, nil
+}
+
+func (s *Service) recordAccountEvent(ctx context.Context, actor, target uuid.UUID, action string,
+	previous, next users.Status, reason, ipHash string) {
+	s.audit.Record(ctx, audit.Event{ActorUserID: &actor, Action: action, TargetType: "user",
+		TargetID: target.String(), Metadata: map[string]any{
+			"kind":            "administrative",
+			"previous_status": string(previous),
+			"status":          string(next),
+			"reason":          reason,
+			"result":          "rejected",
+		}, IPHash: ipHash})
+}
+
+// principalAdminID reads bootstrap_state.details.admin_user_id and verifies that
+// the account still exists and holds the admin role. Missing or invalid data is
+// reported as unresolved so callers can fail closed.
+func (s *Service) principalAdminID(ctx context.Context) (uuid.UUID, bool, error) {
+	var raw *string
+	err := s.pool.QueryRow(ctx, `SELECT details->>'admin_user_id' FROM bootstrap_state WHERE id = 1`).Scan(&raw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, false, nil
+	}
+	if err != nil {
+		return uuid.Nil, false, err
+	}
+	if raw == nil || strings.TrimSpace(*raw) == "" {
+		return uuid.Nil, false, nil
+	}
+	id, err := uuid.Parse(strings.TrimSpace(*raw))
+	if err != nil {
+		return uuid.Nil, false, nil
+	}
+	var hasAdminRole bool
+	if err := s.pool.QueryRow(ctx, `SELECT EXISTS(
+		SELECT 1 FROM user_roles ur JOIN system_roles r ON r.id = ur.role_id
+		WHERE ur.user_id = $1 AND r.key = 'admin')`, id).Scan(&hasAdminRole); err != nil {
+		return uuid.Nil, false, err
+	}
+	if !hasAdminRole {
+		return uuid.Nil, false, nil
+	}
+	return id, true, nil
 }
 
 func (s *Service) Audit(ctx context.Context, f audit.ListFilter) ([]audit.Event, int, error) {

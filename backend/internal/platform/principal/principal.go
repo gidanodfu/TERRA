@@ -29,6 +29,19 @@ func (i Identity) HasRole(role string) bool {
 	return false
 }
 
+func (i Identity) HasAnyRole(roles ...string) bool {
+	for _, role := range roles {
+		if i.HasRole(role) {
+			return true
+		}
+	}
+	return false
+}
+
+func (i Identity) IsAdministrative() bool {
+	return i.HasAnyRole("admin", "moderator", "read_only")
+}
+
 func (i Identity) IsAdmin() bool { return i.HasRole("admin") }
 
 type Principal struct {

@@ -95,6 +95,42 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
+func (h *Handler) AdministrativeAccounts(w http.ResponseWriter, r *http.Request) {
+	page, size, _ := httpx.Pagination(r)
+	q := r.URL.Query()
+	f := users.ListFilter{Query: strings.TrimSpace(q.Get("q")), Status: q.Get("status"), Page: page, Size: size}
+	list, total, err := h.svc.AdministrativeAccounts(r.Context(), f)
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.ListResponse{
+		Data: list, Pagination: httpx.Page{Page: page, PageSize: size, Total: total},
+	})
+}
+
+func (h *Handler) UpdateAdministrativeAccount(w http.ResponseWriter, r *http.Request) {
+	actor, _ := principal.Current(r.Context())
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		httpx.WriteError(w, r, apperr.BadRequest("Identificador de cuenta inválido."))
+		return
+	}
+	var body struct {
+		Status string `json:"status"`
+	}
+	if err := httpx.Decode(w, r, &body); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	updated, err := h.svc.UpdateAdministrativeAccount(r.Context(), actor.ID, id, body.Status, h.ip(r))
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, updated)
+}
+
 func (h *Handler) AuditEvents(w http.ResponseWriter, r *http.Request) {
 	page, size, _ := httpx.Pagination(r)
 	q := r.URL.Query()

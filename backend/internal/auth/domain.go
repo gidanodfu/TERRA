@@ -44,6 +44,7 @@ var userPermissions = []string{
 
 var adminPermissions = []string{
 	"admin.dashboard.read", "admin.users.read", "admin.users.write",
+	"admin.accounts.read", "admin.accounts.write",
 	"admin.organization.read", "admin.organization.write",
 	"admin.drive.read", "admin.jobs.read", "admin.jobs.create", "admin.jobs.cancel", "admin.jobs.retry",
 	"admin.storage.read", "admin.audit.read", "admin.files.read",
@@ -52,6 +53,13 @@ var adminPermissions = []string{
 func PermissionsFor(roles []string) []string {
 	seen := map[string]bool{}
 	out := []string{}
+	administrative := false
+	for _, r := range roles {
+		switch r {
+		case "admin", "moderator", "read_only":
+			administrative = true
+		}
+	}
 	for _, r := range roles {
 		switch r {
 		case "admin":
@@ -62,6 +70,11 @@ func PermissionsFor(roles []string) []string {
 				}
 			}
 		case "user":
+			// A mixed account is administrative: it must not receive worker
+			// permissions or appear as a worker.
+			if administrative {
+				continue
+			}
 			for _, p := range userPermissions {
 				if !seen[p] {
 					seen[p] = true

@@ -53,6 +53,24 @@ cookie terra_csrf == header X-CSRF-Token == sessions.csrf_token
 Además, el login administrativo valida `Origin` cuando el navegador lo envía. `SameSite=Lax`
 reduce el riesgo de envío cross-site; la verificación de token es la defensa principal.
 
+## Clasificación de cuentas
+
+- **Trabajador:** cuenta cuyo único rol es `user`. Es la única que puede tener área,
+  cargo y aparecer en `/api/v1/admin/users`.
+- **Administrativa:** cuenta con `admin`, `moderator` o `read_only`. No es trabajadora,
+  no tiene asignación organizativa y se excluye del listado y del dashboard de
+  trabajadores.
+- **Mixta:** si coincide un rol administrativo con `user`, prevalece la clasificación
+  administrativa. El login de Google no añade `user` a una cuenta administrativa.
+- **Desconocida:** un rol no reconocido no se clasifica como trabajador. El filtrado
+  SQL exige `user` y ningún otro rol (denegación por defecto).
+
+El filtrado se aplica en SQL antes de paginar y de calcular el total. `UpdateUser` y
+`UpdateOwnProfile` vuelven a comprobar la clasificación en la transacción, no solo en
+el servicio. Las cuentas administrativas se gestionan por `/api/v1/admin/accounts`,
+reservado al rol `admin`; el administrador principal se identifica por
+`bootstrap_state.details.admin_user_id` y no puede desactivarse.
+
 ## Turnstile
 
 - Widget renderizado explícitamente con `VITE_TURNSTILE_SITE_KEY`.

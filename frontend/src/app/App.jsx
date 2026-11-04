@@ -55,9 +55,17 @@ function AdminOnly({ children }) {
   return children
 }
 
+function WorkerOnly({ children }) {
+  const { isWorker } = useAuth()
+  if (!isWorker) return <Navigate to="/app/security" replace />
+  return children
+}
+
 function AppIndex() {
-  const { isAdmin } = useAuth()
-  return isAdmin ? <Navigate to="/app/admin" replace /> : <WorkerHome />
+  const { isAdmin, isWorker } = useAuth()
+  if (isAdmin) return <Navigate to="/app/admin" replace />
+  if (!isWorker) return <Navigate to="/app/security" replace />
+  return <WorkerHome />
 }
 
 export default function App() {
@@ -89,11 +97,11 @@ export default function App() {
         }
       >
         <Route index element={<AppIndex />} />
-        <Route path="profile" element={<WorkerProfile />} />
-        <Route path="drive" element={<WorkerDrive />} />
-        <Route path="jobs" element={<WorkerJobs />} />
-        <Route path="jobs/:id" element={<JobDetailPage basePath="/app/jobs" />} />
-        <Route path="documents" element={<WorkerDocuments />} />
+        <Route path="profile" element={<WorkerOnly><WorkerProfile /></WorkerOnly>} />
+        <Route path="drive" element={<WorkerOnly><WorkerDrive /></WorkerOnly>} />
+        <Route path="jobs" element={<WorkerOnly><WorkerJobs /></WorkerOnly>} />
+        <Route path="jobs/:id" element={<WorkerOnly><JobDetailPage basePath="/app/jobs" /></WorkerOnly>} />
+        <Route path="documents" element={<WorkerOnly><WorkerDocuments /></WorkerOnly>} />
         <Route path="security" element={<SecurityPage />} />
 
         <Route path="admin" element={<AdminOnly><AdminDashboard /></AdminOnly>} />

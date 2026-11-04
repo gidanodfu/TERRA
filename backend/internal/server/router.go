@@ -114,6 +114,9 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 	mux.Handle("GET /api/v1/admin/users/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.User))))
 	mux.Handle("PATCH /api/v1/admin/users/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.UpdateUser))))
 
+	mux.Handle("GET /api/v1/admin/accounts", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.AdministrativeAccounts))))
+	mux.Handle("PATCH /api/v1/admin/accounts/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.UpdateAdministrativeAccount))))
+
 	mux.Handle("GET /api/v1/admin/areas", requireAuth(requireAdmin(http.HandlerFunc(h.Org.AdminAreas))))
 	mux.Handle("POST /api/v1/admin/areas", requireAuth(requireAdmin(http.HandlerFunc(h.Org.CreateArea))))
 	mux.Handle("PATCH /api/v1/admin/areas/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Org.UpdateArea))))
