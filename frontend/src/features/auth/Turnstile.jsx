@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { useTheme } from '../../app/ThemeContext'
 
 let loader = null
@@ -26,7 +26,7 @@ function loadTurnstile() {
   return loader
 }
 
-export function Turnstile({ onToken, onExpire, action = 'admin_login' }) {
+export const Turnstile = forwardRef(function Turnstile({ onToken, onExpire, action = 'admin_login' }, ref) {
   const { theme } = useTheme()
   const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY
   const container = useRef(null)
@@ -40,6 +40,20 @@ export function Turnstile({ onToken, onExpire, action = 'admin_login' }) {
     expireCallback.current = onExpire
   }, [onToken, onExpire])
 
+  const resetWidget = useCallback(() => {
+    tokenCallback.current?.('')
+    try {
+      if (window.turnstile && widgetId.current !== null) {
+        window.turnstile.reset(widgetId.current)
+        setFailure(false)
+      }
+    } catch {
+      setFailure(true)
+    }
+  }, [])
+
+  useImperativeHandle(ref, () => ({ reset: resetWidget }), [resetWidget])
+
   useEffect(() => {
     if (!siteKey || !container.current) return undefined
     let cancelled = false
@@ -52,7 +66,7 @@ export function Turnstile({ onToken, onExpire, action = 'admin_login' }) {
           theme: theme === 'dark' ? 'dark' : 'light',
           callback: (token) => tokenCallback.current?.(token),
           'expired-callback': () => {
-            tokenCallback.current?.('')
+            resetWidget()
             expireCallback.current?.()
           },
           'error-callback': () => {
@@ -71,7 +85,7 @@ export function Turnstile({ onToken, onExpire, action = 'admin_login' }) {
       }
       widgetId.current = null
     }
-  }, [siteKey, action, theme])
+  }, [siteKey, action, theme, resetWidget])
 
   if (!siteKey) {
     return (
@@ -84,10 +98,17 @@ export function Turnstile({ onToken, onExpire, action = 'admin_login' }) {
     <div className="flex min-h-[65px] flex-col items-center justify-center">
       <div ref={container} />
       {failure ? (
-        <p className="mt-1 text-center text-sm text-red-600">
-          No fue posible cargar la verificación de seguridad. Recargue la página.
-        </p>
+        <div className="mt-1 text-center">
+          <p className="text-sm text-red-600">No fue posible cargar la verificación de seguridad.</p>
+          <button
+            type="button"
+            onClick={resetWidget}
+            className="mt-1 text-xs font-medium text-brand-700 hover:underline"
+          >
+            Reintentar verificación
+          </button>
+        </div>
       ) : null}
     </div>
   )
-}
+})

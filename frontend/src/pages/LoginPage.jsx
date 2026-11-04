@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../app/AuthContext'
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ username: '', password: '' })
   const [turnstileToken, setTurnstileToken] = useState('')
+  const turnstileRef = useRef(null)
   const [fieldErrors, setFieldErrors] = useState({})
   const [error, setError] = useState(params.get('error') ? OAUTH_ERRORS[params.get('error')] || 'No fue posible iniciar sesión.' : '')
   const [submitting, setSubmitting] = useState(false)
@@ -59,6 +60,7 @@ export default function LoginPage() {
       setError(err.message)
       if (err.fields) setFieldErrors(err.fields)
       setTurnstileToken('')
+      turnstileRef.current?.reset()
     } finally {
       setSubmitting(false)
     }
@@ -146,7 +148,7 @@ export default function LoginPage() {
               </Field>
               <Field error={fieldErrors.turnstile}>
                 <div className="flex justify-center">
-                  <Turnstile onToken={setTurnstileToken} />
+                  <Turnstile ref={turnstileRef} onToken={setTurnstileToken} />
                 </div>
               </Field>
               <Button type="submit" className="w-full" disabled={submitting}>

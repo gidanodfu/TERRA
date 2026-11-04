@@ -88,6 +88,14 @@ el workspace `bg-surface`; las tarjetas `bg-card`; las cabeceras de tabla
 `bg-surface-tertiary`. `color-scheme: dark` adapta selects, date pickers y barras
 nativas, y Cloudflare Turnstile recibe el tema activo.
 
+### Turnstile
+
+`Turnstile` encapsula el ciclo de vida del widget y expone `reset()` por referencia.
+`LoginPage` limpia el token y reinicia el widget después de cualquier intento de
+login enviado que falle, de modo que el siguiente envío use un token nuevo. El
+backend continúa siendo la autoridad: Siteverify, acción, hostname, credenciales y
+límites se validan antes de crear la sesión; el frontend no autoriza nada.
+
 ## Sesión y CSRF
 
 - `AuthProvider` consulta `GET /auth/me` al cargar.

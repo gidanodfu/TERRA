@@ -103,10 +103,10 @@ adicional y sin rollback automático.
 
 - `./terra test backend unit` + `go vet`: correcto.
 - `./terra test backend integration` contra `terra_test`: correcto.
-- `./terra test frontend unit`: 14 pruebas correctas.
-- `./terra test frontend integration`: 6 pruebas correctas.
+- `./terra test frontend unit`: 18 pruebas correctas.
+- `./terra test frontend integration`: 8 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 36 pruebas Playwright correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
+- `./terra test e2e`: 37 pruebas Playwright correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, reset Turnstile, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Backup local, verificación y restauración con marcador.
@@ -240,3 +240,22 @@ configuración de navegación y el título del header. Se añadieron los test ID
 `worker-sidebar`, `worker-workspace`, `worker-scroll` y `worker-drawer`. El documento
 no scrollea: el workspace y el menú tienen desplazamiento independiente, el header
 permanece fijo y el drawer móvil reutiliza la misma sidebar.
+
+## 21. Reinicio de Turnstile tras error de autenticación
+
+El fallo se debía al ciclo de vida del widget: tras un 401 el token anterior seguía
+en React y el widget no se reiniciaba. `Turnstile` ahora expone `reset()` mediante
+`forwardRef`/`useImperativeHandle`; el método limpia el token, valida que exista
+`window.turnstile` y un `widgetId`, ejecuta `window.turnstile.reset(widgetId)` y
+mantiene el widget montado. `LoginPage` limpia el token y llama a `reset()` en el
+catch de cualquier intento enviado que falle (401, 429 o error de red); las
+validaciones locales no reinician el widget. El backend sigue validando Siteverify,
+acción, hostname, credenciales y límites antes de crear la sesión.
+
+Pruebas:
+- Vitest: render/reset/remove, expiración, error-callback y reset sin widget;
+- RTL: 401 con token-1 → reset → token-2 → segundo intento correcto; tres fallos
+  consecutivos con tokens distintos;
+- Go integration: 401 sin sesión, rechazo Turnstile antes de contraseña, Siteverify
+  no disponible, acción/hostname incorrectos y rate limit antes de Siteverify;
+- E2E: token-1 → 401 → reset → token-2 → `/app/admin`, sin recargar.

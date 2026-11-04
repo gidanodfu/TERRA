@@ -47,10 +47,10 @@ Resultados:
 - Backend unit + `go vet`: correcto.
 - Backend integration contra `terra_test`: correcto (migraciones, FK compuesta,
   cola/lease/cancelación/idempotencia, sesiones/CSRF, auditoría).
-- Frontend unit: 14 pruebas correctas.
-- Frontend integration: 6 pruebas correctas.
+- Frontend unit: 18 pruebas correctas.
+- Frontend integration: 8 pruebas correctas.
 - Frontend lint/build/coverage: correcto.
-- E2E Playwright: 36 pruebas correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
+- E2E Playwright: 37 pruebas correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, reset Turnstile, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
 - `./terra test all`: correcto.
 
 ### Infraestructura local
@@ -76,6 +76,7 @@ Resultados:
 - Implementado el modo oscuro global con tokens semánticos, persistencia en localStorage, preferencia del sistema y selector en ambas sidebars.
 - Refinado el modo oscuro a True Black con jerarquía #000000/#050505/#080808/#101010/#181818, inputs y selects oscuros, tablas, modales, tooltips y alertas legibles.
 - Ajustado el campo «Contenido aprobado» de Política: ancho completo, borde, radio, altura 192–208 px, resize vertical y foco verde.
+- Corregido el ciclo de Turnstile: reset con forwardRef/useImperativeHandle tras 401, token limpiado y nuevo token en el segundo intento; pruebas Vitest, Go integration y E2E.
 - Rediseñado el login como composición centrada de una columna, con paneles de trabajadores/administración, tarjeta legal y tipografía Inter local.
 
 ## Pendiente externo

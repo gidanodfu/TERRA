@@ -3,9 +3,12 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"terra/internal/platform/apperr"
 )
 
 func turnstileServer(t *testing.T, body map[string]any) *Turnstile {
@@ -37,9 +40,33 @@ func TestTurnstileRejectsFailures(t *testing.T) {
 	}
 	for _, body := range bodies {
 		ts := turnstileServer(t, body)
-		if err := ts.Verify(context.Background(), "token", "127.0.0.1"); err == nil {
-			t.Fatalf("unexpected success for %v", body)
+		err := ts.Verify(context.Background(), "token", "127.0.0.1")
+		var appErr *apperr.Error
+		if !errors.As(err, &appErr) {
+			t.Fatalf("error no tipado para %v: %v", body, err)
 		}
+		if appErr.Status != http.StatusForbidden {
+			t.Fatalf("status=%d para %v: %v", appErr.Status, body, err)
+		}
+	}
+}
+
+func TestTurnstileUnavailable(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("unavailable"))
+	}))
+	t.Cleanup(srv.Close)
+	ts := &Turnstile{SecretKey: "secret", Action: "admin_login", Hostname: "localhost",
+		VerifyURL: srv.URL, Client: srv.Client()}
+
+	err := ts.Verify(context.Background(), "token", "127.0.0.1")
+	var appErr *apperr.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("error no tipado: %v", err)
+	}
+	if appErr.Status != http.StatusBadGateway || appErr.Code != "turnstile_unavailable" {
+		t.Fatalf("status=%d code=%s message=%s", appErr.Status, appErr.Code, appErr.Message)
 	}
 }
 
