@@ -7,7 +7,7 @@ test('la página de acceso se renderiza sin sesión', async ({ page }) => {
   await expect(page.getByLabel('Usuario')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Trabajadores' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible()
-  await expect(page.getByText('Gestión documental municipal')).toBeVisible()
+  await expect(page.getByText('Gestión documental', { exact: true })).toBeVisible()
   await expect(page.getByText('Respaldo documental institucional, con trazabilidad y control.')).toHaveCount(0)
   await expect(page.locator('header span')).toHaveCount(0)
   for (const document of ['Política de privacidad', 'Términos y condiciones', 'Aviso legal', 'Política de cookies']) {

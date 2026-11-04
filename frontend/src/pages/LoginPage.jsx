@@ -74,7 +74,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[460px]">
         <header className="mb-7 text-center">
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">TERRA</h1>
-          <p className="mt-1.5 text-sm text-slate-500">Gestión documental municipal</p>
+          <p className="mt-1.5 text-sm text-slate-500">Gestión documental</p>
         </header>
 
         <section className="rounded-[20px] border border-slate-200 bg-surface p-6 shadow-sm sm:p-8">
