@@ -106,7 +106,7 @@ adicional y sin rollback automático.
 - `./terra test frontend unit`: 14 pruebas correctas.
 - `./terra test frontend integration`: 6 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 12 pruebas Playwright correctas (login, rutas legales, 404, Inter, responsive, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
+- `./terra test e2e`: 15 pruebas Playwright correctas (layout admin, login, rutas legales, 404, Inter, responsive, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Backup local, verificación y restauración con marcador.
@@ -163,3 +163,12 @@ Se añadieron cuatro rutas legales públicas (`/politica-de-privacidad`,
 `/terminos-y-condiciones`, `/aviso-legal`, `/politica-de-cookies`) con páginas
 independientes, navegación y contenido marcado como pendiente de aprobación
 institucional. No se inventó contenido legal ni se declaró una política vigente.
+
+## 17. Layout administrativo
+
+El panel administrativo usa dos superficies independientes: sidebar blanca de
+210–232 px y workspace flexible, ambas con márgenes exteriores, bordes redondeados
+de 22 px y sombra discreta. La cabecera queda dentro del workspace. En tablet se
+mantiene la sidebar reducida; en móvil se usa el drawer existente. El scroll interno
+de sidebar/workspace oculta la barra visual pero conserva rueda, teclado y touch.
+El panel del trabajador no fue rediseñado.

@@ -33,6 +33,13 @@ frontend/src/
 | `/app/admin/jobs`, `.../storage`, `.../audit`, `.../policy` | admin | Supervisión |
 | `/app/jobs/:id`, `/app/admin/jobs/:id` | propietario/admin | Detalle y SSE |
 
+## Layout administrativo
+
+El panel administrativo (`AppLayout` cuando el rol es `admin`) usa dos superficies:
+sidebar de 210–232 px y workspace flexible, con márgenes, radios de 22 px y scroll
+interno sin barras visibles (`.admin-scroll-container`). En móvil se reutiliza el
+drawer. El panel del trabajador conserva su layout.
+
 ## Sesión y CSRF
 
 - `AuthProvider` consulta `GET /auth/me` al cargar.

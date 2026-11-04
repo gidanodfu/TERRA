@@ -50,7 +50,7 @@ Resultados:
 - Frontend unit: 14 pruebas correctas.
 - Frontend integration: 6 pruebas correctas.
 - Frontend lint/build/coverage: correcto.
-- E2E Playwright: 12 pruebas correctas (login, rutas legales, 404, Inter, responsive, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
+- E2E Playwright: 15 pruebas correctas (layout admin, login, rutas legales, 404, Inter, responsive, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
 - `./terra test all`: correcto.
 
 ### Infraestructura local
@@ -66,6 +66,7 @@ Resultados:
 - Imágenes sin `.git` ni `.env`.
 - Corregida la carga del frontend: `node_modules` visible en la imagen web, bind mounts individuales, `up` recrea web y doctor/verify detectan `/@vite/client` incorrecto.
 - Añadidas rutas legales públicas independentes y navegación desde el login; contenido marcado como pendiente de aprobación institucional.
+- Rediseñado el panel administrativo con sidebar y workspace independientes, superficies rounded, scroll interno sin barras visibles y drawer móvil.
 - Rediseñado el login como composición centrada de una columna, con paneles de trabajadores/administración, tarjeta legal y tipografía Inter local.
 
 ## Pendiente externo

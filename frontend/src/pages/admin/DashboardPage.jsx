@@ -38,7 +38,7 @@ export default function AdminDashboard() {
         title="Dashboard"
         description="Estado operativo de TERRA: identidades, conexiones, trabajos y almacenamiento institucional."
         actions={
-          <Link to="/app/admin/downloads" className="btn-primary">
+          <Link to="/app/admin/downloads" className="btn-primary whitespace-nowrap">
             <ArrowRight className="h-4 w-4" /> Nueva descarga
           </Link>
         }

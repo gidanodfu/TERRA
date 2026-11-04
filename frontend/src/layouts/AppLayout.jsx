@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowLeftRight,
   Building2,
@@ -49,9 +49,66 @@ const roleLabels = {
   user: 'Trabajador',
 }
 
+function currentSection(nav, pathname) {
+  const match = nav.find((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)))
+  return match?.label || 'Panel administrativo'
+}
+
+function Sidebar({ nav, user, onLogout, onNavigate, admin = false }) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-3 px-5 py-5">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-700 font-bold text-white">T</span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-slate-900">TERRA</p>
+          <p className="truncate text-xs text-slate-500">Gestión documental</p>
+        </div>
+      </div>
+
+      <nav className={`${admin ? 'admin-scroll-container' : ''} flex-1 space-y-1 overflow-y-auto px-3 pb-4`}>
+        {nav.map((item) => {
+          const Icon = item.icon
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                  isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`
+              }
+            >
+              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">{item.label}</span>
+            </NavLink>
+          )
+        })}
+      </nav>
+
+      <div className="border-t border-slate-200 p-3">
+        <div className="rounded-xl bg-slate-50 px-3 py-3">
+          <p className="truncate text-sm font-medium text-slate-800">{user?.display_name || user?.email}</p>
+          <p className="truncate text-xs text-slate-500">{roleLabels[user?.roles?.[0]] || 'Usuario'}</p>
+          {user?.area_name ? <p className="mt-1 truncate text-xs text-slate-400">{user.area_name}</p> : null}
+        </div>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" /> Cerrar sesión
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function AppLayout() {
   const { user, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [open, setOpen] = useState(false)
   const nav = isAdmin ? adminNav : workerNav
 
@@ -61,51 +118,85 @@ export default function AppLayout() {
   }
 
   const sidebar = (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-5 py-5">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-700 font-bold text-white">T</span>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-900">TERRA</p>
-          <p className="truncate text-xs text-slate-500">Gestión documental</p>
-        </div>
-      </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
-        {nav.map((item) => {
-          const Icon = item.icon
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={() => setOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                  isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`
-              }
-            >
-              <Icon className="h-4.5 w-4.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">{item.label}</span>
-            </NavLink>
-          )
-        })}
-      </nav>
-      <div className="border-t border-slate-200 p-3">
-        <div className="rounded-xl bg-slate-50 px-3 py-3">
-          <p className="truncate text-sm font-medium text-slate-800">{user?.display_name || user?.email}</p>
-          <p className="truncate text-xs text-slate-500">{roleLabels[user?.roles?.[0]] || 'Usuario'}</p>
-          {user?.area_name ? <p className="mt-1 truncate text-xs text-slate-400">{user.area_name}</p> : null}
-        </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
-        >
-          <LogOut className="h-4 w-4" /> Cerrar sesión
-        </button>
-      </div>
-    </div>
+    <Sidebar nav={nav} user={user} onLogout={handleLogout} onNavigate={() => setOpen(false)} admin={isAdmin} />
   )
+
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-100 p-3 sm:p-4">
+        <div className="mx-auto flex w-full max-w-[1600px] gap-3 sm:gap-4 md:h-[calc(100vh-2rem)]">
+          <aside
+            data-testid="admin-sidebar"
+            className="hidden w-[210px] shrink-0 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm md:flex md:h-full xl:w-[232px]"
+          >
+            {sidebar}
+          </aside>
+
+          <div
+            data-testid="admin-workspace"
+            className="flex min-h-[calc(100vh-1.5rem)] min-w-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm sm:min-h-[calc(100vh-2rem)] md:h-full md:min-h-0"
+          >
+            <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-4 sm:px-6">
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:hidden"
+                aria-label="Abrir menú"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-slate-700">
+                  Panel administrativo
+                  <span className="text-slate-400"> · </span>
+                  {currentSection(adminNav, location.pathname)}
+                </p>
+              </div>
+              <div className="hidden items-center gap-2 sm:flex">
+                <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800">
+                  {user?.area_name || 'Sin área'}
+                </span>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                  {roleLabels[user?.roles?.[0]] || 'Usuario'}
+                </span>
+              </div>
+            </header>
+
+            <div
+              data-testid="admin-scroll"
+              className="admin-scroll-container min-h-0 flex-1 overflow-y-auto"
+            >
+              <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-7 lg:py-8">
+                <Outlet />
+              </main>
+            </div>
+          </div>
+        </div>
+
+        {open ? (
+          <div className="fixed inset-0 z-40 md:hidden">
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/40"
+              aria-label="Cerrar menú"
+              onClick={() => setOpen(false)}
+            />
+            <aside data-testid="admin-drawer" className="relative m-3 flex h-[calc(100vh-1.5rem)] w-[280px] max-w-[85vw] flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-xl">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="absolute right-3 top-4 z-10 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+                aria-label="Cerrar menú"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              {sidebar}
+            </aside>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

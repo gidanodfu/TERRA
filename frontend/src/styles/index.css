@@ -83,3 +83,14 @@
     @apply divide-y divide-slate-100 bg-white;
   }
 }
+
+@layer utilities {
+  .admin-scroll-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .admin-scroll-container::-webkit-scrollbar {
+    display: none;
+  }
+}
