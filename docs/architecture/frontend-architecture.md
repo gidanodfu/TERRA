@@ -33,7 +33,7 @@ frontend/src/
 | `/app/admin/jobs`, `.../storage`, `.../audit`, `.../policy` | admin | Supervisión |
 | `/app/jobs/:id`, `/app/admin/jobs/:id` | propietario/admin | Detalle y SSE |
 
-## Layout administrativo
+## Layout administrativo y del trabajador
 
 El panel administrativo (`AppLayout` cuando el rol es `admin`) usa dos superficies
 sobre un fondo gris azulado: sidebar de 210–232 px (`clamp(210px,17vw,232px)`) y
@@ -45,11 +45,15 @@ visible vía `.admin-scroll-container`). La sidebar es un flex item `min-w-0` pa
 los nombres largos no impongan su `min-content`.
 
 La adaptación de contenido usa container queries sobre `main` (`@container`), no solo
-breakpoints de viewport: las cuadrículas del dashboard y de las páginas administrativas
-responden al ancho real del workspace. `PageHeader` pasa a columna por debajo de 42rem
-de contenido y los badges de la cabecera aparecen según el ancho del workspace. El
-panel del trabajador conserva su layout, pero su `main` usa `max-w-[1600px]` y
-`@container` para compartir el mismo criterio.
+breakpoints de viewport: las cuadrículas del dashboard, de las páginas administrativas
+y de los módulos del trabajador responden al ancho real del workspace. `PageHeader` pasa
+a columna por debajo de 42rem de contenido y los badges de la cabecera aparecen según el
+ancho del workspace.
+
+El panel del trabajador comparte el mismo shell que administración (`worker-sidebar`,
+`worker-workspace`, `worker-scroll` y `worker-drawer`). Solo cambian la navegación, los
+permisos, el título del header y el contenido; el header interno, el scroll propio y la
+zona inferior de la sidebar son comunes.
 
 Tablas: `.table-wrap` conserva scroll horizontal interno y `contain: layout` evita que
 el ancho de la tabla se propague al documento en Chromium. Formularios: `.input` usa

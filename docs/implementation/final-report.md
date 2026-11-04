@@ -106,7 +106,7 @@ adicional y sin rollback automático.
 - `./terra test frontend unit`: 14 pruebas correctas.
 - `./terra test frontend integration`: 6 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 30 pruebas Playwright correctas (layout admin, matriz responsive, tablas, formularios, modal, textos largos, panel del trabajador, tema claro/oscuro, persistencia, textarea de política, footer legal, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
+- `./terra test e2e`: 36 pruebas Playwright correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Backup local, verificación y restauración con marcador.
@@ -226,3 +226,14 @@ enlaces se distribuyen en una cuadrícula 2×2 de columnas iguales y cada enlace
 centrado en su celda. En 320 px la cuadrícula pasa a una columna mediante container
 query, sin comprimir textos ni provocar scroll horizontal. Se validaron las cuatro
 rutas legales y los estados hover/focus.
+
+## 20. Homologación del panel del trabajador
+
+`AppLayout` unifica el shell de administración y trabajador: fondo general, sidebar
+flotante de 210–232 px, workspace independiente, separación por gap, radios de 22 px,
+header interno de 64 px y scroll propio. El trabajador conserva su navegación de seis
+módulos, permisos, contenido, tarjeta de usuario y theme toggle; solo cambia la
+configuración de navegación y el título del header. Se añadieron los test IDs
+`worker-sidebar`, `worker-workspace`, `worker-scroll` y `worker-drawer`. El documento
+no scrollea: el workspace y el menú tienen desplazamiento independiente, el header
+permanece fijo y el drawer móvil reutiliza la misma sidebar.
