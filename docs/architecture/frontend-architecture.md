@@ -60,6 +60,24 @@ Validado en 320, 360, 375, 390, 430, 480, 640, 768, 820, 900, 960, 1024, 1097, 1
 1280, 1366, 1440, 1536, 1648, 1707, 1745 y 1920 px, con alturas de 500–1080 px, y a
 200 % de zoom (960×540).
 
+## Tema claro y oscuro
+
+El tema se centraliza en `app/ThemeContext.jsx` y se aplica como clase `dark` en
+`<html>`. Un script inline en `index.html` resuelve la preferencia antes del primer
+render (localStorage `terra-theme`, o `prefers-color-scheme` si no existe) para evitar
+parpadeos. `ThemeToggle` es el único control de cambio y aparece junto a «Cerrar
+sesión» en las sidebars administrativa y del trabajador; ambos comparten el mismo
+estado y la misma clave persistida.
+
+Los tokens semánticos (`--background`, `--foreground`, `--surface`,
+`--surface-secondary`, `--border`, `--muted`, `--input-*`, `--sidebar-*`,
+`--focus-ring`) viven en `:root` y `.dark`. Además, la escala `slate`, los acentos
+`brand` y las paletas de estado (`emerald`, `amber`, `red`, `orange`, `sky`) se
+reinterpretan bajo `.dark`, de modo que las utilidades existentes adoptan el tema sin
+duplicar reglas por página. Las tarjetas y paneles usan `bg-surface`; los inputs usan
+`bg-input-background`; el foco global usa `--focus-ring`. `color-scheme: dark` adapta
+selects, date pickers y barras nativas, y Cloudflare Turnstile recibe el tema activo.
+
 ## Sesión y CSRF
 
 - `AuthProvider` consulta `GET /auth/me` al cargar.

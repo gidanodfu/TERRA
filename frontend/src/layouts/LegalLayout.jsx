@@ -13,7 +13,7 @@ export default function LegalLayout({ title, intro, sections, currentPath }) {
           </Link>
         </header>
 
-        <article className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
+        <article className="rounded-[20px] border border-slate-200 bg-surface p-6 shadow-sm sm:p-10">
           <header className="border-b border-slate-200 pb-6">
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Información legal</p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>

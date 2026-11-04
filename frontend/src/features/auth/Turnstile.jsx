@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTheme } from '../../app/ThemeContext'
 
 let loader = null
 
@@ -26,6 +27,7 @@ function loadTurnstile() {
 }
 
 export function Turnstile({ onToken, onExpire, action = 'admin_login' }) {
+  const { theme } = useTheme()
   const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY
   const container = useRef(null)
   const tokenCallback = useRef(onToken)
@@ -47,7 +49,7 @@ export function Turnstile({ onToken, onExpire, action = 'admin_login' }) {
         widgetId.current = turnstile.render(container.current, {
           sitekey: siteKey,
           action,
-          theme: 'light',
+          theme: theme === 'dark' ? 'dark' : 'light',
           callback: (token) => tokenCallback.current?.(token),
           'expired-callback': () => {
             tokenCallback.current?.('')
@@ -69,7 +71,7 @@ export function Turnstile({ onToken, onExpire, action = 'admin_login' }) {
       }
       widgetId.current = null
     }
-  }, [siteKey, action])
+  }, [siteKey, action, theme])
 
   if (!siteKey) {
     return (

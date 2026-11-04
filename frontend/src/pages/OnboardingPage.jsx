@@ -24,7 +24,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-slate-200 bg-surface">
         <div className="mx-auto flex h-16 max-w-4xl items-center gap-3 px-4 sm:px-6">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-700 font-bold text-white">T</span>
           <div>

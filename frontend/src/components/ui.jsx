@@ -84,7 +84,7 @@ export function LoadingBlock({ label = 'Cargando…' }) {
 
 export function EmptyState({ title, description, action, icon: Icon }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-surface px-6 py-12 text-center">
       {Icon ? <Icon className="h-9 w-9 text-slate-400" aria-hidden="true" /> : null}
       <div>
         <p className="font-medium text-slate-800">{title}</p>
@@ -111,7 +111,7 @@ export function Alert({ tone = 'error', title, children, onClose }) {
         <div className={title ? 'mt-0.5' : ''}>{children}</div>
       </div>
       {onClose ? (
-        <button type="button" onClick={onClose} className="rounded p-1 hover:bg-black/5" aria-label="Cerrar">
+        <button type="button" onClick={onClose} className="rounded p-1 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Cerrar">
           <X className="h-4 w-4" />
         </button>
       ) : null}
@@ -156,8 +156,8 @@ export function Pagination({ page, pageSize, total, onPage }) {
 export function Modal({ open, title, children, onClose, footer }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4">
-      <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 dark:bg-black/70 p-0 sm:items-center sm:p-4">
+      <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl" role="dialog" aria-modal="true">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
           <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Cerrar">

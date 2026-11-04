@@ -111,7 +111,7 @@ export default function PolicyPage() {
                 value={form.content}
                 onChange={(e) => setForm({ ...form, content: e.target.value })}
                 placeholder="Texto completo de la política institucional aprobada…"
-                className="min-h-56"
+                className="min-h-48 resize-y leading-relaxed sm:min-h-52"
               />
             </Field>
             <Button type="submit" disabled={busy}>

@@ -106,7 +106,7 @@ adicional y sin rollback automático.
 - `./terra test frontend unit`: 14 pruebas correctas.
 - `./terra test frontend integration`: 6 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 22 pruebas Playwright correctas (layout admin, matriz responsive, tablas, formularios, modal, textos largos, panel del trabajador, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
+- `./terra test e2e`: 28 pruebas Playwright correctas (layout admin, matriz responsive, tablas, formularios, modal, textos largos, panel del trabajador, tema claro/oscuro, persistencia, textarea de política, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Backup local, verificación y restauración con marcador.
@@ -202,3 +202,18 @@ Se probaron 22 anchos (320–2560 px), alturas de 500–1080 px y zoom equivalen
 todos los módulos admin y worker sin desbordamientos, tablas con scroll interno,
 formularios estables, modales acotados y capturas comparativas 100/125/150/200 %.
 Los E2E subieron a 22 y `./terra test all` y `./terra doctor` finalizaron correctamente.
+
+## 18. Tema claro/oscuro y campo de política
+
+El tema se centraliza en `ThemeContext` y `ThemeToggle`, con preferencia en
+`localStorage`, lectura inicial de `prefers-color-scheme` y un script inline que evita
+el parpadeo. El selector aparece junto a «Cerrar sesión» en las dos sidebars. Los
+tokens semánticos y la reinterpretación de las escalas de color en `.dark` cubren
+sidebar, workspace, tarjetas, tablas, formularios, modales, alertas, estados vacíos y
+Turnstile. Validado en todas las rutas admin y worker, sin superficies claras ni textos
+oscuros olvidados.
+
+El campo «Contenido aprobado» de Política ocupa el 100 % del ancho de la tarjeta,
+coincide con «Identificador de versión», tiene borde de 1 px, radio de 12 px, altura
+mínima de 192–208 px, `resize: vertical` y foco verde institucional. Se validó a 320,
+390, 768, 1024 y 1440 px y en ambos temas.

@@ -219,7 +219,7 @@ export default function WorkerDrive() {
                       <label className="mt-3 flex items-start gap-2 text-sm text-slate-700">
                         <input
                           type="checkbox"
-                          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-700"
+                          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-700 accent-brand-700"
                           checked={consentChecked}
                           onChange={(e) => setConsentChecked(e.target.checked)}
                         />

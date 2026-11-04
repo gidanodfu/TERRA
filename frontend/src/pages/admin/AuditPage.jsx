@@ -104,7 +104,7 @@ export default function AuditPage() {
                         {expanded === event.id ? 'Ocultar' : 'Ver'}
                       </button>
                       {expanded === event.id ? (
-                        <pre className="mt-2 max-w-xs overflow-x-auto rounded-lg bg-slate-900 p-2 text-left text-xs text-slate-100">
+                        <pre className="code-block mt-2 max-w-xs overflow-x-auto rounded-lg p-2 text-left text-xs">
                           {JSON.stringify(event.metadata || {}, null, 2)}
                         </pre>
                       ) : null}

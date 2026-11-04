@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react'
 import { useAuth } from '../app/AuthContext'
+import ThemeToggle from '../components/ThemeToggle'
 
 const workerNav = [
   { to: '/app', label: 'Inicio', icon: Home, end: true },
@@ -93,13 +94,17 @@ function Sidebar({ nav, user, onLogout, onNavigate, admin = false }) {
           <p className="truncate text-xs text-slate-500">{roleLabels[user?.roles?.[0]] || 'Usuario'}</p>
           {user?.area_name ? <p className="mt-1 truncate text-xs text-slate-400" title={user.area_name}>{user.area_name}</p> : null}
         </div>
-        <button
-          type="button"
-          onClick={onLogout}
-          className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
-        >
-          <LogOut className="h-4 w-4" aria-hidden="true" /> Cerrar sesión
-        </button>
+        <div className="mt-2 flex items-stretch gap-2">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="flex min-h-11 flex-1 items-center gap-2 rounded-xl px-2.5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          >
+            <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">Cerrar sesión</span>
+          </button>
+          <ThemeToggle />
+        </div>
       </div>
     </div>
   )
@@ -127,14 +132,14 @@ export default function AppLayout() {
         <div className="mx-auto flex h-full w-full max-w-[1920px] gap-3 sm:gap-4">
           <aside
             data-testid="admin-sidebar"
-            className="hidden shrink-0 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm md:flex md:h-full md:w-[clamp(210px,17vw,232px)]"
+            className="hidden shrink-0 overflow-hidden rounded-[22px] border border-slate-200 bg-sidebar-background shadow-sm md:flex md:h-full md:w-[clamp(210px,17vw,232px)]"
           >
             {sidebar}
           </aside>
 
           <div
             data-testid="admin-workspace"
-            className="@container flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm"
+            className="@container flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-surface shadow-sm"
           >
             <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-4 sm:px-6">
               <button
@@ -182,11 +187,11 @@ export default function AppLayout() {
           <div className="fixed inset-0 z-40 md:hidden">
             <button
               type="button"
-              className="absolute inset-0 bg-slate-900/40"
+              className="absolute inset-0 bg-slate-900/40 dark:bg-black/70"
               aria-label="Cerrar menú"
               onClick={() => setOpen(false)}
             />
-            <aside data-testid="admin-drawer" className="relative m-3 flex h-[calc(100dvh-1.5rem)] w-[280px] max-w-[85vw] flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-xl">
+            <aside data-testid="admin-drawer" className="relative m-3 flex h-[calc(100dvh-1.5rem)] w-[280px] max-w-[85vw] flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-sidebar-background shadow-xl">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -205,12 +210,12 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white lg:block">{sidebar}</aside>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-sidebar-background lg:block">{sidebar}</aside>
 
       {open ? (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <button type="button" className="absolute inset-0 bg-slate-900/40" aria-label="Cerrar menú" onClick={() => setOpen(false)} />
-          <aside className="relative h-full w-72 max-w-[85vw] border-r border-slate-200 bg-white shadow-xl">
+          <button type="button" className="absolute inset-0 bg-slate-900/40 dark:bg-black/70" aria-label="Cerrar menú" onClick={() => setOpen(false)} />
+          <aside className="relative h-full w-72 max-w-[85vw] border-r border-slate-200 bg-sidebar-background shadow-xl">
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -225,7 +230,7 @@ export default function AppLayout() {
       ) : null}
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-surface/90 px-4 backdrop-blur sm:px-6">
           <button
             type="button"
             onClick={() => setOpen(true)}

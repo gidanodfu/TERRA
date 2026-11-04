@@ -77,7 +77,7 @@ export default function LoginPage() {
           <p className="mt-1.5 text-sm text-slate-500">Gestión documental municipal</p>
         </header>
 
-        <section className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="rounded-[20px] border border-slate-200 bg-surface p-6 shadow-sm sm:p-8">
           <div className="text-center">
             <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Iniciar sesión</h2>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
@@ -112,7 +112,7 @@ export default function LoginPage() {
             </button>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
+          <section className="mt-5 rounded-2xl border border-slate-200 bg-surface p-5">
             <div className="text-center">
               <h3 className="text-sm font-semibold text-slate-900">Administración</h3>
               <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
@@ -166,7 +166,7 @@ export default function LoginPage() {
           <p>¿Problemas de acceso? Contacte al administrador del sistema.</p>
         </div>
 
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-surface px-4 py-4 shadow-sm">
           <h2 className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
             Información legal
           </h2>

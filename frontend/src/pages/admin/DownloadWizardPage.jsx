@@ -191,7 +191,7 @@ export default function DownloadWizardPage() {
               <input
                 type="radio"
                 name="scope"
-                className="h-4 w-4 text-brand-700"
+                className="h-4 w-4 text-brand-700 accent-brand-700"
                 value="my_drive_full"
                 checked={scope === 'my_drive_full'}
                 onChange={() => setScope('my_drive_full')}
@@ -205,7 +205,7 @@ export default function DownloadWizardPage() {
               <input
                 type="radio"
                 name="scope"
-                className="h-4 w-4 text-brand-700"
+                className="h-4 w-4 text-brand-700 accent-brand-700"
                 value="selected_folders"
                 checked={scope === 'selected_folders'}
                 onChange={() => setScope('selected_folders')}

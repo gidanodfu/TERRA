@@ -115,7 +115,7 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
                   <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-brand-700"
+                      className="h-4 w-4 rounded border-slate-300 text-brand-700 accent-brand-700"
                       checked={checked}
                       disabled={disabled}
                       onChange={() => toggle(folder)}
