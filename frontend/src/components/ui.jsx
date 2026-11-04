@@ -2,10 +2,10 @@ import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Loader2, X } from
 
 export function PageHeader({ title, description, actions }) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {description ? <p className="mt-1 max-w-2xl text-sm text-slate-500">{description}</p> : null}
+    <div className="mb-6 flex flex-col gap-3 @2xl:flex-row @2xl:items-start @2xl:justify-between">
+      <div className="min-w-0">
+        <h1 className="wrap-anywhere text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
+        {description ? <p className="mt-1 max-w-2xl wrap-anywhere text-sm text-slate-500">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
@@ -36,7 +36,7 @@ export function Button({ variant = 'primary', className = '', children, ...props
 
 export function Field({ label, htmlFor, error, hint, children }) {
   return (
-    <div>
+    <div className="min-w-0">
       {label ? (
         <label className="label" htmlFor={htmlFor}>
           {label}
@@ -49,20 +49,20 @@ export function Field({ label, htmlFor, error, hint, children }) {
   )
 }
 
-export function Input({ id, error, ...props }) {
-  return <input id={id} className={`input ${error ? 'border-red-400' : ''}`} {...props} />
+export function Input({ id, error, className = '', ...props }) {
+  return <input id={id} className={`input ${error ? 'border-red-400' : ''} ${className}`} {...props} />
 }
 
-export function Select({ id, error, children, ...props }) {
+export function Select({ id, error, className = '', children, ...props }) {
   return (
-    <select id={id} className={`input ${error ? 'border-red-400' : ''}`} {...props}>
+    <select id={id} className={`input ${error ? 'border-red-400' : ''} ${className}`} {...props}>
       {children}
     </select>
   )
 }
 
-export function Textarea({ id, error, ...props }) {
-  return <textarea id={id} className={`input min-h-28 ${error ? 'border-red-400' : ''}`} {...props} />
+export function Textarea({ id, error, className = '', ...props }) {
+  return <textarea id={id} className={`input min-h-28 ${error ? 'border-red-400' : ''} ${className}`} {...props} />
 }
 
 export function Badge({ tone = 'bg-slate-100 text-slate-700', children }) {
@@ -88,7 +88,7 @@ export function EmptyState({ title, description, action, icon: Icon }) {
       {Icon ? <Icon className="h-9 w-9 text-slate-400" aria-hidden="true" /> : null}
       <div>
         <p className="font-medium text-slate-800">{title}</p>
-        {description ? <p className="mt-1 max-w-md text-sm text-slate-500">{description}</p> : null}
+        {description ? <p className="mt-1 max-w-md break-words text-sm text-slate-500">{description}</p> : null}
       </div>
       {action}
     </div>
@@ -138,7 +138,7 @@ export function Pagination({ page, pageSize, total, onPage }) {
       <p className="text-sm text-slate-500">
         {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} de {total}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button variant="secondary" onClick={() => onPage(page - 1)} disabled={page <= 1} aria-label="Página anterior">
           <ChevronLeft className="h-4 w-4" /> Anterior
         </Button>
@@ -157,15 +157,15 @@ export function Modal({ open, title, children, onClose, footer }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4">
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:rounded-2xl" role="dialog" aria-modal="true">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+      <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl" role="dialog" aria-modal="true">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
           <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Cerrar">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="px-5 py-4">{children}</div>
-        {footer ? <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">{footer}</div> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4" data-testid="modal-body">{children}</div>
+        {footer ? <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-200 px-5 py-4">{footer}</div> : null}
       </div>
     </div>
   )
@@ -173,14 +173,14 @@ export function Modal({ open, title, children, onClose, footer }) {
 
 export function StatCard({ label, value, hint, icon: Icon, tone = 'text-brand-700' }) {
   return (
-    <div className="card p-5">
+    <div className="card min-w-0 p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">{value}</p>
-          {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+        <div className="min-w-0">
+          <p className="wrap-anywhere text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-2 wrap-anywhere text-2xl font-semibold tabular-nums text-slate-900">{value}</p>
+          {hint ? <p className="mt-1 wrap-anywhere text-xs text-slate-500">{hint}</p> : null}
         </div>
-        {Icon ? <Icon className={`h-6 w-6 ${tone}`} aria-hidden="true" /> : null}
+        {Icon ? <Icon className={`h-6 w-6 shrink-0 ${tone}`} aria-hidden="true" /> : null}
       </div>
     </div>
   )
@@ -190,7 +190,7 @@ export function DetailRow({ label, children }) {
   return (
     <div className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-baseline sm:justify-between">
       <dt className="text-sm text-slate-500">{label}</dt>
-      <dd className="text-sm font-medium text-slate-800">{children}</dd>
+      <dd className="min-w-0 wrap-anywhere text-sm font-medium text-slate-800 sm:text-right">{children}</dd>
     </div>
   )
 }

@@ -35,12 +35,30 @@ frontend/src/
 
 ## Layout administrativo
 
-El panel administrativo (`AppLayout` cuando el rol es `admin`) usa dos superficies:
-sidebar de 210–232 px y workspace flexible, con márgenes, radios de 22 px y scroll
-interno sin barras visibles (`.admin-scroll-container`). En móvil se reutiliza el
-drawer. El panel del trabajador conserva su layout. La auditoría responsive cubre 320,
-768, 1024, 1280 y 1920 px, además de alturas reducidas; la cabecera trunca nombres
-largos y el scroll interno sigue siendo real aunque la barra visual esté oculta.
+El panel administrativo (`AppLayout` cuando el rol es `admin`) usa dos superficies
+sobre un fondo gris azulado: sidebar de 210–232 px (`clamp(210px,17vw,232px)`) y
+workspace flexible. El shell mide `100dvh` y `max-w-[1920px]`, con 16 px de margen
+exterior: ocupa todo el ancho en 1366–1920 px y se limita en monitores ultrapanorámicos
+para no estirar la interfaz sin control. El documento nunca scrollea; el único
+propietario del scroll vertical es `admin-scroll` (`overflow-y: auto`, sin barra
+visible vía `.admin-scroll-container`). La sidebar es un flex item `min-w-0` para que
+los nombres largos no impongan su `min-content`.
+
+La adaptación de contenido usa container queries sobre `main` (`@container`), no solo
+breakpoints de viewport: las cuadrículas del dashboard y de las páginas administrativas
+responden al ancho real del workspace. `PageHeader` pasa a columna por debajo de 42rem
+de contenido y los badges de la cabecera aparecen según el ancho del workspace. El
+panel del trabajador conserva su layout, pero su `main` usa `max-w-[1600px]` y
+`@container` para compartir el mismo criterio.
+
+Tablas: `.table-wrap` conserva scroll horizontal interno y `contain: layout` evita que
+el ancho de la tabla se propague al documento en Chromium. Formularios: `.input` usa
+`min-w-0` para que selects e inputs puedan encogerse dentro de flex/grid. Los modales
+son flex column con `max-h-[92dvh]`, cabecera y pie fijos y cuerpo desplazable.
+
+Validado en 320, 360, 375, 390, 430, 480, 640, 768, 820, 900, 960, 1024, 1097, 1180,
+1280, 1366, 1440, 1536, 1648, 1707, 1745 y 1920 px, con alturas de 500–1080 px, y a
+200 % de zoom (960×540).
 
 ## Sesión y CSRF
 

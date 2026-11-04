@@ -61,7 +61,7 @@ export default function AuditPage() {
       />
       {error ? <Alert tone="error">{error}</Alert> : null}
 
-      <form onSubmit={search} className="mb-4 flex flex-col gap-2 lg:flex-row">
+      <form onSubmit={search} className="mb-4 flex flex-col gap-2 @2xl:flex-row">
         <Input value={action} onChange={(e) => setAction(e.target.value)} placeholder="Acción exacta, p. ej. download_job.created" aria-label="Filtrar por acción" />
         <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Desde" />
         <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Hasta" />

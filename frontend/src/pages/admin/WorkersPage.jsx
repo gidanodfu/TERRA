@@ -51,9 +51,9 @@ export default function AdminWorkers() {
 
       {error ? <Alert tone="error">{error}</Alert> : null}
 
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mb-4 flex flex-col gap-2 @lg:flex-row">
         <form
-          className="flex flex-1 gap-2"
+          className="flex min-w-0 flex-1 gap-2"
           onSubmit={(e) => {
             e.preventDefault()
             setPage(1)
@@ -70,7 +70,7 @@ export default function AdminWorkers() {
             <Search className="h-4 w-4" /> Buscar
           </Button>
         </form>
-        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }} aria-label="Filtrar por estado">
+        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }} aria-label="Filtrar por estado" className="@lg:w-56">
           <option value="">Todos los estados</option>
           <option value="active">Activos</option>
           <option value="pending_profile">Perfil pendiente</option>

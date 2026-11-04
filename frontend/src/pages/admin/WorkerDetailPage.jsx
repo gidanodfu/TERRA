@@ -113,8 +113,8 @@ export default function WorkerDetailPage() {
       {error ? <Alert tone="error">{error}</Alert> : null}
       {success ? <Alert tone="success" onClose={() => setSuccess('')}>{success}</Alert> : null}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-6 @3xl:grid-cols-3">
+        <Card className="@3xl:col-span-2">
           <CardBody>
             <div className="mb-4 flex items-center gap-3">
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-700">
@@ -132,7 +132,7 @@ export default function WorkerDetailPage() {
 
             <form onSubmit={save} className="mt-6 space-y-4 border-t border-slate-100 pt-5">
               <h3 className="text-sm font-semibold text-slate-900">Modificar asignación</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 @md:grid-cols-2">
                 <Field label="Área" htmlFor="area_id">
                   <Select
                     id="area_id"

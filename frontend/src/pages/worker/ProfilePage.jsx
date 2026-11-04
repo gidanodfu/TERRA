@@ -20,9 +20,9 @@ export default function WorkerProfile() {
             <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-100 text-brand-800">
               <UserRound className="h-5 w-5" />
             </span>
-            <div>
-              <p className="font-medium text-slate-900">{user?.display_name || user?.email}</p>
-              <p className="text-xs text-slate-500">{user?.email || 'Cuenta de Google verificada'}</p>
+            <div className="min-w-0">
+              <p className="wrap-anywhere font-medium text-slate-900">{user?.display_name || user?.email}</p>
+              <p className="wrap-anywhere text-xs text-slate-500">{user?.email || 'Cuenta de Google verificada'}</p>
             </div>
           </div>
           <ProfileForm

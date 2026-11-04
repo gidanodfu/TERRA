@@ -119,7 +119,7 @@ export default function OrganizationPage() {
       {error ? <Alert tone="error" onClose={() => setError('')}>{error}</Alert> : null}
       {success ? <Alert tone="success" onClose={() => setSuccess('')}>{success}</Alert> : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 @2xl:grid-cols-2">
         <Card>
           <CardBody>
             <h2 className="mb-3 font-semibold text-slate-900">Áreas</h2>

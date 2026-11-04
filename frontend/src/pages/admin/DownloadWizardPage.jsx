@@ -158,7 +158,7 @@ export default function DownloadWizardPage() {
                 </Button>
               </div>
             ) : connection ? (
-              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+              <dl className="mt-4 grid gap-3 text-sm @lg:grid-cols-2">
                 <div>
                   <dt className="text-slate-500">Cuenta autorizada</dt>
                   <dd className="font-medium text-slate-800">{connection.google_email || '—'}</dd>
@@ -186,7 +186,7 @@ export default function DownloadWizardPage() {
       <Card className="mt-4">
         <CardBody>
           <h2 className="font-semibold text-slate-900">Alcance del snapshot</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 @lg:grid-cols-2">
             <label className={`cursor-pointer rounded-xl border p-4 ${scope === 'my_drive_full' ? 'border-brand-600 bg-brand-50' : 'border-slate-200 hover:border-slate-300'}`}>
               <input
                 type="radio"
@@ -248,7 +248,7 @@ export default function DownloadWizardPage() {
             </div>
           )}
 
-          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 text-sm @lg:grid-cols-2">
             <div className="rounded-xl bg-slate-50 p-3">
               <p className="text-xs text-slate-500">Trabajador</p>
               <p className="font-medium text-slate-800">{worker?.display_name || '—'}</p>

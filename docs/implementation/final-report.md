@@ -106,7 +106,7 @@ adicional y sin rollback automático.
 - `./terra test frontend unit`: 14 pruebas correctas.
 - `./terra test frontend integration`: 6 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 15 pruebas Playwright correctas (layout admin, login, rutas legales, 404, Inter, responsive, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
+- `./terra test e2e`: 22 pruebas Playwright correctas (layout admin, matriz responsive, tablas, formularios, modal, textos largos, panel del trabajador, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Backup local, verificación y restauración con marcador.
@@ -169,10 +169,36 @@ institucional. No se inventó contenido legal ni se declaró una política vigen
 El panel administrativo usa dos superficies independientes: sidebar blanca de
 210–232 px y workspace flexible, ambas con márgenes exteriores, bordes redondeados
 de 22 px y sombra discreta. La cabecera queda dentro del workspace. En tablet se
-mantiene la sidebar reducida; en móvil se usa el drawer existente. El scroll interno
-de sidebar/workspace oculta la barra visual pero conserva rueda, teclado y touch.
-El panel del trabajador no fue rediseñado.
+mantiene la sidebar reducida; en móvil se usa el drawer existente.
 
-Validación responsive: 320, 768, 1024, 1280, 1920 px y altura reducida. Se comprobó
-ausencia de scroll horizontal, cabecera visible con nombres largos, scroll interno
-real sin barras visibles, sidebar de 210 px en tablet y drawer en móvil.
+Causa raíz corregida: el shell alternaba entre altura ligada al viewport en `md+` y
+altura por contenido por debajo de `md`; en ese segundo caso el documento entero
+scrolleaba y aparecía la barra del navegador. Además, el wrapper de la sidebar no
+tenía `min-w-0`, por lo que los textos con `truncate` imponían un ancho de
+`min-content` de ~334 px dentro de un panel de 210–232 px y se recortaban con
+`overflow-hidden`. Ahora el shell usa `100dvh` en todos los anchos, el workspace es
+`h-full min-h-0` y el único scroll es `admin-scroll` (`overflow-y: auto`), con la
+barra visual oculta. El wrapper de la sidebar es `w-full min-w-0`. El `main` usa
+`@container` y las cuadrículas `@sm`/`@4xl`, ajustándose al ancho del workspace.
+
+### Causa raíz del problema 100 % / 125 %
+
+El shell usaba `max-w-[1600px]`. En un monitor de 1920 px al 100 % quedaba centrado con
+160 px de aire a cada lado; al 125 % el viewport CSS baja a 1536 px y el mismo límite no
+se alcanza, por lo que el diseño se veía lleno. La diferencia no era de zoom sino de
+ancho máximo: 1920 → 1600 px de shell, 1536 → 1504 px de shell.
+
+Corrección: `max-w-[1920px]` (16 px de margen en 1920 px, tope solo en ultrapanorámicos)
+y grids por container queries sobre `main`, que miden el workspace real. Se añadió
+`clamp(210px,17vw,232px)` a la sidebar, `min-w-0` a inputs/selects, `wrap-anywhere` a
+textos sin puntos de corte, `contain: layout` a `.table-wrap` (el ancho de la tabla se
+propagaba al `documentElement` en Chromium) y modales de altura acotada con cuerpo
+desplazable.
+
+### Validación
+
+Se probaron 22 anchos (320–2560 px), alturas de 500–1080 px y zoom equivalente a 200 %
+(960×540): sin scroll horizontal global, sin scroll vertical del documento en admin,
+todos los módulos admin y worker sin desbordamientos, tablas con scroll interno,
+formularios estables, modales acotados y capturas comparativas 100/125/150/200 %.
+Los E2E subieron a 22 y `./terra test all` y `./terra doctor` finalizaron correctamente.

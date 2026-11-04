@@ -116,16 +116,16 @@ export default function WorkerDrive() {
       <Card>
         <CardBody>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-4">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-50 text-brand-700">
+            <div className="flex min-w-0 items-start gap-4">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700">
                 <ShieldCheck className="h-6 w-6" />
               </span>
-              <div>
+              <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-semibold text-slate-900">Cuenta autorizada</h2>
                   <StatusBadge type="connection" status={connection?.status || 'revoked'} />
                 </div>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 wrap-anywhere text-sm text-slate-500">
                   {connection?.google_email || 'Aún no ha autorizado una cuenta de Google.'}
                 </p>
               </div>

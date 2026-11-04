@@ -44,14 +44,14 @@ export default function AdminDashboard() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 @sm:grid-cols-2 @3xl:grid-cols-4">
         <StatCard label="Trabajadores activos" value={data.active_users} hint={`${data.pending_profiles} perfiles pendientes`} icon={Users} />
         <StatCard label="Áreas / cargos" value={`${data.areas} / ${data.positions}`} hint="Catálogo organizativo" icon={Database} />
         <StatCard label="Trabajos en curso" value={data.running_jobs + data.queued_jobs} hint={`${data.queued_jobs} en cola · ${data.waiting_authorization_jobs} en espera`} icon={ListChecks} />
         <StatCard label="Almacenamiento" value={formatBytes(data.stored_bytes)} hint="Documentos resguardados" icon={HardDrive} />
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-4 grid gap-4 @sm:grid-cols-2 @3xl:grid-cols-4">
         <StatCard label="Completados" value={data.completed_jobs} hint="Snapshots finalizados" icon={FileClock} />
         <StatCard label="Fallidos / parciales" value={data.failed_jobs} hint="Requieren revisión" icon={ShieldAlert} tone="text-amber-600" />
         <StatCard label="Drives conectados" value={data.connected_drives} hint={`${data.reauth_drives} requieren reconexión`} icon={Database} tone="text-emerald-600" />
@@ -63,8 +63,8 @@ export default function AdminDashboard() {
         />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="mt-6 grid gap-6 @3xl:grid-cols-3">
+        <Card className="@3xl:col-span-2">
           <CardBody>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">Actividad reciente</h2>

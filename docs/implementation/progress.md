@@ -50,7 +50,7 @@ Resultados:
 - Frontend unit: 14 pruebas correctas.
 - Frontend integration: 6 pruebas correctas.
 - Frontend lint/build/coverage: correcto.
-- E2E Playwright: 15 pruebas correctas (layout admin, login, rutas legales, 404, Inter, responsive, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
+- E2E Playwright: 22 pruebas correctas (layout admin, matriz responsive, tablas, formularios, modal, textos largos, panel del trabajador, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
 - `./terra test all`: correcto.
 
 ### Infraestructura local
@@ -67,7 +67,10 @@ Resultados:
 - Corregida la carga del frontend: `node_modules` visible en la imagen web, bind mounts individuales, `up` recrea web y doctor/verify detectan `/@vite/client` incorrecto.
 - Añadidas rutas legales públicas independentes y navegación desde el login; contenido marcado como pendiente de aprobación institucional.
 - Rediseñado el panel administrativo con sidebar y workspace independientes, superficies rounded, scroll interno sin barras visibles y drawer móvil.
-- Auditado en 320, 768, 1024, 1280, 1920 px y altura reducida; cabeceras largas truncadas sin colapsar la sección y sin scroll horizontal.
+- Corregida la causa raíz del scroll: shell `100dvh`, un único scroll interno, documento sin scroll y sidebar `min-w-0` sin recorte.
+- Corregido el aprovechamiento de ancho: shell `max-w-[1920px]` (16 px de margen en 1920) y grids por container queries en dashboard y módulos.
+- Corregidos desbordamientos de tablas (`contain: layout` + scroll interno), selects/inputs (`min-w-0` y anchos acotados), textos largos (`wrap-anywhere`) y modales (`92dvh` con cuerpo desplazable).
+- Auditado en 320, 375, 430, 768, 960, 1024, 1152, 1280, 1440, 1920 px y alturas de 500–560 px; cuadrículas por container queries y sin scroll horizontal.
 - Rediseñado el login como composición centrada de una columna, con paneles de trabajadores/administración, tarjeta legal y tipografía Inter local.
 
 ## Pendiente externo

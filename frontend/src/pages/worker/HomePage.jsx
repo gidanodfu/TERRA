@@ -43,7 +43,7 @@ export default function WorkerHome() {
         description="Consulte el estado de su conexión, sus descargas y los documentos resguardados por TERRA."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 @sm:grid-cols-2 @3xl:grid-cols-4">
         <StatCard
           label="Conexión de Google Drive"
           value={connection ? 'Vinculada' : 'Sin conectar'}
@@ -60,8 +60,8 @@ export default function WorkerHome() {
         />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="mt-6 grid gap-6 @3xl:grid-cols-3">
+        <Card className="@3xl:col-span-2">
           <CardBody>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">Descargas recientes</h2>
@@ -74,7 +74,7 @@ export default function WorkerHome() {
             ) : (
               <ul className="divide-y divide-slate-100">
                 {jobs.map((job) => (
-                  <li key={job.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <li key={job.id} className="flex flex-col gap-2 py-3 @md:flex-row @md:items-center @md:justify-between">
                     <div className="min-w-0">
                       <Link to={`/app/jobs/${job.id}`} className="truncate text-sm font-medium text-brand-800 hover:underline">
                         Trabajo {job.id.slice(0, 8).toUpperCase()}

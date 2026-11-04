@@ -170,8 +170,8 @@ export default function JobDetailPage({ basePath }) {
       ) : null}
       {job.error_message ? <Alert tone="error" title={job.error_code || 'Error del trabajo'}>{job.error_message}</Alert> : null}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-6 @3xl:grid-cols-3">
+        <Card className="@3xl:col-span-2">
           <CardBody>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -185,7 +185,7 @@ export default function JobDetailPage({ basePath }) {
             <div className="mt-4">
               <ProgressBar value={percent} tone={tone} label={`${percent}% procesado · ${formatBytes(job.downloaded_bytes)} descargados`} />
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mt-5 grid grid-cols-2 gap-3 @2xl:grid-cols-4">
               <div className="rounded-xl bg-emerald-50 p-3">
                 <p className="text-xs text-emerald-700">Completados</p>
                 <p className="text-xl font-semibold text-emerald-900">{job.completed_items}</p>
@@ -246,7 +246,7 @@ export default function JobDetailPage({ basePath }) {
 
       <Card className="mt-6">
         <CardBody>
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 flex flex-col gap-2 @md:flex-row @md:items-center @md:justify-between">
             <h2 className="font-semibold text-slate-900">Elementos</h2>
             <Select
               value={itemStatus}
@@ -255,7 +255,7 @@ export default function JobDetailPage({ basePath }) {
                 setPage(1)
               }}
               aria-label="Filtrar elementos"
-              className="sm:w-52"
+              className="@md:w-52"
             >
               <option value="">Todos</option>
               <option value="completed">Completados</option>

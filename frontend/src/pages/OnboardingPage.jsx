@@ -33,13 +33,13 @@ export default function OnboardingPage() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <main className="@container mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <PageHeader
           title="Complete su perfil"
           description="Necesitamos sus datos y su asignación organizativa para activar su cuenta institucional."
         />
 
-        <div className="mb-5 grid gap-3 sm:grid-cols-3">
+        <div className="mb-5 grid gap-3 @lg:grid-cols-3">
           <div className="card flex items-center gap-3 p-4">
             <UserRound className="h-5 w-5 text-brand-700" />
             <span className="text-sm text-slate-600">Datos personales</span>

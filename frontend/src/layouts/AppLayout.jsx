@@ -56,8 +56,8 @@ function currentSection(nav, pathname) {
 
 function Sidebar({ nav, user, onLogout, onNavigate, admin = false }) {
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-5 py-5">
+    <div className="flex h-full w-full min-w-0 flex-col">
+      <div className="flex items-center gap-3 px-4 py-5">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-700 font-bold text-white">T</span>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-slate-900">TERRA</p>
@@ -123,18 +123,18 @@ export default function AppLayout() {
 
   if (isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-100 p-3 sm:p-4">
-        <div className="mx-auto flex w-full max-w-[1600px] gap-3 sm:gap-4 md:h-[calc(100vh-2rem)]">
+      <div className="h-dvh bg-slate-100 p-3 sm:p-4">
+        <div className="mx-auto flex h-full w-full max-w-[1920px] gap-3 sm:gap-4">
           <aside
             data-testid="admin-sidebar"
-            className="hidden w-[210px] shrink-0 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm md:flex md:h-full xl:w-[232px]"
+            className="hidden shrink-0 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm md:flex md:h-full md:w-[clamp(210px,17vw,232px)]"
           >
             {sidebar}
           </aside>
 
           <div
             data-testid="admin-workspace"
-            className="flex min-h-[calc(100vh-1.5rem)] min-w-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm sm:min-h-[calc(100vh-2rem)] md:h-full md:min-h-0"
+            className="@container flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm"
           >
             <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-4 sm:px-6">
               <button
@@ -152,14 +152,14 @@ export default function AppLayout() {
                   {currentSection(adminNav, location.pathname)}
                 </p>
               </div>
-              <div className="hidden items-center gap-2 sm:flex">
+              <div className="hidden items-center gap-2 @xl:flex">
                 <span
-                  className="max-w-[8rem] truncate rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 lg:max-w-[14rem] xl:max-w-[16rem]"
+                  className="max-w-[10rem] truncate rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 @3xl:max-w-[14rem] @5xl:max-w-[16rem]"
                   title={user?.area_name || 'Sin área'}
                 >
                   {user?.area_name || 'Sin área'}
                 </span>
-                <span className="max-w-[7rem] truncate rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                <span className="max-w-[8rem] truncate rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                   {roleLabels[user?.roles?.[0]] || 'Usuario'}
                 </span>
               </div>
@@ -167,9 +167,11 @@ export default function AppLayout() {
 
             <div
               data-testid="admin-scroll"
-              className="admin-scroll-container min-h-0 flex-1 overflow-y-auto"
+              tabIndex={0}
+              aria-label="Contenido del panel administrativo"
+              className="admin-scroll-container min-h-0 min-w-0 flex-1 overflow-y-auto"
             >
-              <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-7 lg:py-8">
+              <main className="@container mx-auto w-full px-4 py-6 sm:px-6 lg:px-7 lg:py-8">
                 <Outlet />
               </main>
             </div>
@@ -184,7 +186,7 @@ export default function AppLayout() {
               aria-label="Cerrar menú"
               onClick={() => setOpen(false)}
             />
-            <aside data-testid="admin-drawer" className="relative m-3 flex h-[calc(100vh-1.5rem)] w-[280px] max-w-[85vw] flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-xl">
+            <aside data-testid="admin-drawer" className="relative m-3 flex h-[calc(100dvh-1.5rem)] w-[280px] max-w-[85vw] flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-xl">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -247,7 +249,7 @@ export default function AppLayout() {
             </span>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
+        <main className="@container mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:py-8">
           <Outlet />
         </main>
       </div>
