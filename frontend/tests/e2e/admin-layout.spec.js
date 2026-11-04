@@ -7,7 +7,7 @@ const adminUser = {
   display_name: 'Ada Admin',
   email: 'ada@example.test',
   area_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  area_name: 'Sistemas',
+  area_name: 'Secretaría de Administración y Finanzas Municipal',
   position_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   position_name: 'Administradora',
   status: 'active',
@@ -63,6 +63,7 @@ test('el panel administrativo usa dos superficies separadas y rounded', async ({
   await expect(sidebar.getByRole('link', { name: 'Trabajadores' })).toBeVisible()
   await expect(sidebar.getByText('Cerrar sesión')).toBeVisible()
   await expect(workspace.locator('header').first()).toContainText('Panel administrativo')
+  await expect(workspace.locator('header').first()).toContainText('Dashboard')
 
   const sidebarBox = await sidebar.boundingBox()
   const workspaceBox = await workspace.boundingBox()
@@ -84,6 +85,14 @@ test('el panel administrativo usa dos superficies separadas y rounded', async ({
     return element.scrollTop
   })
   expect(scrolled).toBeGreaterThan(0)
+
+  const nav = sidebar.locator('nav')
+  expect(await nav.evaluate((element) => getComputedStyle(element).scrollbarWidth)).toBe('none')
+  const navScrolled = await nav.evaluate((element) => {
+    element.scrollTop = 120
+    return element.scrollTop
+  })
+  expect(navScrolled).toBeGreaterThan(0)
 })
 
 test('en tablet se mantienen las dos superficies con sidebar reducida', async ({ page }) => {
@@ -99,12 +108,15 @@ test('en tablet se mantienen las dos superficies con sidebar reducida', async ({
   expect(sidebarBox.x).toBeGreaterThan(0)
   expect(workspaceBox.x).toBeGreaterThan(sidebarBox.x + sidebarBox.width)
   expect(sidebarBox.width).toBeLessThanOrEqual(220)
+  const headerText = await workspace.locator('header').first().innerText()
+  expect(headerText).toContain('Panel administrativo')
+  expect(headerText).toContain('Dashboard')
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
   expect(overflow).toBeFalsy()
 })
 
 test('la navegación administrativa conserva todos los módulos y el drawer móvil', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+  await page.setViewportSize({ width: 320, height: 700 })
   await mockAdmin(page)
   await page.goto('/app/admin')
   await expect(page.getByTestId('admin-sidebar')).toBeHidden()

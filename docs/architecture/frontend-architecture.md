@@ -38,7 +38,9 @@ frontend/src/
 El panel administrativo (`AppLayout` cuando el rol es `admin`) usa dos superficies:
 sidebar de 210–232 px y workspace flexible, con márgenes, radios de 22 px y scroll
 interno sin barras visibles (`.admin-scroll-container`). En móvil se reutiliza el
-drawer. El panel del trabajador conserva su layout.
+drawer. El panel del trabajador conserva su layout. La auditoría responsive cubre 320,
+768, 1024, 1280 y 1920 px, además de alturas reducidas; la cabecera trunca nombres
+largos y el scroll interno sigue siendo real aunque la barra visual esté oculta.
 
 ## Sesión y CSRF
 

@@ -67,6 +67,7 @@ Resultados:
 - Corregida la carga del frontend: `node_modules` visible en la imagen web, bind mounts individuales, `up` recrea web y doctor/verify detectan `/@vite/client` incorrecto.
 - Añadidas rutas legales públicas independentes y navegación desde el login; contenido marcado como pendiente de aprobación institucional.
 - Rediseñado el panel administrativo con sidebar y workspace independientes, superficies rounded, scroll interno sin barras visibles y drawer móvil.
+- Auditado en 320, 768, 1024, 1280, 1920 px y altura reducida; cabeceras largas truncadas sin colapsar la sección y sin scroll horizontal.
 - Rediseñado el login como composición centrada de una columna, con paneles de trabajadores/administración, tarjeta legal y tipografía Inter local.
 
 ## Pendiente externo

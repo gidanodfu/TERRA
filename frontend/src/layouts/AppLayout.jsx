@@ -65,7 +65,7 @@ function Sidebar({ nav, user, onLogout, onNavigate, admin = false }) {
         </div>
       </div>
 
-      <nav className={`${admin ? 'admin-scroll-container' : ''} flex-1 space-y-1 overflow-y-auto px-3 pb-4`}>
+      <nav className={`${admin ? 'admin-scroll-container' : ''} min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4`}>
         {nav.map((item) => {
           const Icon = item.icon
           return (
@@ -89,9 +89,9 @@ function Sidebar({ nav, user, onLogout, onNavigate, admin = false }) {
 
       <div className="border-t border-slate-200 p-3">
         <div className="rounded-xl bg-slate-50 px-3 py-3">
-          <p className="truncate text-sm font-medium text-slate-800">{user?.display_name || user?.email}</p>
+          <p className="truncate text-sm font-medium text-slate-800" title={user?.display_name || user?.email}>{user?.display_name || user?.email}</p>
           <p className="truncate text-xs text-slate-500">{roleLabels[user?.roles?.[0]] || 'Usuario'}</p>
-          {user?.area_name ? <p className="mt-1 truncate text-xs text-slate-400">{user.area_name}</p> : null}
+          {user?.area_name ? <p className="mt-1 truncate text-xs text-slate-400" title={user.area_name}>{user.area_name}</p> : null}
         </div>
         <button
           type="button"
@@ -153,10 +153,13 @@ export default function AppLayout() {
                 </p>
               </div>
               <div className="hidden items-center gap-2 sm:flex">
-                <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800">
+                <span
+                  className="max-w-[8rem] truncate rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 lg:max-w-[14rem] xl:max-w-[16rem]"
+                  title={user?.area_name || 'Sin área'}
+                >
                   {user?.area_name || 'Sin área'}
                 </span>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                <span className="max-w-[7rem] truncate rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                   {roleLabels[user?.roles?.[0]] || 'Usuario'}
                 </span>
               </div>

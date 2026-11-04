@@ -172,3 +172,7 @@ de 22 px y sombra discreta. La cabecera queda dentro del workspace. En tablet se
 mantiene la sidebar reducida; en móvil se usa el drawer existente. El scroll interno
 de sidebar/workspace oculta la barra visual pero conserva rueda, teclado y touch.
 El panel del trabajador no fue rediseñado.
+
+Validación responsive: 320, 768, 1024, 1280, 1920 px y altura reducida. Se comprobó
+ausencia de scroll horizontal, cabecera visible con nombres largos, scroll interno
+real sin barras visibles, sidebar de 210 px en tablet y drawer en móvil.

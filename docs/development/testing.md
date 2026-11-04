@@ -140,7 +140,7 @@ installed on the host.
 | Sessions/CSRF | auth | DB + HTTP | token helpers | httptest + DB | Covered |
 | Audit | audit | DB | — | record/list | Covered |
 | Vite client / React mount / HMR | frontend | HTTP + browser | HTTP client | Playwright (15 E2E) | Covered |
-| Admin two-surface layout / scroll | frontend | Browser | — | Playwright | Covered |
+| Admin two-surface layout / scroll | frontend | Browser | — | Playwright (320–1920 px, short height) | Covered |
 | SSE | downloads/API | HTTP | client hook | browser/proxy smoke | Partial |
 | Vite proxy | frontend | HTTP | HTTP client | Playwright | Covered |
 | Local storage | storage | Filesystem | sanitization/atomic tests | consistency check | Covered |
