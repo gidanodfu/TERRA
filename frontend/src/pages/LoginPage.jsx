@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../app/AuthContext'
 import { api } from '../services/api'
 import { Alert, Button, Field, Input, Spinner } from '../components/ui'
 import { Turnstile } from '../features/auth/Turnstile'
+import { LEGAL_LINKS } from '../features/legal/links'
 
 const OAUTH_ERRORS = {
   oauth_state: 'La autorización expiró o el estado no es válido. Intente iniciar sesión nuevamente.',
@@ -14,15 +15,6 @@ const OAUTH_ERRORS = {
   account_mismatch: 'La cuenta de Google autorizada no coincide con su cuenta TERRA.',
   drive_connect_failed: 'No fue posible conectar Google Drive. Intente nuevamente.',
 }
-
-// No legal routes exist in this local distribution. The documents are shown as
-// pending institutional publications instead of inventing destinations.
-const LEGAL_DOCUMENTS = [
-  'Política de privacidad',
-  'Términos y condiciones',
-  'Aviso legal',
-  'Política de cookies',
-]
 
 export default function LoginPage() {
   const { user, loading, apply } = useAuth()
@@ -80,15 +72,9 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10 sm:px-6">
       <div className="w-full max-w-[460px]">
-        <header className="mb-6 flex flex-col items-center text-center">
-          <span
-            className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-700 text-lg font-bold text-white shadow-sm"
-            aria-hidden="true"
-          >
-            T
-          </span>
-          <h1 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">TERRA</h1>
-          <p className="mt-1 text-sm text-slate-500">Gestión documental municipal</p>
+        <header className="mb-7 text-center">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">TERRA</h1>
+          <p className="mt-1.5 text-sm text-slate-500">Gestión documental municipal</p>
         </header>
 
         <section className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -185,14 +171,19 @@ export default function LoginPage() {
             Información legal
           </h2>
           <ul className="mt-2 grid gap-x-4 gap-y-1.5 text-center text-xs text-slate-500 sm:grid-cols-2 sm:text-left">
-            {LEGAL_DOCUMENTS.map((document) => (
-              <li key={document} className="truncate" title="Documento pendiente de publicación institucional">
-                {document}
+            {LEGAL_LINKS.map((link) => (
+              <li key={link.to} className="truncate">
+                <Link
+                  to={link.to}
+                  className="rounded underline decoration-slate-300 underline-offset-4 hover:text-brand-800 hover:decoration-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                >
+                  {link.title}
+                </Link>
               </li>
             ))}
           </ul>
           <p className="mt-2 text-center text-[11px] text-slate-400 sm:text-left">
-            Documentos pendientes de publicación institucional.
+            Contenido pendiente de aprobación institucional.
           </p>
         </section>
       </div>

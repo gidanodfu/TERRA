@@ -106,7 +106,7 @@ adicional y sin rollback automático.
 - `./terra test frontend unit`: 14 pruebas correctas.
 - `./terra test frontend integration`: 6 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 9 pruebas Playwright correctas (login, Inter, responsive, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
+- `./terra test e2e`: 12 pruebas Playwright correctas (login, rutas legales, 404, Inter, responsive, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Backup local, verificación y restauración con marcador.
@@ -158,6 +158,8 @@ TERRA, tarjeta de autenticación con paneles independientes para trabajadores y
 administración, textos informativos y tarjeta legal inferior. Se eliminó el bloque
 verde lateral y se aplicó Inter local (400–700) a todo el frontend.
 
-No se modificaron backend, OAuth, Turnstile, sesiones, rutas funcionales ni otras
-páginas. No existían rutas legales en el repositorio, por lo que los cuatro documentos
-se muestran como pendientes de publicación institucional, sin inventar destinos.
+No se modificaron backend, OAuth, Turnstile, sesiones ni rutas funcionales existentes.
+Se añadieron cuatro rutas legales públicas (`/politica-de-privacidad`,
+`/terminos-y-condiciones`, `/aviso-legal`, `/politica-de-cookies`) con páginas
+independientes, navegación y contenido marcado como pendiente de aprobación
+institucional. No se inventó contenido legal ni se declaró una política vigente.

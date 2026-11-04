@@ -70,9 +70,10 @@ Los límites de `.env.example` son valores de desarrollo. No representan cuotas 
 Google ni límites institucionales. Cada entidad ajustará los suyos si adopta el
 proyecto fuera de esta distribución local.
 
-## 8. Rutas legales
+## 8. Contenido legal
 
-La distribución no incluye páginas de política de privacidad, términos y condiciones,
-aviso legal ni política de cookies. El login muestra esos documentos como pendientes
-de publicación institucional para no inventar rutas ni contenido legal. Cuando la
-entidad los publique, deben enlazarse a sus rutas reales.
+Las rutas públicas `/politica-de-privacidad`, `/terminos-y-condiciones`, `/aviso-legal`
+y `/politica-de-cookies` existen y son navegables desde el login. Su contenido está
+marcado como pendiente de aprobación y publicación institucional. La entidad debe
+aportar el texto definitivo; no se inventaron políticas ni declaraciones de
+cumplimiento.

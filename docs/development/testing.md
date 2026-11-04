@@ -121,6 +121,8 @@ Vite dev server and its `/api` proxy. It validates:
 - protected route redirect and anonymous 401;
 - HMR WebSocket connection;
 - Inter local, estructura visual del login y responsive móvil;
+- rutas legales públicas, contenido pendiente, recarga directa y redirección de alias;
+- 404 frontend;
 - conservación del redirect OAuth.
 
 Chromium and dependencies are installed in the web image. No Playwright browser is
@@ -137,7 +139,7 @@ installed on the host.
 | Organization integrity | organization/users | DB | slug/normalization | composite FK | Covered |
 | Sessions/CSRF | auth | DB + HTTP | token helpers | httptest + DB | Covered |
 | Audit | audit | DB | — | record/list | Covered |
-| Vite client / React mount / HMR | frontend | HTTP + browser | HTTP client | Playwright (9 E2E) | Covered |
+| Vite client / React mount / HMR | frontend | HTTP + browser | HTTP client | Playwright (12 E2E) | Covered |
 | SSE | downloads/API | HTTP | client hook | browser/proxy smoke | Partial |
 | Vite proxy | frontend | HTTP | HTTP client | Playwright | Covered |
 | Local storage | storage | Filesystem | sanitization/atomic tests | consistency check | Covered |

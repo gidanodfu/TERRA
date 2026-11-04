@@ -20,6 +20,11 @@ frontend/src/
 |---|---|---|
 | `/` | público | Login (Google + administrador) |
 | `/onboarding` | autenticado pendiente | Perfil obligatorio |
+| `/politica-de-privacidad` | público | Política de privacidad |
+| `/terminos-y-condiciones` | público | Términos y condiciones |
+| `/aviso-legal` | público | Aviso legal |
+| `/politica-de-cookies` | público | Política de cookies |
+| `/Política-*`, `/Términos-*`, etc. | público | Redirección a rutas canónicas |
 | `/app` | trabajador | Inicio |
 | `/app/profile`, `/app/drive`, `/app/jobs`, `/app/documents`, `/app/security` | trabajador | Panel |
 | `/app/admin` | admin | Dashboard |

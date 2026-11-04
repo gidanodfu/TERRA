@@ -21,6 +21,10 @@ import StoragePage from '../pages/admin/StoragePage'
 import AuditPage from '../pages/admin/AuditPage'
 import PolicyPage from '../pages/admin/PolicyPage'
 import NotFoundPage from '../pages/NotFoundPage'
+import PrivacyPage from '../pages/legal/PrivacyPage'
+import TermsPage from '../pages/legal/TermsPage'
+import LegalNoticePage from '../pages/legal/LegalNoticePage'
+import CookiesPage from '../pages/legal/CookiesPage'
 import { Spinner } from '../components/ui'
 
 function FullScreenLoader() {
@@ -61,6 +65,20 @@ export default function App() {
     <Routes>
       <Route path="/" element={<LoginPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
+
+      <Route path="/politica-de-privacidad" element={<PrivacyPage />} />
+      <Route path="/terminos-y-condiciones" element={<TermsPage />} />
+      <Route path="/aviso-legal" element={<LegalNoticePage />} />
+      <Route path="/politica-de-cookies" element={<CookiesPage />} />
+
+      <Route path="/Política-de-privacidad" element={<Navigate to="/politica-de-privacidad" replace />} />
+      <Route path="/Politica-de-privacidad" element={<Navigate to="/politica-de-privacidad" replace />} />
+      <Route path="/Términos-y-condiciones" element={<Navigate to="/terminos-y-condiciones" replace />} />
+      <Route path="/Terminos-y-condiciones" element={<Navigate to="/terminos-y-condiciones" replace />} />
+      <Route path="/Aviso-legal" element={<Navigate to="/aviso-legal" replace />} />
+      <Route path="/Aviso-Legal" element={<Navigate to="/aviso-legal" replace />} />
+      <Route path="/Política-de-cookies" element={<Navigate to="/politica-de-cookies" replace />} />
+      <Route path="/Politica-de-cookies" element={<Navigate to="/politica-de-cookies" replace />} />
 
       <Route
         path="/app"
