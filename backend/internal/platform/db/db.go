@@ -1,4 +1,4 @@
-// Package db owns the PostgreSQL connection pool.
+// El paquete db es dueño del pool de conexiones a PostgreSQL.
 package db
 
 import (

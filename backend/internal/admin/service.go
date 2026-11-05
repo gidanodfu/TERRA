@@ -1,5 +1,5 @@
-// Package admin coordinates cross-module administrative use cases: dashboard,
-// worker management, audit queries and organizational assignment.
+// El paquete admin coordina casos de uso administrativos entre módulos: dashboard,
+// gestión de trabajadores, consultas de auditoría y asignación organizativa.
 package admin
 
 import (
@@ -70,7 +70,7 @@ func (s *Service) Dashboard(ctx context.Context) (*Dashboard, error) {
 	return d, nil
 }
 
-// queryDashboard lives in repository.go to keep SQL out of this use case.
+// queryDashboard vive en repository.go para mantener SQL fuera de este caso de uso.
 func (s *Service) downloadPoolQuery(ctx context.Context, d *Dashboard) error {
 	return s.queryDashboard(ctx, d)
 }
@@ -175,9 +175,9 @@ func (s *Service) AdministrativeAccounts(ctx context.Context, f users.ListFilter
 	return list, total, err
 }
 
-// UpdateAdministrativeAccount changes the status of an administrative account.
-// Only the admin role can reach this use case (route guard); the principal
-// administrator is protected and a missing identifier fails closed.
+// UpdateAdministrativeAccount cambia el estado de una cuenta administrativa.
+// Solo el rol admin puede llegar a este caso de uso (guarda de ruta); el
+// administrador principal está protegido y un identificador ausente falla de forma segura.
 func (s *Service) UpdateAdministrativeAccount(ctx context.Context, actor, target uuid.UUID, rawStatus, ipHash string) (*users.User, error) {
 	status := users.Status(strings.TrimSpace(rawStatus))
 	switch status {
@@ -244,9 +244,9 @@ func (s *Service) recordAccountEvent(ctx context.Context, actor, target uuid.UUI
 		}, IPHash: ipHash})
 }
 
-// principalAdminID reads bootstrap_state.details.admin_user_id and verifies that
-// the account still exists and holds the admin role. Missing or invalid data is
-// reported as unresolved so callers can fail closed.
+// principalAdminID lee bootstrap_state.details.admin_user_id y verifica que
+// la cuenta siga existiendo y tenga el rol admin. Un dato ausente o inválido
+// se informa como no resuelto para que los llamadores fallen de forma segura.
 func (s *Service) principalAdminID(ctx context.Context) (uuid.UUID, bool, error) {
 	var raw *string
 	err := s.pool.QueryRow(ctx, `SELECT details->>'admin_user_id' FROM bootstrap_state WHERE id = 1`).Scan(&raw)

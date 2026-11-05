@@ -1,61 +1,62 @@
-# Docker environment
+# Entorno Docker
 
-TERRA is distributed as a **local development environment**. Docker is the only
-supported runtime; Go, Node, npm, PostgreSQL, Vite and test tools are installed
-inside containers.
+TERRA se distribuye como un **entorno de desarrollo local**. Docker es el único
+entorno de ejecución soportado; Go, Node, npm, PostgreSQL, Vite y las herramientas de prueba se
+instalan dentro de los contenedores.
 
-## Services
+## Servicios
 
-| Service | Image | Command | Purpose |
+| Servicio | Imagen | Comando | Propósito |
 |---|---|---|---|
-| `web` | `terra-web:local` | `npm run dev -- --host 0.0.0.0 --port 5173` | Vite dev server, HMR and `/api` proxy |
-| `api` | `terra-backend:local` | `go run ./cmd/api` | REST API and SSE |
-| `worker` | `terra-backend:local` | `go run ./cmd/worker` | PostgreSQL queue and Drive transfers |
-| `db` | `postgres:18-alpine` | PostgreSQL | Source of truth and queue |
+| `web` | `terra-web:local` | `npm run dev -- --host 0.0.0.0 --port 5173` | Servidor de desarrollo Vite, HMR y proxy `/api` |
+| `api` | `terra-backend:local` | `go run ./cmd/api` | API REST y SSE |
+| `worker` | `terra-backend:local` | `go run ./cmd/worker` | Cola de PostgreSQL y transferencias de Drive |
+| `db` | `postgres:18-alpine` | PostgreSQL | Fuente de verdad y cola |
 
-API and worker share the backend image but have independent commands. There is no
-Nginx, Traefik, Redis, broker, production Compose or auxiliary container.
+La API y el worker comparten la imagen del backend pero tienen comandos independientes.
+No hay Nginx, Traefik, Redis, broker, Compose de producción ni contenedor auxiliar.
 
-## Host requirements
+## Requisitos del host
 
-- Docker Engine/Desktop with daemon access.
+- Docker Engine/Desktop con acceso al daemon.
 - Docker Compose v2.
 - Bash, curl, tar, sha256sum, git.
-- No Go, Node, npm, PostgreSQL, Vite or compilers on the host.
+- No se necesita Go, Node, npm, PostgreSQL, Vite ni compiladores en el host.
 
-## Ports
+## Puertos
 
-| Port | Usage |
+| Puerto | Uso |
 |---|---|
-| `${WEB_PORT:-8080}` | Browser access to Vite |
-| `5173` | Vite inside the web container |
-| `${DB_PORT:-5432}` | PostgreSQL bound to 127.0.0.1 only |
-| `8080` | API inside the Docker network |
+| `${WEB_PORT:-8080}` | Acceso del navegador a Vite |
+| `5173` | Vite dentro del contenedor web |
+| `${DB_PORT:-5432}` | PostgreSQL vinculado solo a 127.0.0.1 |
+| `8080` | API dentro de la red de Docker |
 
-Vite proxies `/api` (REST and SSE) to `http://api:8080`. Container-to-container
-communication uses service names, never `localhost`.
+Vite redirige `/api` (REST y SSE) mediante proxy a `http://api:8080`. La comunicación
+entre contenedores usa los nombres de servicio, nunca `localhost`.
 
-## Volumes and mounts
+## Volúmenes y montajes
 
-| Resource | Type | Purpose |
+| Recurso | Tipo | Propósito |
 |---|---|---|
-| `terra_terra-db` | named volume | PostgreSQL data |
-| `node_modules` | image layer | frontend dependencies installed during build |
-| `../backend:/src` | bind | Go source, live edits |
-| `../frontend/{src,public,tests,...}` | binds individuales | React source, HMR y tests |
-| `../data/dev:/var/lib/terra` | bind | documents, ro for API and rw for worker |
-| `../.cache/go-mod`, `../.cache/go-build` | bind | Go caches owned by the host user |
+| `terra_terra-db` | volumen nombrado | Datos de PostgreSQL |
+| `node_modules` | capa de imagen | dependencias del frontend instaladas durante el build |
+| `../backend:/src` | bind | código Go, edición en vivo |
+| `../frontend/{src,public,tests,...}` | binds individuales | código React, HMR y pruebas |
+| `../data/dev:/var/lib/terra` | bind | documentos, ro para la API y rw para el worker |
+| `../.cache/go-mod`, `../.cache/go-build` | bind | cachés de Go propiedad del usuario del host |
 
-The repository `.git` directory is **not** mounted into containers. Docker build
-contexts exclude `.git`, `.github`, caches, `node_modules`, `dist`, test reports and
-environment secrets through `.dockerignore`.
+El directorio `.git` del repositorio **no** se monta en los contenedores. Los contextos
+de build de Docker excluyen `.git`, `.github`, cachés, `node_modules`, `dist`, informes
+de pruebas y secretos de entorno mediante `.dockerignore`.
 
-## Data persistence
+## Persistencia de datos
 
-`./terra down` stops containers and keeps data. `./terra down --remove` removes
-containers and the network but **never** volumes, PostgreSQL or documents.
+`./terra down` detiene los contenedores y conserva los datos. `./terra down --remove`
+elimina los contenedores y la red pero **nunca** los volúmenes, PostgreSQL ni los
+documentos.
 
-## Images
+## Imágenes
 
 ```bash
 ./terra build
@@ -64,4 +65,4 @@ containers and the network but **never** volumes, PostgreSQL or documents.
 ./terra build api
 ```
 
-PostgreSQL uses the pinned `postgres:18-alpine` image and is not rebuilt.
+PostgreSQL usa la imagen fijada `postgres:18-alpine` y no se reconstruye.

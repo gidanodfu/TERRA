@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Development image: Vite dev server + Node tooling + Chromium for Playwright.
+# Imagen de desarrollo: servidor de desarrollo Vite + herramientas Node + Chromium para Playwright.
 FROM node:24-bookworm-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates chromium curl \

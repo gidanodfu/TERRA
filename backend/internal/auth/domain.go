@@ -1,5 +1,5 @@
-// Package auth implements worker Google sign-in, local administrator sign-in,
-// server-side sessions, CSRF protection and route authorization.
+// El paquete auth implementa el inicio de sesión de trabajadores con Google, el inicio de sesión local de administradores,
+// las sesiones del lado del servidor, la protección CSRF y la autorización de rutas.
 package auth
 
 import (
@@ -70,8 +70,8 @@ func PermissionsFor(roles []string) []string {
 				}
 			}
 		case "user":
-			// A mixed account is administrative: it must not receive worker
-			// permissions or appear as a worker.
+			// Una cuenta mixta es administrativa: no debe recibir permisos
+			// de trabajador ni aparecer como trabajador.
 			if administrative {
 				continue
 			}

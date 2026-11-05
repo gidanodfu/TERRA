@@ -1,5 +1,5 @@
-// Package organization owns the municipal catalogue: areas, positions and their
-// historical assignments. Positions are organizational data, never security roles.
+// El paquete organization es dueño del catálogo municipal: áreas, cargos y sus
+// asignaciones históricas. Los cargos son datos organizativos, nunca roles de seguridad.
 package organization
 
 import (

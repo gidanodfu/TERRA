@@ -81,7 +81,7 @@ export const Turnstile = forwardRef(function Turnstile({ onToken, onExpire, acti
       try {
         if (window.turnstile && widgetId.current !== null) window.turnstile.remove(widgetId.current)
       } catch {
-        // widget already removed
+        // el widget ya fue eliminado
       }
       widgetId.current = null
     }

@@ -36,7 +36,7 @@ while IFS= read -r rel; do
 done < <(terra_db_psql "SELECT relative_path FROM stored_files WHERE status='completed' ORDER BY relative_path;" 2>/dev/null || true)
 printf 'Archivos completados en base de datos: %s\nArchivos faltantes: %s\n' "$rows" "$missing"
 if ((missing > 0)); then
-  terra_error "Inconsistencia detectada. Restaure un backup local."
+  terra_error "Inconsistencia detectada. Restaure una copia de seguridad local."
   exit 1
 fi
 terra_ok "PostgreSQL y almacenamiento son consistentes."

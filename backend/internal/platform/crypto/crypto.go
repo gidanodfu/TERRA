@@ -1,4 +1,4 @@
-// Package crypto encrypts OAuth refresh tokens at rest and hashes session material.
+// El paquete crypto cifra los refresh tokens de OAuth en reposo y calcula hashes del material de sesión.
 package crypto
 
 import (
@@ -12,7 +12,7 @@ import (
 	"io"
 )
 
-// Box seals small secrets with AES-256-GCM using a key that never lives in PostgreSQL.
+// Box sella secretos pequeños con AES-256-GCM usando una clave que nunca reside en PostgreSQL.
 type Box struct{ aead cipher.AEAD }
 
 func NewBox(key []byte) (*Box, error) {

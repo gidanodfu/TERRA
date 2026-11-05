@@ -36,7 +36,7 @@ terra_ensure_storage
 terra_ensure_caches
 if ! terra_volume_exists; then
   if terra_storage_has_data; then
-    terra_error "No existe el volumen PostgreSQL pero hay documentos. Restaure un backup; no se iniciará una base vacía."
+    terra_error "No existe el volumen PostgreSQL pero hay documentos. Restaure una copia de seguridad; no se iniciará una base vacía."
   else
     terra_error "No existe el volumen PostgreSQL. Use ./terra init."
   fi

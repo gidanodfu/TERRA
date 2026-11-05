@@ -150,7 +150,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"status": "password_changed"})
 }
 
-// Middleware accessors keep routing code dependent on the transport component only.
+// Los accesores de middleware mantienen el código de rutas dependiente solo del componente de transporte.
 func (h *Handler) RequireAuth(next http.Handler) http.Handler   { return h.svc.RequireAuth(next) }
 func (h *Handler) RequireActive(next http.Handler) http.Handler { return h.svc.RequireActive(next) }
 func (h *Handler) RequireAdmin(next http.Handler) http.Handler  { return h.svc.RequireAdmin(next) }

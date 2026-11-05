@@ -69,16 +69,16 @@ section() { printf '\n===== %s =====\n' "$*" | tee -a "$log"; }
 fail() { terra_error "$1"; failures=$((failures + 1)); }
 
 backend_unit() {
-  section "BACKEND UNIT (api)"
+  section "PRUEBAS UNITARIAS DE BACKEND (api)"
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T api go test -coverprofile=/tmp/backend-coverage.out ./...; then
-    terra_ok "Backend unit correcto."
+    terra_ok "Pruebas unitarias de backend correctas."
     "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" cp api:/tmp/backend-coverage.out "$TERRA_ROOT_DIR/artifacts/coverage/backend-unit.out" >/dev/null 2>&1 || true
   else
-    fail "Backend unit falló."
+    fail "Las pruebas unitarias de backend fallaron."
   fi
-  section "BACKEND VET (api)"
+  section "GO VET (api)"
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T api go vet ./...; then
     terra_ok "go vet correcto."
@@ -88,7 +88,7 @@ backend_unit() {
 }
 
 backend_integration() {
-  section "BACKEND INTEGRATION (api + db test)"
+  section "PRUEBAS DE INTEGRACIÓN DE BACKEND (api + db test)"
   user="$(terra_env_get POSTGRES_USER)"
   db="$(terra_env_get POSTGRES_DB)"
   test_db="${db}_test"
@@ -110,18 +110,18 @@ backend_integration() {
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T -e "TEST_DATABASE_URL=$test_url" api \
       go test -tags=integration -count=1 -coverprofile=/tmp/backend-integration.out ./tests/integration/...; then
-    terra_ok "Backend integration correcto."
+    terra_ok "Pruebas de integración de backend correctas."
     "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" cp api:/tmp/backend-integration.out "$TERRA_ROOT_DIR/artifacts/coverage/backend-integration.out" >/dev/null 2>&1 || true
   else
-    fail "Backend integration falló."
+    fail "Las pruebas de integración de backend fallaron."
   fi
   cleanup_db
   trap - EXIT
 }
 
 frontend_lint() {
-  section "FRONTEND LINT (web)"
+  section "LINT DE FRONTEND (web)"
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T web npm run lint; then
     terra_ok "Lint correcto."
@@ -131,55 +131,55 @@ frontend_lint() {
 }
 
 frontend_unit() {
-  section "FRONTEND UNIT (web)"
+  section "PRUEBAS UNITARIAS DE FRONTEND (web)"
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T web npm run test:unit; then
-    terra_ok "Frontend unit correcto."
+    terra_ok "Pruebas unitarias de frontend correctas."
   else
-    fail "Frontend unit falló."
+    fail "Las pruebas unitarias de frontend fallaron."
   fi
 }
 
 frontend_integration() {
-  section "FRONTEND INTEGRATION (web)"
+  section "PRUEBAS DE INTEGRACIÓN DE FRONTEND (web)"
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T web npm run test:integration; then
-    terra_ok "Frontend integration correcto."
+    terra_ok "Pruebas de integración de frontend correctas."
   else
-    fail "Frontend integration falló."
+    fail "Las pruebas de integración de frontend fallaron."
   fi
 }
 
 frontend_build() {
-  section "FRONTEND BUILD (web)"
+  section "COMPILACIÓN DEL FRONTEND (web)"
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T web npm run build -- --outDir /tmp/terra-build --emptyOutDir; then
-    terra_ok "Build del frontend correcto."
+    terra_ok "Compilación del frontend correcta."
   else
-    fail "Build del frontend falló."
+    fail "La compilación del frontend falló."
   fi
 }
 
 frontend_coverage() {
-  section "FRONTEND COVERAGE (web)"
+  section "COBERTURA DEL FRONTEND (web)"
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T web npm run test:coverage; then
     rm -rf "$TERRA_ROOT_DIR/artifacts/coverage/frontend"
     "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" cp web:/tmp/coverage "$TERRA_ROOT_DIR/artifacts/coverage/frontend" >/dev/null 2>&1 || true
-    terra_ok "Cobertura frontend generada."
+    terra_ok "Cobertura de frontend generada."
   else
-    fail "Cobertura frontend falló."
+    fail "La cobertura de frontend falló."
   fi
 }
 
 e2e() {
-  section "E2E (Playwright en web)"
+  section "PRUEBAS E2E (Playwright en web)"
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T web npm run test:e2e; then
-    terra_ok "E2E correcto."
+    terra_ok "Pruebas E2E correctas."
   else
-    fail "E2E falló."
+    fail "Las pruebas E2E fallaron."
   fi
   # Conserva reporte y resultados también cuando la suite falla, para que el
   # artefacto de CI incluya captura, error-context y trace.

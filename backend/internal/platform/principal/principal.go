@@ -1,5 +1,5 @@
-// Package principal carries the authenticated identity through request contexts
-// without importing domain packages (avoids dependency cycles).
+// El paquete principal transporta la identidad autenticada en los contextos de petición
+// sin importar paquetes de dominio (evita ciclos de dependencia).
 package principal
 
 import (

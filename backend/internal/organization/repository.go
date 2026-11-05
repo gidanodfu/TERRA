@@ -139,7 +139,7 @@ func (r *Repository) UpdatePosition(ctx context.Context, id uuid.UUID, name, sta
 	return nil
 }
 
-// ValidatePositionForArea enforces the database rule at the use-case boundary too.
+// ValidatePositionForArea aplica también la regla de base de datos en el límite del caso de uso.
 func (r *Repository) ValidatePositionForArea(ctx context.Context, areaID, positionID uuid.UUID) error {
 	var ok bool
 	err := r.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM positions
@@ -172,7 +172,7 @@ func uniqueSlug(ctx context.Context, base string, exists func(context.Context, s
 	return "", errors.New("no fue posible generar un slug único")
 }
 
-// SlugForArea supports deterministic storage path naming.
+// SlugForArea admite nombres deterministas para las rutas de almacenamiento.
 func (r *Repository) SlugForArea(ctx context.Context, base string) (string, error) {
 	return uniqueSlug(ctx, base, r.AreaSlugTaken)
 }

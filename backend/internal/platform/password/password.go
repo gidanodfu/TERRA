@@ -1,4 +1,4 @@
-// Package password implements Argon2id hashing for local administrator credentials.
+// El paquete password implementa hashing Argon2id para credenciales de administrador local.
 package password
 
 import (
@@ -61,7 +61,7 @@ func Verify(encoded, plain string) bool {
 	return subtle.ConstantTimeCompare(got, want) == 1
 }
 
-// ValidateStrength is a cheap server-side policy check applied before hashing.
+// ValidateStrength es una comprobación barata de política del lado del servidor aplicada antes del hashing.
 func ValidateStrength(plain string) error {
 	if len(plain) < 12 {
 		return errors.New("al menos 12 caracteres")

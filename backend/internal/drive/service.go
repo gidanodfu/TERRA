@@ -84,7 +84,7 @@ func (s *Service) CompleteConnect(ctx context.Context, rawState, code, ipHash st
 	if err != nil {
 		return nil, apperr.BadRequest("No fue posible verificar la cuenta de Google autorizada.")
 	}
-	// The Drive authorization must belong to the same Google account that signs in to TERRA.
+	// La autorización de Drive debe pertenecer a la misma cuenta de Google que inicia sesión en TERRA.
 	owner, err := s.users.GetByGoogleSubject(ctx, identity.Subject)
 	if err != nil || owner.ID != user.ID {
 		return nil, apperr.Conflict("drive_account_mismatch",
@@ -179,7 +179,7 @@ func (s *Service) CreatePolicy(ctx context.Context, actor uuid.UUID, version, co
 	return p, nil
 }
 
-// EnsureReady blocks exploration and download until connection and policy consent are current.
+// EnsureReady bloquea la exploración y la descarga hasta que la conexión y el consentimiento de política estén vigentes.
 func (s *Service) EnsureReady(ctx context.Context, conn *Connection) error {
 	latest, err := s.repo.LatestPolicy(ctx)
 	if err != nil {
@@ -260,7 +260,7 @@ func (s *Service) Browse(ctx context.Context, ownerID uuid.UUID, parentID string
 	return &BrowseResult{ParentID: parentID, ParentName: name, Path: path, IsRoot: isRoot, Folders: folders}, nil
 }
 
-// NormalizeRoots validates Drive IDs and removes descendants of already selected roots.
+// NormalizeRoots valida los IDs de Drive y elimina los descendientes de raíces ya seleccionadas.
 func (s *Service) NormalizeRoots(ctx context.Context, ownerID uuid.UUID, ids []string) ([]Root, error) {
 	conn, err := s.EnsureReadyForUser(ctx, ownerID)
 	if err != nil {
@@ -389,7 +389,7 @@ func dedupe(items []string) []string {
 	return out
 }
 
-// IsReauth reports whether an API error requires the owner to reconnect.
+// IsReauth informa si un error de la API requiere que el propietario vuelva a conectar.
 func IsReauth(err error) bool {
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {

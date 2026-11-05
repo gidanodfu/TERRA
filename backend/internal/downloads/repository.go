@@ -94,8 +94,8 @@ func (r *Repository) GetByIdempotency(ctx context.Context, requester uuid.UUID, 
 	return r.Get(ctx, id)
 }
 
-// Create inserts a job and its roots atomically. When the Idempotency-Key was
-// already used by this administrator the existing job is returned untouched.
+// Create inserta un trabajo y sus raíces de forma atómica. Cuando la Idempotency-Key
+// ya fue usada por este administrador, devuelve el trabajo existente sin modificarlo.
 func (r *Repository) Create(ctx context.Context, j *Job, roots []Root) (*Job, bool, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -156,7 +156,7 @@ type ListFilter struct {
 	Query       string
 	From        *time.Time
 	To          *time.Time
-	// RestrictToUser limits results to jobs where the user requested or owns the Drive.
+	// RestrictToUser limita los resultados a los trabajos que el usuario solicitó o cuyo Drive posee.
 	RestrictToUser *uuid.UUID
 	Page, Size     int
 }
@@ -206,9 +206,9 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]Job, int, error)
 			"(j.drive_owner_user_id = $%d OR j.requested_by_user_id = $%d)", n, n))
 	}
 	whereSQL := strings.Join(where, " AND ")
-	// Duplicate the restriction argument if the clause needs it twice.
+	// Duplica el argumento de restricción si la cláusula lo necesita.
 	if f.RestrictToUser != nil {
-		// The generated clause uses the same $N twice, so no extra argument is needed.
+		// La cláusula generada usa el mismo $N dos veces, así que no se necesita un argumento adicional.
 	}
 
 	var total int
@@ -269,7 +269,7 @@ func (r *Repository) JobBytes(ctx context.Context, jobID uuid.UUID) (int64, erro
 	return n, err
 }
 
-// --- worker queue protocol ---
+// --- protocolo de cola del worker ---
 
 func (r *Repository) ClaimNext(ctx context.Context, workerID string, lease time.Duration) (*Job, error) {
 	var id uuid.UUID
@@ -309,7 +309,7 @@ func (r *Repository) ClaimNext(ctx context.Context, workerID string, lease time.
 	return r.Get(ctx, id)
 }
 
-// Heartbeat extends the lease and reports whether cancellation was requested.
+// Heartbeat extiende el lease e informa si se solicitó la cancelación.
 func (r *Repository) Heartbeat(ctx context.Context, jobID uuid.UUID, workerID string, lease time.Duration) (string, bool, error) {
 	var status string
 	var cancel bool
@@ -422,7 +422,7 @@ func (r *Repository) RetryFailed(ctx context.Context, jobID uuid.UUID) (*Job, er
 	return r.Get(ctx, jobID)
 }
 
-// --- items ---
+// --- elementos ---
 
 type WorkerItem struct {
 	ID           uuid.UUID
@@ -530,7 +530,7 @@ func (r *Repository) FailRemaining(ctx context.Context, jobID uuid.UUID, code, m
 	return err
 }
 
-// RecomputeCounters keeps PostgreSQL counters authoritative after every item.
+// RecomputeCounters mantiene los contadores de PostgreSQL como autoritativos después de cada elemento.
 func (r *Repository) RecomputeCounters(ctx context.Context, jobID uuid.UUID) (*Job, error) {
 	_, err := r.pool.Exec(ctx, `UPDATE download_jobs j SET
 		total_items = c.total,
@@ -619,7 +619,7 @@ func (r *Repository) ItemByID(ctx context.Context, id uuid.UUID) (*Item, error) 
 	return &it, err
 }
 
-// --- events ---
+// --- eventos ---
 
 func (r *Repository) AddEvent(ctx context.Context, jobID uuid.UUID, eventType string, payload map[string]any) {
 	raw, _ := json.Marshal(payload)
@@ -647,7 +647,7 @@ func (r *Repository) EventsAfter(ctx context.Context, jobID uuid.UUID, afterID i
 	return out, rows.Err()
 }
 
-// --- stored files ---
+// --- archivos almacenados ---
 
 func (r *Repository) ListStoredFiles(ctx context.Context, ownerID *uuid.UUID, page, size int) ([]StoredFile, int, error) {
 	where := ""

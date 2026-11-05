@@ -48,7 +48,7 @@ func NewWorker(cfg config.Config, repo *Repository, driveRepo *drive.Repository,
 	}
 }
 
-// Run claims queued or abandoned jobs until the process is stopped.
+// Run reclama trabajos en cola o abandonados hasta que se detiene el proceso.
 func (w *Worker) Run(ctx context.Context) error {
 	w.log.Info("worker_started", "worker_id", w.id, "concurrency", w.cfg.Worker.Concurrency,
 		"per_account", w.cfg.Worker.PerAccountConcurrency)
@@ -240,7 +240,7 @@ func (w *Worker) runJob(ctx context.Context, parent context.Context, job *Job, c
 	return nil
 }
 
-// --- scanning ---
+// --- escaneo ---
 
 type folderTask struct {
 	id       string
@@ -423,7 +423,7 @@ func withExtension(name, exportMime string) string {
 	return name + ext
 }
 
-// --- downloading ---
+// --- descarga ---
 
 func (w *Worker) downloadAll(ctx context.Context, parent context.Context, job *Job, api *drive.API,
 	jobRoot string, cancelRequested *atomic.Bool) error {
@@ -624,7 +624,7 @@ func (w *Worker) downloadItem(ctx context.Context, parent context.Context, job *
 		w.handleItemError(parent, job, item, err, reauth, capacity, capacityCode)
 		return
 	}
-	// A leftover file can only belong to this same job snapshot (job UUID is in the path).
+	// Un archivo sobrante solo puede pertenecer a este mismo snapshot del trabajo (el UUID del trabajo está en la ruta).
 	if _, statErr := os.Lstat(abs); statErr == nil {
 		_ = os.Remove(abs)
 	}

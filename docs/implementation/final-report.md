@@ -28,7 +28,7 @@ Exactamente cuatro servicios. Sin Nginx, broker, Redis ni contenedores auxiliare
 - Cola PostgreSQL, leases, heartbeat, cancelación, reintentos e idempotencia.
 - Almacenamiento privado con rutas seguras, checksums y escritura atómica.
 - Paneles trabajador/administrador, SSE, dashboard y exploradores.
-- Scripts de operación local, backups y recuperación.
+- Scripts de operación local, copias de seguridad y recuperación.
 - Pruebas unitarias, integración, E2E y CI Docker-only.
 
 ## 4. Funcionalidades pendientes externas
@@ -109,13 +109,13 @@ adicional y sin rollback automático.
 - `./terra test e2e`: 37 pruebas Playwright correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, reset Turnstile, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
-- Backup local, verificación y restauración con marcador.
+- Copia de seguridad local, verificación y restauración con marcador.
 
 ## 12. Integración continua
 
 `.github/workflows/ci.yml` se ejecuta en push, PR y manualmente. Usa Docker, crea un
 `.env` ficticio, valida, construye, inicializa y ejecuta `./terra test all`. Publica
-artifacts y recopila logs en fallos. No despliega a ningún servidor.
+artifacts y recopila registros en fallos. No despliega a ningún servidor.
 
 ## 13. Riesgos residuales
 
@@ -125,7 +125,7 @@ artifacts y recopila logs en fallos. No despliega a ningún servidor.
 - La pérdida de `TOKEN_ENCRYPTION_KEY` obliga a reconectar Drive.
 - La CI remota debe verificarse en GitHub Actions.
 
-## 14. Backups locales
+## 14. Copias de seguridad locales
 
 ```bash
 ./terra backup

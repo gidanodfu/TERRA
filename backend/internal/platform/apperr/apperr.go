@@ -1,4 +1,4 @@
-// Package apperr defines typed application errors translated once into stable HTTP responses.
+// El paquete apperr define errores tipados de la aplicación traducidos una sola vez a respuestas HTTP estables.
 package apperr
 
 import (
@@ -59,7 +59,7 @@ func TooManyRequests(message string) *Error {
 	return New(http.StatusTooManyRequests, "rate_limited", message)
 }
 
-// As extracts an *Error or wraps anything else as a 500.
+// As extrae un *Error o envuelve cualquier otro valor como un 500.
 func As(err error) *Error {
 	var e *Error
 	if errors.As(err, &e) {

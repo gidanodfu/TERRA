@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
     try {
       await api.post('/auth/logout')
     } catch {
-      // Session may already be gone; local state is cleared regardless.
+      // Puede que la sesión ya no exista; el estado local se limpia de todos modos.
     } finally {
       clear()
     }

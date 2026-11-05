@@ -1,9 +1,9 @@
-# Storage and volumes
+# Almacenamiento y volúmenes
 
-## Local document path
+## Ruta local de documentos
 
-`STORAGE_HOST_PATH` defaults to `../data/dev` relative to `deploy/`, resolving to
-the repository `data/dev` directory. The container path is fixed at
+`STORAGE_HOST_PATH` toma por defecto `../data/dev` relativo a `deploy/`, lo que resuelve al
+directorio `data/dev` del repositorio. La ruta del contenedor es fija:
 `/var/lib/terra`.
 
 ```
@@ -20,48 +20,48 @@ data/dev/
                                 └── Mi unidad/
 ```
 
-Each job creates an independent snapshot. Documents are never stored in PostgreSQL.
+Cada job crea una instantánea independiente. Los documentos nunca se almacenan en PostgreSQL.
 
-## Permissions
+## Permisos
 
-The API and worker run with the host UID/GID (`TERRA_UID`/`TERRA_GID`), so local
-files remain readable and editable by the developer. Compose mounts:
+La API y el worker se ejecutan con el UID/GID del host (`TERRA_UID`/`TERRA_GID`), de modo que los archivos locales
+siguen siendo legibles y editables por el desarrollador. Compose monta:
 
-- API: `/var/lib/terra` read-only.
-- Worker: `/var/lib/terra` read-write.
+- API: `/var/lib/terra` en solo lectura.
+- Worker: `/var/lib/terra` en lectura y escritura.
 
-The API and worker cannot write outside the configured document root.
+La API y el worker no pueden escribir fuera de la raíz de documentos configurada.
 
-## PostgreSQL volume
+## Volumen de PostgreSQL
 
-`terra_terra-db` is a named Docker volume mounted at `/var/lib/postgresql`. It is
-preserved by stop/down and by container removal.
+`terra_terra-db` es un volumen Docker con nombre montado en `/var/lib/postgresql`. Se
+conserva con stop/down y con la eliminación de contenedores.
 
-## Node modules and Go caches
+## Node modules y cachés de Go
 
-- `node_modules`: installed in the web image; not mounted from the host.
-- `.cache/go-mod` and `.cache/go-build`: host directories for Go module/build caches.
+- `node_modules`: instalado en la imagen web; no se monta desde el host.
+- `.cache/go-mod` y `.cache/go-build`: directorios del host para las cachés de módulos/build de Go.
 
-These are caches, not application data.
+Son cachés, no datos de la aplicación.
 
-## Path safety
+## Seguridad de rutas
 
-The storage module sanitizes each name, rejects `..`, absolute paths and symlinks,
-keeps paths contained under `STORAGE_ROOT`, and writes via temporary `.part` files
-plus atomic rename. Collisions receive a deterministic suffix based on the Drive ID.
+El módulo de almacenamiento sanea cada nombre, rechaza `..`, rutas absolutas y symlinks,
+mantiene las rutas contenidas bajo `STORAGE_ROOT`, y escribe mediante archivos temporales `.part`
+más un rename atómico. Las colisiones reciben un sufijo determinista basado en el ID de Drive.
 
-## Consistency
+## Consistencia
 
 ```bash
 ./deploy/scripts/consistency-check.sh
 ```
 
-Compares completed `stored_files` with the document path. The test suite does not
-modify development documents.
+Compara los `stored_files` completados con la ruta de documentos. La suite de pruebas no
+modifica los documentos de desarrollo.
 
-## Capacity
+## Capacidad
 
-Local limits are configured in `.env`:
+Los límites locales se configuran en `.env`:
 
 - `MAX_DOWNLOAD_BYTES`
 - `MAX_JOB_BYTES`
@@ -69,11 +69,11 @@ Local limits are configured in `.env`:
 - `MAX_AREA_STORAGE_BYTES`
 - `MIN_FREE_DISK_BYTES`
 
-## Cleanup
+## Limpieza
 
-Unreferenced `.part` files are removed on retries. Snapshot retention is explicit:
+Los archivos `.part` no referenciados se eliminan en los reintentos. La retención de instantáneas es explícita:
 
 ```bash
-./deploy/scripts/retention.sh          # dry run
+./deploy/scripts/retention.sh          # simulación, sin aplicar cambios
 CONFIRM=yes ./deploy/scripts/retention.sh --apply
 ```

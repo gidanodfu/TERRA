@@ -1,6 +1,6 @@
-# Debugging
+# Depuración
 
-## First commands
+## Primeros comandos
 
 ```bash
 ./terra check
@@ -9,9 +9,10 @@
 ./terra logs
 ```
 
-`doctor.sh` checks Docker, Compose, services, PostgreSQL, migrations, Vite proxy,
-API, storage, volumes, recent worker errors and backups. It returns non-zero when it
-finds a problem and never prints secrets.
+`doctor.sh` comprueba Docker, Compose, servicios, PostgreSQL, migraciones, proxy de
+Vite, API, almacenamiento, volúmenes, errores recientes del worker y copias de
+seguridad. Devuelve un código distinto de cero cuando encuentra un problema y nunca
+imprime secretos.
 
 ## Shells
 
@@ -23,14 +24,14 @@ finds a problem and never prints secrets.
 ./terra db
 ```
 
-Inside the API/worker shell the Go toolchain is available:
+Dentro del shell de la API/worker la toolchain de Go está disponible:
 
 ```bash
 go test ./...
 go vet ./...
 ```
 
-Inside the web shell:
+Dentro del shell de web:
 
 ```bash
 npm run test:unit
@@ -38,7 +39,7 @@ npm run test:integration
 npm run test:e2e
 ```
 
-## Inspect a service
+## Inspeccionar un servicio
 
 ```bash
 ./terra logs api -n 300
@@ -47,7 +48,7 @@ npm run test:e2e
 ./terra restart worker
 ```
 
-## Database
+## Base de datos
 
 ```bash
 ./terra db
@@ -95,28 +96,29 @@ mantiene `node_modules` dentro de la imagen y fuerza la recreación de web en
 
 No se desactiva HMR ni React Refresh. No se parchea el puerto para ocultar el fallo.
 
-## SSE and proxy
+## SSE y proxy
 
-The SSE endpoint is under `/api/v1/download-jobs/{id}/events`. Vite proxies it to
-`api:8080`. Verify:
+El endpoint SSE está en `/api/v1/download-jobs/{id}/events`. Vite lo redirige mediante
+proxy a `api:8080`. Verifica:
 
 ```bash
 curl -i http://localhost:8080/api/v1/health
 curl -i http://localhost:8080/api/v1/auth/me
 ```
 
-The second must return `401` without a session.
+El segundo debe devolver `401` sin sesión.
 
-## Build issues
+## Problemas de compilación
 
 ```bash
 ./terra build --no-cache
 ```
 
-Backend and frontend dependencies are installed inside Docker. A lockfile change
-requires rebuilding the corresponding image.
+Las dependencias del backend y del frontend se instalan dentro de Docker. Un cambio en
+el lockfile requiere reconstruir la imagen correspondiente.
 
-## No destructive shortcuts
+## Sin atajos destructivos
 
-Do not delete volumes, databases or documents to “fix” a startup problem. Use
-`./terra doctor`, logs, backups and restore procedures.
+No elimines volúmenes, bases de datos ni documentos para “arreglar” un problema de
+arranque. Usa `./terra doctor`, los logs, las copias de seguridad y los procedimientos
+de restauración.

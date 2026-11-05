@@ -1,6 +1,6 @@
--- Administrative accounts are not workers: their area/position assignment is
--- invalid. Preserve the previous values in organization_history before clearing
--- them so the correction keeps full traceability.
+-- Las cuentas administrativas no son trabajadores: su asignación de área/cargo es
+-- inválida. Conserva los valores anteriores en organization_history antes de limpiarlos,
+-- de modo que la corrección mantenga la trazabilidad completa.
 INSERT INTO organization_history
     (user_id, area_id, position_id, previous_area_id, previous_position_id, actor_user_id)
 SELECT u.id, NULL, NULL, u.area_id, u.position_id, NULL

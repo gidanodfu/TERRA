@@ -1,5 +1,5 @@
-// Command bootstrap applies migrations, prepares storage and creates the first
-// administrator exactly once. Running it again never overwrites credentials.
+// Comando bootstrap aplica migraciones, prepara el almacenamiento y crea el primer
+// administrador una sola vez. Ejecutarlo de nuevo nunca sobrescribe credenciales.
 package main
 
 import (

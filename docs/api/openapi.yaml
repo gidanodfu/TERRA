@@ -11,33 +11,33 @@ servers:
 security:
   - cookieAuth: []
 tags:
-  - name: Public
-  - name: Auth
-  - name: Me
+  - name: Público
+  - name: Autenticación
+  - name: Perfil propio
   - name: Drive
-  - name: Jobs
-  - name: Files
-  - name: Admin
-  - name: Audit
+  - name: Trabajos
+  - name: Archivos
+  - name: Administración
+  - name: Auditoría
 paths:
   /health:
     get:
-      tags: [Public]
+      tags: [Público]
       security: []
-      summary: Liveness de la API
+      summary: Disponibilidad de la API
       responses:
         "200": { description: OK }
   /ready:
     get:
-      tags: [Public]
+      tags: [Público]
       security: []
-      summary: Readiness (incluye PostgreSQL)
+      summary: Preparación (incluye PostgreSQL)
       responses:
         "200": { description: Listo }
         "503": { description: Base de datos no disponible }
   /public/areas:
     get:
-      tags: [Public]
+      tags: [Público]
       security: []
       summary: Áreas activas
       responses:
@@ -53,7 +53,7 @@ paths:
                     items: { $ref: "#/components/schemas/Area" }
   /public/areas/{areaId}/positions:
     get:
-      tags: [Public]
+      tags: [Público]
       security: []
       summary: Cargos activos de un área
       parameters:
@@ -72,7 +72,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
   /public/policy:
     get:
-      tags: [Public]
+      tags: [Público]
       security: []
       summary: Última política institucional publicada
       responses:
@@ -85,14 +85,14 @@ paths:
 
   /auth/google/start:
     get:
-      tags: [Auth]
+      tags: [Autenticación]
       security: []
       summary: Inicia OAuth de identidad y redirige a Google
       responses:
         "302": { description: Redirección a Google }
   /auth/google/callback:
     get:
-      tags: [Auth]
+      tags: [Autenticación]
       security: []
       summary: Callback OAuth de identidad
       parameters:
@@ -102,7 +102,7 @@ paths:
         "302": { description: Redirección al SPA con cookies de sesión }
   /auth/google/drive/callback:
     get:
-      tags: [Auth]
+      tags: [Autenticación]
       security: []
       summary: Callback OAuth de autorización documental de Drive
       parameters:
@@ -112,9 +112,9 @@ paths:
         "302": { description: Redirección a /app/drive }
   /auth/admin/login:
     post:
-      tags: [Auth]
+      tags: [Autenticación]
       security: []
-      summary: Login local de administrador con Turnstile
+      summary: Inicio de sesión local de administrador con Turnstile
       requestBody:
         required: true
         content:
@@ -141,7 +141,7 @@ paths:
         "429": { $ref: "#/components/responses/RateLimited" }
   /auth/logout:
     post:
-      tags: [Auth]
+      tags: [Autenticación]
       summary: Cierra la sesión actual
       responses:
         "200": { description: Sesión cerrada }
@@ -149,7 +149,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
   /auth/me:
     get:
-      tags: [Auth]
+      tags: [Autenticación]
       summary: Sesión actual, usuario y permisos
       responses:
         "200":
@@ -160,7 +160,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
   /auth/password:
     post:
-      tags: [Auth]
+      tags: [Autenticación]
       summary: Cambia la contraseña local y cierra otras sesiones
       requestBody:
         required: true
@@ -178,7 +178,7 @@ paths:
 
   /me:
     get:
-      tags: [Me]
+      tags: [Perfil propio]
       summary: Perfil y permisos
       responses:
         "200":
@@ -188,7 +188,7 @@ paths:
               schema: { $ref: "#/components/schemas/MeResponse" }
   /me/profile:
     patch:
-      tags: [Me]
+      tags: [Perfil propio]
       summary: Actualiza el perfil obligatorio
       requestBody:
         required: true
@@ -283,7 +283,7 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
   /me/stored-files:
     get:
-      tags: [Me]
+      tags: [Perfil propio]
       summary: Documentos propios resguardados
       parameters:
         - $ref: "#/components/parameters/Page"
@@ -304,7 +304,7 @@ paths:
 
   /download-jobs:
     get:
-      tags: [Jobs]
+      tags: [Trabajos]
       summary: Trabajos propios (todos para administradores)
       parameters:
         - $ref: "#/components/parameters/Page"
@@ -332,7 +332,7 @@ paths:
                         items: { $ref: "#/components/schemas/Job" }
   /download-jobs/{id}:
     get:
-      tags: [Jobs]
+      tags: [Trabajos]
       summary: Detalle de un trabajo
       parameters: [{ $ref: "#/components/parameters/JobId" }]
       responses:
@@ -345,7 +345,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
   /download-jobs/{id}/items:
     get:
-      tags: [Jobs]
+      tags: [Trabajos]
       summary: Elementos del trabajo
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -367,7 +367,7 @@ paths:
                         items: { $ref: "#/components/schemas/Item" }
   /download-jobs/{id}/events:
     get:
-      tags: [Jobs]
+      tags: [Trabajos]
       summary: Progreso por Server-Sent Events
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -382,7 +382,7 @@ paths:
               schema: { type: string }
   /download-jobs/{id}/cancel:
     post:
-      tags: [Jobs]
+      tags: [Trabajos]
       summary: Solicita cancelación
       parameters: [{ $ref: "#/components/parameters/JobId" }]
       responses:
@@ -394,7 +394,7 @@ paths:
         "409": { description: El trabajo ya finalizó }
   /download-jobs/{id}/retry-failed:
     post:
-      tags: [Jobs]
+      tags: [Trabajos]
       summary: Reintenta elementos fallidos (solo admin)
       parameters: [{ $ref: "#/components/parameters/JobId" }]
       responses:
@@ -407,13 +407,13 @@ paths:
 
   /files/{id}/content:
     get:
-      tags: [Files]
+      tags: [Archivos]
       summary: Descarga autorizada de un documento
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         "200":
-          description: Contenido binario como attachment
+          description: Contenido binario como archivo adjunto
           headers:
             Content-Disposition:
               schema: { type: string }
@@ -425,7 +425,7 @@ paths:
 
   /admin/dashboard:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Métricas y actividad reciente
       responses:
         "200":
@@ -435,7 +435,7 @@ paths:
               schema: { $ref: "#/components/schemas/Dashboard" }
   /admin/users:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Lista de trabajadores
       parameters:
         - $ref: "#/components/parameters/Page"
@@ -459,7 +459,7 @@ paths:
                         items: { $ref: "#/components/schemas/User" }
   /admin/users/{id}:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Detalle de trabajador, conexión e historial
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -470,7 +470,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/WorkerDetail" }
     patch:
-      tags: [Admin]
+      tags: [Administración]
       summary: Actualiza asignación o estado
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -492,7 +492,7 @@ paths:
         "409": { description: No puede suspenderse a sí mismo }
   /admin/areas:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Todas las áreas con conteos
       responses:
         "200":
@@ -506,7 +506,7 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/Area" }
     post:
-      tags: [Admin]
+      tags: [Administración]
       summary: Crea un área
       requestBody:
         required: true
@@ -524,7 +524,7 @@ paths:
               schema: { $ref: "#/components/schemas/Area" }
   /admin/areas/{id}:
     patch:
-      tags: [Admin]
+      tags: [Administración]
       summary: Edita nombre o estado del área
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -544,7 +544,7 @@ paths:
               schema: { $ref: "#/components/schemas/Area" }
   /admin/areas/{areaId}/positions:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Cargos del área (incluye inactivos)
       parameters:
         - $ref: "#/components/parameters/AreaId"
@@ -560,7 +560,7 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/Position" }
     post:
-      tags: [Admin]
+      tags: [Administración]
       summary: Crea un cargo en el área
       parameters:
         - $ref: "#/components/parameters/AreaId"
@@ -581,7 +581,7 @@ paths:
         "409": { description: Nombre duplicado en el área }
   /admin/positions/{id}:
     patch:
-      tags: [Admin]
+      tags: [Administración]
       summary: Edita nombre o estado del cargo
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -601,7 +601,7 @@ paths:
               schema: { $ref: "#/components/schemas/Position" }
   /admin/users/{userId}/drive/connection:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Conexión Drive del trabajador
       parameters:
         - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
@@ -621,7 +621,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
   /admin/users/{userId}/drive/folders:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Navega carpetas de Mi unidad del trabajador
       parameters:
         - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
@@ -639,7 +639,7 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
   /admin/drive-connections:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Lista conexiones Drive
       parameters:
         - $ref: "#/components/parameters/Page"
@@ -660,7 +660,7 @@ paths:
                         items: { $ref: "#/components/schemas/AdminConnection" }
   /admin/policies:
     post:
-      tags: [Admin]
+      tags: [Administración]
       summary: Publica una versión aprobada de la política
       requestBody:
         required: true
@@ -681,7 +681,7 @@ paths:
         "409": { description: Versión duplicada }
   /admin/users/{userId}/download-jobs:
     post:
-      tags: [Admin]
+      tags: [Administración]
       summary: Crea un trabajo de descarga institucional
       parameters:
         - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
@@ -718,7 +718,7 @@ paths:
         "422": { $ref: "#/components/responses/Validation" }
   /admin/download-jobs:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Todos los trabajos
       parameters:
         - $ref: "#/components/parameters/Page"
@@ -740,7 +740,7 @@ paths:
                         items: { $ref: "#/components/schemas/Job" }
   /admin/download-jobs/{id}:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Detalle administrativo de un trabajo
       parameters: [{ $ref: "#/components/parameters/JobId" }]
       responses:
@@ -751,7 +751,7 @@ paths:
               schema: { $ref: "#/components/schemas/Job" }
   /admin/download-jobs/{id}/cancel:
     post:
-      tags: [Admin]
+      tags: [Administración]
       summary: Cancela un trabajo
       parameters: [{ $ref: "#/components/parameters/JobId" }]
       responses:
@@ -762,7 +762,7 @@ paths:
               schema: { $ref: "#/components/schemas/Job" }
   /admin/storage:
     get:
-      tags: [Admin]
+      tags: [Administración]
       summary: Documentos almacenados de todos los trabajadores
       parameters:
         - $ref: "#/components/parameters/Page"
@@ -782,7 +782,7 @@ paths:
                         items: { $ref: "#/components/schemas/StoredFile" }
   /admin/audit-events:
     get:
-      tags: [Audit]
+      tags: [Auditoría]
       summary: Registro de auditoría
       parameters:
         - $ref: "#/components/parameters/Page"

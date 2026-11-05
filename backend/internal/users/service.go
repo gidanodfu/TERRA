@@ -26,7 +26,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*User, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-// UpdateOwnProfile validates both fields and the area/position relationship before writing.
+// UpdateOwnProfile valida ambos campos y la relación área/cargo antes de escribir.
 func (s *Service) UpdateOwnProfile(ctx context.Context, userID uuid.UUID, in UpdateProfileInput, ipHash string) (*User, error) {
 	current, err := s.repo.GetByID(ctx, userID)
 	if err != nil {

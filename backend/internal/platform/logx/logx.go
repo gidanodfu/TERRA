@@ -1,4 +1,4 @@
-// Package logx builds the structured logger used by both entrypoints.
+// El paquete logx construye el logger estructurado usado por ambos puntos de entrada.
 package logx
 
 import (

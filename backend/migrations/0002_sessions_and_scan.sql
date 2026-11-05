@@ -1,4 +1,4 @@
--- Worker scan checkpoint and mandatory session invalidation on account deactivation.
+-- Punto de control del escaneo del worker e invalidación obligatoria de sesiones al desactivar una cuenta.
 
 ALTER TABLE download_jobs ADD COLUMN scan_completed_at timestamptz;
 

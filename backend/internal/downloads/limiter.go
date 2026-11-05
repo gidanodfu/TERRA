@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-// AccountLimiter spaces download starts per Drive connection across every job in
-// the worker process. A per-goroutine sleep would allow the shared quota to be
-// exceeded when several items run concurrently.
+// AccountLimiter espacia los inicios de descarga por conexión de Drive en todos los trabajos
+// del proceso worker. Un sleep por goroutine permitiría superar la cuota compartida
+// cuando varios elementos se ejecutan en paralelo.
 type AccountLimiter struct {
 	mu   sync.Mutex
 	next map[string]time.Time

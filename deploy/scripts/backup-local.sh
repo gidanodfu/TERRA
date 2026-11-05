@@ -2,10 +2,10 @@
 # =============================================================================
 # TERRA - backup-local.sh
 # Versión: 2.0.0
-# Descripción: respaldo local coordinado de PostgreSQL y del volumen documental.
+# Descripción: copia de seguridad local coordinada de PostgreSQL y del volumen documental.
 # Uso: ./deploy/scripts/backup-local.sh [--no-verify]
 # Requisitos: PostgreSQL activo y almacenamiento local accesible.
-# Efectos: crea backups/<timestamp>/; nunca sobrescribe backups ni modifica datos.
+# Efectos: crea copias de seguridad en backups/<timestamp>/; nunca sobrescribe copias ni modifica datos.
 #          No incluye .env ni TOKEN_ENCRYPTION_KEY.
 # Códigos: 0 correcto · 1 fallo · 2 uso incorrecto.
 # =============================================================================
@@ -49,7 +49,7 @@ storage_path="$(terra_storage_path)"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 backup_root="$TERRA_ROOT_DIR/backups"
 backup_dir="$backup_root/$stamp"
-[[ ! -e "$backup_dir" ]] || terra_die "El backup $backup_dir ya existe; no se sobrescribe." 1
+[[ ! -e "$backup_dir" ]] || terra_die "La copia de seguridad $backup_dir ya existe; no se sobrescribe." 1
 mkdir -p "$backup_root"
 chmod 700 "$backup_root"
 mkdir -m 700 "$backup_dir"
@@ -61,14 +61,14 @@ archive="$backup_dir/storage.tar.gz"
 
 terra_step "Respaldando PostgreSQL ($db)"
 if ! terra_compose exec -T db pg_dump -U "$user" -d "$db" -Fc > "$dump"; then
-  terra_error "pg_dump falló. Backup parcial en $backup_dir."
+  terra_error "pg_dump falló. Copia de seguridad parcial en $backup_dir."
   exit 1
 fi
 [[ -s "$dump" ]] || terra_die "El dump quedó vacío." 1
 
 terra_step "Respaldando almacenamiento local"
 if ! tar czf "$archive" -C "$storage_path" .; then
-  terra_error "El archivo del almacenamiento falló. Backup parcial en $backup_dir."
+  terra_error "El archivo del almacenamiento falló. Copia de seguridad parcial en $backup_dir."
   exit 1
 fi
 [[ -s "$archive" ]] || terra_die "El archivo de almacenamiento quedó vacío." 1
@@ -76,7 +76,7 @@ fi
 encrypted=false
 if [[ -n "${BACKUP_GPG_RECIPIENT:-}" ]]; then
   command -v gpg >/dev/null 2>&1 || terra_die "BACKUP_GPG_RECIPIENT definido pero gpg no está instalado." 1
-  terra_step "Cifrando backup con GPG"
+  terra_step "Cifrando copia de seguridad con GPG"
   gpg --batch --yes --encrypt --recipient "$BACKUP_GPG_RECIPIENT" "$dump"
   gpg --batch --yes --encrypt --recipient "$BACKUP_GPG_RECIPIENT" "$archive"
   rm -f "$dump" "$archive"

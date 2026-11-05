@@ -1,4 +1,4 @@
-// Package helpers provides isolated PostgreSQL fixtures for backend integration tests.
+// El paquete helpers proporciona fixtures PostgreSQL aislados para las pruebas de integración del backend.
 package helpers
 
 import (
@@ -15,8 +15,8 @@ import (
 	"terra/migrations"
 )
 
-// Pool opens TEST_DATABASE_URL, applies migrations and starts from an empty schema.
-// The test runner creates and destroys the disposable database; development data is never used.
+// Pool abre TEST_DATABASE_URL, aplica las migraciones y parte de un esquema vacío.
+// El runner de pruebas crea y destruye la base desechable; los datos de desarrollo nunca se usan.
 func Pool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")

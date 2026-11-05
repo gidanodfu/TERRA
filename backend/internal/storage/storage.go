@@ -1,5 +1,5 @@
-// Package storage owns every filesystem path in TERRA. Callers only ever handle
-// paths relative to STORAGE_ROOT; absolute paths never reach clients.
+// El paquete storage es dueño de cada ruta del sistema de archivos en TERRA. Los llamadores solo manejan
+// rutas relativas a STORAGE_ROOT; las rutas absolutas nunca llegan a los clientes.
 package storage
 
 import (
@@ -18,12 +18,12 @@ type Store struct {
 	minFree int64
 }
 
-// New prepares a writable store (worker and bootstrap).
+// New prepara un almacén escribible (worker y bootstrap).
 func New(root string, minFree int64) (*Store, error) {
 	return newStore(root, minFree, true)
 }
 
-// NewReadOnly opens an existing store without modifying it (API container).
+// NewReadOnly abre un almacén existente sin modificarlo (contenedor api).
 func NewReadOnly(root string, minFree int64) (*Store, error) {
 	return newStore(root, minFree, false)
 }
@@ -59,7 +59,7 @@ func newStore(root string, minFree int64, writable bool) (*Store, error) {
 
 func (s *Store) Root() string { return s.root }
 
-// JobRoot builds the municipal classification and the independent snapshot root.
+// JobRoot construye la clasificación municipal y la raíz independiente del snapshot.
 func (s *Store) JobRoot(areaID uuid.UUID, areaSlug string, positionID uuid.UUID, positionSlug string,
 	userID, jobID uuid.UUID) (string, error) {
 	segments := []string{
@@ -76,7 +76,7 @@ func (s *Store) JobRoot(areaID uuid.UUID, areaSlug string, positionID uuid.UUID,
 	return rel, nil
 }
 
-// Child appends already-sanitized segments to a relative path.
+// Child añade segmentos ya saneados a una ruta relativa.
 func Child(base string, segments ...string) string {
 	parts := []string{strings.TrimSuffix(base, "/")}
 	for _, seg := range segments {
@@ -87,7 +87,7 @@ func Child(base string, segments ...string) string {
 	return strings.Join(parts, "/")
 }
 
-// Abs validates a relative path and returns its contained absolute form.
+// Abs valida una ruta relativa y devuelve su forma absoluta contenida.
 func (s *Store) Abs(rel string) (string, error) {
 	if err := validateRelative(rel); err != nil {
 		return "", err
@@ -110,7 +110,7 @@ func (s *Store) contained(abs string) error {
 	return nil
 }
 
-// EnsureDir creates a directory tree without following symlinks.
+// EnsureDir crea un árbol de directorios sin seguir enlaces simbólicos.
 func (s *Store) EnsureDir(rel string) (string, error) {
 	abs, err := s.Abs(rel)
 	if err != nil {
@@ -150,7 +150,7 @@ func (s *Store) walkMkdir(abs string) error {
 	return nil
 }
 
-// CreateTemp opens a .part file in the destination directory so rename stays atomic.
+// CreateTemp abre un archivo .part en el directorio de destino para que el renombrado siga siendo atómico.
 func (s *Store) CreateTemp(rel string, itemID uuid.UUID) (*os.File, string, error) {
 	abs, err := s.Abs(rel)
 	if err != nil {
@@ -172,7 +172,7 @@ func (s *Store) CreateTemp(rel string, itemID uuid.UUID) (*os.File, string, erro
 	return f, f.Name(), nil
 }
 
-// OpenRead opens a regular file and refuses symlinks.
+// OpenRead abre un archivo regular y rechaza enlaces simbólicos.
 func (s *Store) OpenRead(rel string) (*os.File, os.FileInfo, error) {
 	abs, err := s.Abs(rel)
 	if err != nil {
@@ -194,7 +194,7 @@ func (s *Store) OpenRead(rel string) (*os.File, os.FileInfo, error) {
 	return f, info, nil
 }
 
-// RenameAtomic replaces nothing: it fails when the destination already exists.
+// RenameAtomic no reemplaza nada: falla si el destino ya existe.
 func RenameAtomic(temp, abs string) error {
 	if _, err := os.Lstat(abs); err == nil {
 		return errors.New("destination already exists")
@@ -244,8 +244,8 @@ func validateRelative(rel string) error {
 	return nil
 }
 
-// Sanitize makes a single Drive name safe for the local filesystem while keeping
-// it readable. Identity always comes from the Drive ID, never from this name.
+// Sanitize hace que un nombre individual de Drive sea seguro para el sistema de archivos local sin dejar de
+// ser legible. La identidad siempre proviene del ID de Drive, nunca de este nombre.
 func Sanitize(name string) string {
 	name = strings.TrimSpace(name)
 	var b strings.Builder
@@ -263,7 +263,7 @@ func Sanitize(name string) string {
 	if out == "" {
 		out = "_"
 	}
-	// Keep byte length bounded without splitting a UTF-8 rune.
+	// Mantiene acotada la longitud en bytes sin dividir un rune UTF-8.
 	for len(out) > 120 {
 		_, size := utf8.DecodeLastRuneInString(out)
 		out = out[:len(out)-size]
@@ -308,7 +308,7 @@ func isReserved(name string) bool {
 	return false
 }
 
-// UniqueName appends a deterministic Drive-ID suffix when two items collide.
+// UniqueName añade un sufijo determinista con el ID de Drive cuando dos elementos colisionan.
 func UniqueName(used map[string]string, name, driveID string) string {
 	name = Sanitize(name)
 	key := strings.ToLower(name)

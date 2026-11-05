@@ -1,5 +1,5 @@
--- TERRA initial schema.
--- Metadata lives in PostgreSQL; document bytes live only in the private volume.
+-- Esquema inicial de TERRA.
+-- Los metadatos viven en PostgreSQL; los bytes de los documentos solo viven en el volumen privado.
 
 CREATE TABLE areas (
     id          uuid PRIMARY KEY,
@@ -21,7 +21,7 @@ CREATE TABLE positions (
     created_at       timestamptz NOT NULL DEFAULT now(),
     updated_at       timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT positions_area_name_unique UNIQUE (area_id, normalized_name),
-    -- Target of the composite FK below: guarantees a user's position belongs to the user's area.
+    -- Destino de la FK compuesta siguiente: garantiza que el cargo de un usuario pertenece a su área.
     CONSTRAINT positions_id_area_unique UNIQUE (id, area_id)
 );
 

@@ -1,8 +1,8 @@
-# Database development
+# Desarrollo de la base de datos
 
-PostgreSQL 18 runs in the `db` container with a persistent named volume.
+PostgreSQL 18 se ejecuta en el contenedor `db` con un volumen nombrado persistente.
 
-## Access
+## Acceso
 
 ```bash
 ./terra db
@@ -10,12 +10,12 @@ PostgreSQL 18 runs in the `db` container with a persistent named volume.
 docker compose exec -T db psql -U terra -d terra
 ```
 
-Credentials are read from `.env`; they are never printed by scripts.
+Las credenciales se leen de `.env`; los scripts nunca las imprimen.
 
-## Schema
+## Esquema
 
-Migrations are embedded in the API image and applied with an advisory lock. See
-`docs/architecture/database-design.md`.
+Las migraciones están embebidas en la imagen de la API y se aplican con un bloqueo
+advisory. Ver `docs/architecture/database-design.md`.
 
 ```bash
 ./terra migrate status
@@ -23,27 +23,27 @@ Migrations are embedded in the API image and applied with an advisory lock. See
 ./terra migrate up
 ```
 
-## Development data
+## Datos de desarrollo
 
-The development database lives in `terra_terra-db`. It is preserved by
-`./terra down` and by `./terra down --remove`.
+La base de datos de desarrollo vive en `terra_terra-db`. Se conserva con
+`./terra down` y con `./terra down --remove`.
 
-Never use `docker compose down -v`, `docker volume rm` or
-`docker system prune --volumes` to solve a local problem.
+Nunca uses `docker compose down -v`, `docker volume rm` ni
+`docker system prune --volumes` para resolver un problema local.
 
-## Test database
+## Base de datos de pruebas
 
 `./terra test backend integration`:
 
-1. creates the disposable database `terra_test`;
-2. applies all migrations;
-3. runs integration tests against it;
-4. drops `terra_test`.
+1. crea la base de datos desechable `terra_test`;
+2. aplica todas las migraciones;
+3. ejecuta las pruebas de integración contra ella;
+4. elimina `terra_test`.
 
-The development database is not modified. Test fixtures live in
-`backend/tests/fixtures` and helpers in `backend/tests/helpers`.
+La base de datos de desarrollo no se modifica. Los fixtures de prueba viven en
+`backend/tests/fixtures` y los helpers en `backend/tests/helpers`.
 
-## Common queries
+## Consultas habituales
 
 ```sql
 SELECT status, count(*) FROM download_jobs GROUP BY status;
@@ -52,24 +52,24 @@ SELECT relative_path FROM stored_files ORDER BY created_at DESC LIMIT 10;
 SELECT * FROM schema_migrations ORDER BY version;
 ```
 
-## Consistency
+## Consistencia
 
 ```bash
 ./terra test backend integration
 ./deploy/scripts/consistency-check.sh
 ```
 
-## Reset (only if you accept data loss)
+## Restablecimiento (solo si aceptas pérdida de datos)
 
-The distribution does not include a reset command. If you intentionally want to
-discard local data, stop the stack and remove the volume manually **only after
-creating a backup**:
+La distribución no incluye un comando de restablecimiento. Si quieres descartar
+intencionadamente los datos locales, detén el stack y elimina el volumen manualmente
+**solo después de crear una copia de seguridad**:
 
 ```bash
 ./terra backup
 ./terra down
-# Deliberate, destructive, development-only action:
+# Acción deliberada, destructiva, solo para desarrollo:
 # docker volume rm terra_terra-db
 ```
 
-This is not part of normal operation and is never executed by the scripts.
+Esto no forma parte del funcionamiento normal y los scripts nunca lo ejecutan.

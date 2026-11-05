@@ -15,8 +15,8 @@ import (
 	"terra/internal/platform/httpx"
 )
 
-// Turnstile verifies admin login tokens against Cloudflare Siteverify. The widget
-// rendering is irrelevant; only this server-side call authorizes a login.
+// Turnstile verifica los tokens de inicio de sesión administrativo contra Cloudflare Siteverify. El
+// renderizado del widget es irrelevante; solo esta llamada del lado del servidor autoriza un inicio de sesión.
 type Turnstile struct {
 	SecretKey string
 	Hostname  string
@@ -86,8 +86,8 @@ func (t *Turnstile) Verify(ctx context.Context, token, remoteIP string) (err err
 	return nil
 }
 
-// logVerify records the Siteverify outcome. The token and the secret key are
-// deliberately absent: only metadata useful for diagnosis is emitted.
+// logVerify registra el resultado de Siteverify. El token y la clave secreta están
+// deliberadamente ausentes: solo se emiten metadatos útiles para el diagnóstico.
 func (t *Turnstile) logVerify(ctx context.Context, started time.Time, result turnstileResponse, err error) {
 	if t.Logger == nil {
 		return

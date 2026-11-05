@@ -60,7 +60,7 @@ Resultados:
 - Volumen PostgreSQL y usuarios conservados al eliminar contenedores.
 - Recuperación con `./terra init` tras eliminar los cuatro contenedores.
 - `./terra down --remove` conservó el volumen.
-- Backup local, verificación y restauración con marcador comprobados.
+- Copia de seguridad local, verificación y restauración con marcador comprobados.
 - `bash -n` y ShellCheck sin advertencias.
 - Build de imágenes sin dependencias de Go/Node en el host.
 - Imágenes sin `.git` ni `.env`.

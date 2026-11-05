@@ -112,7 +112,7 @@ func (g *Client) UserInfo(ctx context.Context, token *oauth2.Token) (*Identity, 
 	return &id, nil
 }
 
-// RevokeToken asks Google to invalidate a refresh or access token.
+// RevokeToken pide a Google que invalide un refresh token o un access token.
 func (g *Client) RevokeToken(ctx context.Context, token string) error {
 	resp, err := g.http.PostForm("https://oauth2.googleapis.com/revoke", url.Values{"token": {token}})
 	if err != nil {
@@ -142,10 +142,10 @@ func pkceChallenge(verifier string) string {
 	return base64.RawURLEncoding.EncodeToString(sum[:])
 }
 
-// TokenSource returns a refreshing source for a stored Drive refresh token.
+// TokenSource devuelve una fuente renovable para un refresh token de Drive almacenado.
 func (g *Client) TokenSource(ctx context.Context, refreshToken string) oauth2.TokenSource {
 	return g.drive.TokenSource(ctx, &oauth2.Token{RefreshToken: refreshToken})
 }
 
-// DriveScopes exposes the requested documental scopes for verification.
+// DriveScopes expone los scopes documentales solicitados para su verificación.
 func (g *Client) DriveScopes() []string { return g.drive.Scopes }

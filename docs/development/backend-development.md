@@ -1,24 +1,24 @@
-# Backend development
+# Desarrollo del backend
 
-The backend runs inside the `api` container with the Go toolchain included.
-No Go installation is required on the host.
+El backend se ejecuta dentro del contenedor `api` con la toolchain de Go incluida.
+No se requiere ninguna instalación de Go en el host.
 
-## Run and edit
+## Ejecución y edición
 
-`../backend` is bind-mounted at `/src`. The API starts with:
+`../backend` está montado mediante bind en `/src`. La API se inicia con:
 
 ```bash
 ./terra up
 ```
 
-The container command is `go run ./cmd/api`. On restart it recompiles with the
-current source. Logs:
+El comando del contenedor es `go run ./cmd/api`. Al reiniciar, recompila con el
+código fuente actual. Registros:
 
 ```bash
 ./terra logs api -f
 ```
 
-## Tests and vet
+## Pruebas y vet
 
 ```bash
 ./terra test backend unit
@@ -26,7 +26,7 @@ current source. Logs:
 ./terra test backend
 ```
 
-Equivalent Docker commands:
+Comandos Docker equivalentes:
 
 ```bash
 docker compose exec -T api go test ./...
@@ -34,12 +34,12 @@ docker compose exec -T api go vet ./...
 docker compose exec -T api go test -tags=integration ./tests/integration/...
 ```
 
-The integration runner creates a disposable `terra_test` database and drops it
-afterwards. It never touches the development database.
+El runner de integración crea una base de datos desechable `terra_test` y la elimina
+después. Nunca toca la base de datos de desarrollo.
 
-## Commands inside the image
+## Comandos dentro de la imagen
 
-The API image also contains the bootstrap and migration commands:
+La imagen de la API también contiene los comandos de bootstrap y migraciones:
 
 ```bash
 ./terra migrate up
@@ -47,10 +47,10 @@ The API image also contains the bootstrap and migration commands:
 ./terra bootstrap
 ```
 
-These run with `go run` inside the `api` container. There is no migrations
-container.
+Estos se ejecutan con `go run` dentro del contenedor `api`. No hay un contenedor
+de migraciones.
 
-## Structure
+## Estructura
 
 ```
 backend/
@@ -60,17 +60,17 @@ backend/
 └── tests/{unit,integration,fixtures,helpers}/
 ```
 
-Unit tests for internal packages live alongside their packages; the directory under
-`tests/unit` is reserved for exported cross-package behavior. Integration tests are
-tagged `integration`.
+Las pruebas unitarias de los paquetes internos viven junto a sus paquetes; el directorio
+bajo `tests/unit` está reservado para el comportamiento exportado entre paquetes. Las
+pruebas de integración llevan la etiqueta `integration`.
 
-## Go caches
+## Cachés de Go
 
-The local distribution mounts host directories `.cache/go-mod` and `.cache/go-build`
-into the API/worker containers. This keeps downloads and builds fast without
-installing Go on the host.
+La distribución local monta los directorios del host `.cache/go-mod` y `.cache/go-build`
+en los contenedores api/worker. Esto mantiene rápidas las descargas y compilaciones sin
+instalar Go en el host.
 
-## Rebuild
+## Reconstrucción
 
 ```bash
 ./terra build api

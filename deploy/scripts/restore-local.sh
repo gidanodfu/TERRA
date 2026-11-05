@@ -4,8 +4,8 @@
 # Versión: 2.0.0
 # Descripción: restaura PostgreSQL y/o el volumen documental local.
 # Uso: ./deploy/scripts/restore-local.sh [backup-dir] [--db|--storage|--all]
-# Requisitos: backup verificado y confirmación explícita.
-# Efectos: DESTRUCTIVO sobre los datos indicados. No elimina el backup.
+# Requisitos: copia de seguridad verificada y confirmación explícita.
+# Efectos: DESTRUCTIVO sobre los datos indicados. No elimina la copia de seguridad.
 # Códigos: 0 correcto · 1 fallo · 2 uso incorrecto · 3 cancelado.
 # =============================================================================
 set -Eeuo pipefail
@@ -18,12 +18,12 @@ usage() {
   cat <<'USAGE'
 Uso: restore-local.sh [backup-dir] [--db|--storage|--all]
 
-Sin directorio restaura el backup local más reciente.
+Sin directorio restaura la copia de seguridad local más reciente.
   --db       restaura solo PostgreSQL
   --storage  restaura solo el volumen documental
   --all      restaura ambos (por defecto)
 
-Se exige CONFIRM=yes o confirmación interactiva. El backup no se elimina.
+Se exige CONFIRM=yes o confirmación interactiva. La copia de seguridad no se elimina.
 USAGE
 }
 
@@ -47,17 +47,17 @@ if [[ -z "$backup_dir" ]]; then
   backup_dir="$(terra_backups | tail -n1)"
   [[ -n "$backup_dir" ]] || terra_die "No hay backups locales en backups/." 1
   backup_dir="$TERRA_ROOT_DIR/backups/$backup_dir"
-  terra_info "Usando el backup más reciente: $backup_dir"
+  terra_info "Usando la copia de seguridad más reciente: $backup_dir"
 fi
-[[ -d "$backup_dir" ]] || terra_die "No existe el directorio de backup: $backup_dir" 2
+[[ -d "$backup_dir" ]] || terra_die "No existe el directorio de copia de seguridad: $backup_dir" 2
 backup_dir="$(cd -- "$backup_dir" && pwd)"
 terra_check_env_file
 terra_check_commands
 terra_require_db_running
 
-[[ -f "$backup_dir/metadata.json" ]] || terra_die "Falta metadata.json; no se puede verificar el backup." 3
+[[ -f "$backup_dir/metadata.json" ]] || terra_die "Falta metadata.json; no se puede verificar la copia de seguridad." 3
 grep -q '"distribution": "local-development"' "$backup_dir/metadata.json" \
-  || terra_die "El backup no corresponde a la distribución local." 3
+  || terra_die "La copia de seguridad no corresponde a la distribución local." 3
 [[ -f "$backup_dir/SHA256SUMS" ]] || terra_die "Falta SHA256SUMS." 3
 (cd "$backup_dir" && sha256sum -c SHA256SUMS >/dev/null) || terra_die "Checksums inválidos." 3
 
@@ -79,7 +79,7 @@ space_dir="$storage_path"
 while [[ ! -d "$space_dir" ]]; do space_dir="$(dirname "$space_dir")"; done
 available_bytes="$(df --output=avail -B1 "$space_dir" 2>/dev/null | tail -1 | tr -d ' ')"
 if [[ "$required_bytes" =~ ^[0-9]+$ && "$available_bytes" =~ ^[0-9]+$ ]] && ((required_bytes > available_bytes)); then
-  terra_error "Espacio insuficiente: backup $required_bytes bytes, disponibles $available_bytes."
+  terra_error "Espacio insuficiente: la copia de seguridad requiere $required_bytes bytes y hay $available_bytes disponibles."
   exit 1
 fi
 
@@ -113,7 +113,7 @@ if ((restore_db == 1)); then
   user="$(terra_env_get POSTGRES_USER)"
   db="$(terra_env_get POSTGRES_DB)"
   if ! terra_compose exec -T db pg_restore -U "$user" -d "$db" --clean --if-exists --no-owner < "$dump"; then
-    terra_error "Falló la restauración de PostgreSQL. El backup se conserva."
+    terra_error "Falló la restauración de PostgreSQL. La copia de seguridad se conserva."
     exit 1
   fi
   terra_ok "PostgreSQL restaurado."
@@ -123,7 +123,7 @@ if ((restore_storage == 1)); then
   terra_step "Restaurando almacenamiento local"
   mkdir -p -- "$storage_path"
   if ! tar xzf "$archive" -C "$storage_path"; then
-    terra_error "Falló la restauración del almacenamiento. El backup se conserva."
+    terra_error "Falló la restauración del almacenamiento. La copia de seguridad se conserva."
     exit 1
   fi
   terra_ok "Almacenamiento restaurado."
@@ -135,7 +135,7 @@ terra_wait_healthy db 240
 terra_compose up -d api worker web >/dev/null
 for service in api worker web; do terra_wait_healthy "$service" 240; done
 if ! terra_verify_stack; then
-  terra_error "La restauración terminó, pero la verificación falló. No elimine el backup."
+  terra_error "La restauración terminó, pero la verificación falló. No elimine la copia de seguridad."
   exit 1
 fi
 
@@ -147,7 +147,7 @@ if ((restore_db == 1 && restore_storage == 1)); then
     [[ -f "$storage_path/$rel" ]] || { terra_error "Falta: $rel"; missing=$((missing + 1)); }
   done < <(terra_db_psql "SELECT relative_path FROM stored_files WHERE status='completed' ORDER BY relative_path;" 2>/dev/null || true)
   if ((missing > 0)); then
-    terra_error "Faltan $missing archivo(s) del backup."
+    terra_error "Faltan $missing archivo(s) de la copia de seguridad."
     exit 1
   fi
   terra_ok "Consistencia verificada."

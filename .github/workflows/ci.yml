@@ -14,16 +14,16 @@ concurrency:
 
 jobs:
   quality:
-    name: Docker-only quality checks
+    name: Comprobaciones de calidad solo con Docker
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Checkout repository
+      - name: Clonar repositorio
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
 
-      - name: Validate required repository structure
+      - name: Validar estructura requerida del repositorio
         run: |
           set -eu
           test -f deploy/compose.yaml
@@ -35,7 +35,7 @@ jobs:
           test -f docs/development/testing.md
           echo "Estructura requerida presente."
 
-      - name: Prepare controlled local .env
+      - name: Preparar .env local controlado
         run: |
           set -eu
           cp .env.example .env
@@ -67,19 +67,19 @@ jobs:
             .env
           echo "Archivo .env de CI generado con valores ficticios (no secretos reales)."
 
-      - name: Validate environment
+      - name: Validar entorno
         run: ./terra check
 
-      - name: Build Docker images
+      - name: Construir imágenes Docker
         run: ./terra build
 
-      - name: Initialize TERRA
+      - name: Inicializar TERRA
         run: ./terra init
 
-      - name: Run all frontend and backend tests
+      - name: Ejecutar todas las pruebas de frontend y backend
         run: ./terra test all
 
-      - name: Collect diagnostics on failure
+      - name: Recopilar diagnósticos en caso de fallo
         if: failure()
         run: |
           mkdir -p artifacts
@@ -87,7 +87,7 @@ jobs:
           ./terra doctor > artifacts/ci-doctor.txt 2>&1 || true
           ./terra logs > artifacts/ci-logs.txt 2>&1 || true
 
-      - name: Upload test and diagnostic artifacts
+      - name: Subir artefactos de pruebas y diagnóstico
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -96,6 +96,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Stop containers
+      - name: Detener contenedores
         if: always()
         run: ./terra down --remove || true

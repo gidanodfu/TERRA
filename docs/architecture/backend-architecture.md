@@ -72,7 +72,7 @@ administrativa; eso vive en `downloads.Create` y en las políticas HTTP.
 
 - `context.Context` en todas las operaciones de I/O.
 - Errores tipados y traducción única a HTTP.
-- Early returns y funciones pequeñas.
+- Retornos tempranos y funciones pequeñas.
 - Interfaces orientadas al consumidor solo donde hay variación real (p. ej. `httpx.Middleware`).
 - SQL en repositorios, no en handlers.
 - Migraciones con restricciones; reglas críticas también en PostgreSQL.

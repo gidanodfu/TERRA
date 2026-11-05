@@ -1,4 +1,4 @@
-// Package validate provides small field-level validators shared by use cases.
+// El paquete validate proporciona validadores pequeños a nivel de campo compartidos por los casos de uso.
 package validate
 
 import (
@@ -23,8 +23,8 @@ func MaxLen(fields map[string]string, key, value string, max int) {
 	}
 }
 
-// Slug produces an ASCII slug safe for database constraints and storage paths.
-// Accents are folded through NFD so "Área" and "Area" produce the same identifier.
+// Slug produce un slug ASCII seguro para las restricciones de base de datos y las rutas de almacenamiento.
+// Los acentos se pliegan mediante NFD para que "Área" y "Area" produzcan el mismo identificador.
 func Slug(value string) string {
 	lower := norm.NFD.String(strings.ToLower(strings.TrimSpace(value)))
 	var b strings.Builder

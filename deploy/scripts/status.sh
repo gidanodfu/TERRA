@@ -24,16 +24,16 @@ terra_check_env_file
 terra_check_commands
 terra_compose config >/dev/null
 
-printf '\n%s\n' "TERRA STATUS — desarrollo local"
+printf '\n%s\n' "TERRA — ESTADO DEL ENTORNO LOCAL"
 printf 'Proyecto Docker: %s\n' "$TERRA_PROJECT"
 printf 'Archivo de configuración: .env\n\n'
 
-printf '%-8s %-14s %-14s %-24s\n' "SERVICIO" "ESTADO" "HEALTH" "IMAGEN"
+printf '%-8s %-14s %-14s %-24s\n' "SERVICIO" "ESTADO" "SALUD" "IMAGEN"
 printf '%s\n' "----------------------------------------------------------------------------"
 for service in "${TERRA_ALLOWED_SERVICES[@]}"; do
   id="$(terra_service_container "$service" 2>/dev/null || true)"
   if [[ -z "$id" ]]; then
-    printf '%-8s %-14s %-14s %-24s\n' "$service" "MISSING" "-" "-"
+    printf '%-8s %-14s %-14s %-24s\n' "$service" "AUSENTE" "-" "-"
     continue
   fi
   state="$("$TERRA_DOCKER_BIN" inspect -f '{{.State.Status}}' "$id" 2>/dev/null || echo unknown)"
@@ -62,7 +62,7 @@ if [[ -d "$storage_path" ]]; then
   printf '  Tamaño: %s\n' "$(terra_file_size "$storage_path")"
   printf '  Espacio libre: %s\n' "$(df -h --output=avail "$storage_path" 2>/dev/null | tail -1 | tr -d ' ')"
 else
-  printf '  MISSING\n'
+  printf '  AUSENTE\n'
 fi
 
 printf '\n%s\n' "PostgreSQL"
@@ -72,7 +72,7 @@ if [[ "$(terra_container_health db)" == "healthy" || "$(terra_container_health d
   if terra_compose exec -T db pg_isready -U "$user" -d "$db" >/dev/null 2>&1; then
     printf '  Conexión: OK\n'
   else
-    printf '  Conexión: FAIL\n'
+    printf '  Conexión: FALLO\n'
   fi
   migrations="$(terra_db_psql "SELECT count(*) FROM schema_migrations;" 2>/dev/null || echo '?')"
   users="$(terra_db_psql "SELECT count(*) FROM users;" 2>/dev/null || echo '?')"
@@ -87,17 +87,17 @@ port="$(terra_web_port)"
 if curl -fsS --max-time 5 "http://127.0.0.1:$port/api/v1/health" >/dev/null 2>&1; then
   printf '  API /health vía Vite proxy: OK\n'
 else
-  printf '  API /health vía Vite proxy: FAIL\n'
+  printf '  API /health vía Vite proxy: FALLO\n'
 fi
 if curl -fsS --max-time 5 "http://127.0.0.1:$port/api/v1/ready" >/dev/null 2>&1; then
   printf '  API /ready: OK\n'
 else
-  printf '  API /ready: FAIL\n'
+  printf '  API /ready: FALLO\n'
 fi
 if curl -fsS --max-time 5 "http://127.0.0.1:$port/" >/dev/null 2>&1; then
   printf '  Vite dev server: OK (http://127.0.0.1:%s)\n' "$port"
 else
-  printf '  Vite dev server: FAIL\n'
+  printf '  Vite dev server: FALLO\n'
 fi
 heartbeat="$(terra_db_psql "SELECT COALESCE(to_char(max(heartbeat_at), 'YYYY-MM-DD HH24:MI:SS'), 'sin trabajos recientes') FROM download_jobs;" 2>/dev/null || echo '?')"
 printf '  Último heartbeat registrado: %s\n\n' "$heartbeat"

@@ -21,7 +21,7 @@ import (
 
 var driveIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-// APIError carries the retry/reauth semantics the worker needs.
+// APIError transporta la semántica de reintento y reautenticación que necesita el worker.
 type APIError struct {
 	Code       string
 	Transient  bool
@@ -141,8 +141,8 @@ func (a *API) ListFolders(ctx context.Context, parentID string) ([]FolderItem, e
 	}
 }
 
-// PathToRoot returns the folder chain from Mi unidad down to id, inclusive.
-// It proves the selected folder is inside this connection's My Drive tree.
+// PathToRoot devuelve la cadena de carpetas desde Mi unidad hasta id, inclusive.
+// Demuestra que la carpeta seleccionada está dentro del árbol de Mi unidad de esta conexión.
 func (a *API) PathToRoot(ctx context.Context, id string) ([]RemoteFile, error) {
 	rootID, err := a.RootID(ctx)
 	if err != nil {
@@ -176,7 +176,7 @@ func (a *API) PathToRoot(ctx context.Context, id string) ([]RemoteFile, error) {
 	return nil, &APIError{Code: "drive_depth_exceeded", Err: errors.New("parent chain too deep")}
 }
 
-// OpenDownload streams either a binary file or the required native export.
+// OpenDownload transmite un archivo binario o la exportación nativa requerida.
 func (a *API) OpenDownload(ctx context.Context, f RemoteFile) (io.ReadCloser, int64, string, error) {
 	if f.MimeType == MimeFolder {
 		return nil, 0, "", &APIError{Code: "is_folder", Err: errors.New("folders cannot be downloaded")}
@@ -278,7 +278,7 @@ func classify(err error) error {
 	return &APIError{Code: "drive_transient", Transient: true, Err: err}
 }
 
-// Translate exposes classification to the worker.
+// Translate expone la clasificación al worker.
 func Translate(err error) *APIError {
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {

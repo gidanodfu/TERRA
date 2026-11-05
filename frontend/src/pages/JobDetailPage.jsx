@@ -73,7 +73,7 @@ export default function JobDetailPage({ basePath }) {
     }
   }, [id, job?.completed_items, job?.failed_items, job?.skipped_items, job?.status, page, itemStatus])
 
-  // Polling fallback when SSE is unavailable or reconnecting.
+  // Respaldo por polling cuando SSE no está disponible o se está reconectando.
   useEffect(() => {
     if (!job || isTerminal(job.status) || connected) return undefined
     const timer = setInterval(loadJob, 5000)

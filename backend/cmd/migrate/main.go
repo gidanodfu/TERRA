@@ -1,5 +1,5 @@
-// Command migrate applies embedded migrations and reports their state.
-// It runs inside the existing api container; it is not a separate service.
+// Comando migrate aplica las migraciones embebidas e informa su estado.
+// Se ejecuta dentro del contenedor api existente; no es un servicio independiente.
 package main
 
 import (

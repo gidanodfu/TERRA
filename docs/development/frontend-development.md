@@ -1,53 +1,53 @@
-# Frontend development
+# Desarrollo de frontend
 
-The `web` container runs the Vite development server with hot module replacement.
+El contenedor `web` ejecuta el servidor de desarrollo de Vite con reemplazo de módulos en caliente (HMR).
 
-## Access
+## Acceso
 
 ```text
 http://localhost:8080
 ```
 
-Port `8080` on the host maps to Vite `5173` inside the container. Change the host
-port with `WEB_PORT` in `.env`.
+El puerto `8080` del host se asigna al `5173` de Vite dentro del contenedor. Cambie el puerto
+del host con `WEB_PORT` en `.env`.
 
 ## Stack
 
 - React 19
 - Vite 8
 - Tailwind CSS 4
-- Lucide icons
+- Iconos Lucide
 - React Router
 - Vitest + React Testing Library
-- Playwright + Chromium inside the container
+- Playwright + Chromium dentro del contenedor
 
-## Live editing
+## Edición en vivo
 
-Source files under `src/`, `public/`, `tests/` and development configs are bind-mounted into `/app`. Changes to `src/` are reflected through Vite HMR.
+Los archivos fuente bajo `src/`, `public/`, `tests/` y las configuraciones de desarrollo se montan mediante bind en `/app`. Los cambios en `src/` se reflejan a través del HMR de Vite.
 
-`node_modules` is installed in the web image with `npm ci` during the build and is not bind-mounted from the host. A local `frontend/node_modules` is not part of TERRA's operational flow; if it exists, it is a residual from a manual host install and does not affect Docker.
+`node_modules` se instala en la imagen web con `npm ci` durante el build y no se monta desde el host. Un `frontend/node_modules` local no forma parte del flujo operativo de TERRA; si existe, es un residuo de una instalación manual en el host y no afecta a Docker.
 
-`npm`, Vite, Vitest and Playwright run inside the `web` container:
+`npm`, Vite, Vitest y Playwright se ejecutan dentro del contenedor `web`:
 
 ```bash
-./terra shell web                                  # interactive shell
-docker compose exec -T web npm run test:unit       # one-off command
+./terra shell web                                  # shell interactiva
+docker compose exec -T web npm run test:unit       # comando puntual
 docker compose exec -T web npm run lint
 ```
 
-After changing `package.json` or `package-lock.json`, rebuild and recreate the web service:
+Después de cambiar `package.json` o `package-lock.json`, reconstruya y recree el servicio web:
 
 ```bash
 ./terra build web
 ./terra up
 ```
 
-Node.js is not required on the host; it is only part of the web image.
+No se requiere Node.js en el host; solo forma parte de la imagen web.
 
-## Vite client y React Refresh
+## Cliente de Vite y React Refresh
 
 El doctor verifica que `/@vite/client` se sirva como JavaScript, que React Refresh
-esté disponible y que la app monte en `#root`:
+esté disponible y que la aplicación monte en `#root`:
 
 ```bash
 ./terra doctor
@@ -62,21 +62,21 @@ Reconstruya y recree:
 ./terra up
 ```
 
-## API and SSE proxy
+## Proxy de API y SSE
 
-`vite.config.js` proxies `/api` to `http://api:8080`. This includes REST and
-Server-Sent Events. Do not use `localhost` for container-to-container traffic.
+`vite.config.js` redirige `/api` a `http://api:8080`. Esto incluye REST y
+Server-Sent Events. No use `localhost` para el tráfico entre contenedores.
 
-## Frontend tests
+## Pruebas de frontend
 
 ```bash
 ./terra test frontend unit
 ./terra test frontend integration
 ./terra test e2e
-./terra test frontend       # lint + unit + integration + build + coverage
+./terra test frontend       # lint + unitarias + integración + build + cobertura
 ```
 
-Tests run inside the `web` container:
+Las pruebas se ejecutan dentro del contenedor `web`:
 
 ```bash
 docker compose exec -T web npm run test:unit
@@ -84,15 +84,15 @@ docker compose exec -T web npm run test:integration
 docker compose exec -T web npm run test:e2e
 ```
 
-## Shell and build
+## Shell y compilación
 
 ```bash
 ./terra shell web
 ./terra build
 ```
 
-Build output inside the container is written to `/tmp` during tests; the host is
-not polluted with compiled artifacts.
+La salida del build dentro del contenedor se escribe en `/tmp` durante las pruebas; el host
+no se contamina con artefactos compilados.
 
 ## Lint
 
@@ -100,4 +100,4 @@ not polluted with compiled artifacts.
 docker compose exec -T web npm run lint
 ```
 
-No Node installation is required on the host.
+No se requiere ninguna instalación de Node en el host.

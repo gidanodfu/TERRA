@@ -1,4 +1,4 @@
-// Package users owns TERRA worker profiles and their organizational assignment.
+// El paquete users es dueño de los perfiles de trabajador de TERRA y su asignación organizativa.
 package users
 
 import (
@@ -44,9 +44,9 @@ type User struct {
 	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
 }
 
-// HasRole and the classification helpers centralise account separation. A
-// worker is an account whose only role is RoleUser; unknown or mixed roles are
-// never treated as workers (deny by default).
+// HasRole y los helpers de clasificación centralizan la separación de cuentas. Un
+// trabajador es una cuenta cuyo único rol es RoleUser; los roles desconocidos o mixtos
+// nunca se tratan como trabajadores (denegación por defecto).
 func (u User) HasRole(role Role) bool {
 	for _, r := range u.Roles {
 		if r == string(role) {

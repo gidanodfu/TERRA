@@ -102,11 +102,11 @@ else
   terra_ok "Sin errores recientes en worker"
 fi
 
-terra_step "8. Backups locales"
+terra_step "8. Copias de seguridad locales"
 if [[ -n "$(terra_backups)" ]]; then
-  terra_ok "Backups locales disponibles: $(terra_backups | wc -l)"
+  terra_ok "Copias de seguridad locales disponibles: $(terra_backups | wc -l)"
 else
-  terra_warn "No hay backups locales todavía."
+  terra_warn "No hay copias de seguridad locales todavía."
 fi
 
 printf '\n'

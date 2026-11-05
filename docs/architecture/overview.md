@@ -77,7 +77,7 @@ sequenceDiagram
 - Sin `drive.file` como sustituto de `drive.readonly`.
 - Sin refresh tokens en el navegador.
 - Sin borrado de historial al suspender/desactivar.
-- Sin claves ni tokens en logs.
+- Sin claves ni tokens en registros.
 - Sin descargas dentro de una petición HTTP.
 
 Véanse los ADR en `docs/decisions/`.

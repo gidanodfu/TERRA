@@ -1,5 +1,5 @@
-// Package downloads owns the persistent PostgreSQL queue, job lifecycle, worker
-// lease protocol, SSE progress and the download pipeline.
+// El paquete downloads es dueño de la cola persistente en PostgreSQL, el ciclo de vida de los
+// trabajos, el protocolo de lease del worker, el progreso SSE y el pipeline de descarga.
 package downloads
 
 import (

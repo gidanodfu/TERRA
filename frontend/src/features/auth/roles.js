@@ -4,7 +4,7 @@ export function isAdministrativeAccount(user) {
   return Boolean(user?.roles?.some((role) => ADMINISTRATIVE_ROLES.includes(role)))
 }
 
-// Mirrors the backend rule: only an account whose sole role is "user" is a worker.
+// Refleja la regla del backend: solo una cuenta cuyo único rol es "user" es un trabajador.
 export function isWorkerAccount(user) {
   const roles = user?.roles || []
   return roles.includes('user') && roles.every((role) => role === 'user')

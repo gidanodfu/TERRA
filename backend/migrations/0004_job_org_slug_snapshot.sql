@@ -1,5 +1,5 @@
--- Snapshot the slugs used for the physical snapshot path so later renames of an
--- area or position do not change where an in-flight job writes its files.
+-- Fija los slugs usados en la ruta física del snapshot para que los renombrados posteriores de un
+-- área o cargo no cambien el lugar donde un trabajo en curso escribe sus archivos.
 ALTER TABLE download_jobs ADD COLUMN area_slug_snapshot text NOT NULL DEFAULT '';
 ALTER TABLE download_jobs ADD COLUMN position_slug_snapshot text NOT NULL DEFAULT '';
 

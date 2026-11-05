@@ -1,4 +1,4 @@
-// Package config centralizes every environment-driven setting of TERRA.
+// El paquete config centraliza cada ajuste de TERRA basado en variables de entorno.
 package config
 
 import (
@@ -70,8 +70,8 @@ type Bootstrap struct {
 
 func (c Config) IsProduction() bool { return c.Env == "production" }
 
-// Load reads and validates the environment. Missing mandatory values are fatal:
-// TERRA must never start with a silently degraded security configuration.
+// Load lee y valida el entorno. La ausencia de valores obligatorios es fatal:
+// TERRA nunca debe arrancar con una configuración de seguridad degradada silenciosamente.
 func Load() (Config, error) {
 	c := Config{
 		Env:            env("APP_ENV", "development"),

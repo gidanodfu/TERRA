@@ -46,7 +46,7 @@ else
 fi
 
 if ((volume_before == 1)); then
-  terra_volume_exists || terra_die "El volumen PostgreSQL desapareció. Revise backups."
+  terra_volume_exists || terra_die "El volumen PostgreSQL desapareció. Revise las copias de seguridad."
   terra_ok "Volumen PostgreSQL conservado: $TERRA_DB_VOLUME"
 fi
 storage_path="$(terra_storage_path)"

@@ -1,8 +1,8 @@
-# Worker development
+# Desarrollo de worker
 
-The worker is an independent container using the same backend image as the API.
+El worker es un contenedor independiente que usa la misma imagen de backend que la API.
 
-## Start and inspect
+## Inicio e inspección
 
 ```bash
 ./terra up
@@ -10,27 +10,27 @@ The worker is an independent container using the same backend image as the API.
 ./terra status
 ```
 
-Command: `go run ./cmd/worker`.
-It claims jobs from PostgreSQL with `FOR UPDATE ... SKIP LOCKED`, maintains a lease
-and heartbeat, scans Drive, downloads or exports files, writes atomically, and
-updates progress.
+Comando: `go run ./cmd/worker`.
+Toma jobs de PostgreSQL con `FOR UPDATE ... SKIP LOCKED`, mantiene una lease
+y un heartbeat, escanea Drive, descarga o exporta archivos, escribe de forma atómica y
+actualiza el progreso.
 
-## Edits
+## Ediciones
 
-The backend source is bind-mounted. Restart only the worker after backend changes:
+El código fuente del backend se monta mediante bind. Reinicie solo el worker tras cambios en el backend:
 
 ```bash
 ./terra restart worker
 ```
 
-or rebuild/start:
+o reconstruya/inicie:
 
 ```bash
 ./terra build api
 ./terra up
 ```
 
-## Queue checks
+## Comprobaciones de la cola
 
 ```bash
 ./terra db -c "SELECT status, count(*) FROM download_jobs GROUP BY status;"
@@ -38,31 +38,31 @@ or rebuild/start:
 ./terra db -c "SELECT max(heartbeat_at) FROM download_jobs;"
 ```
 
-## Cancellation and leases
+## Cancelación y leases
 
-- Cancellation is requested through the API and observed by the heartbeat.
-- Expired leases can be reclaimed after a worker restart.
-- A lost lease does not finalize the job; the new owner resumes it.
-- Completed items are not downloaded again.
+- La cancelación se solicita a través de la API y el heartbeat la observa.
+- Las leases expiradas se pueden recuperar tras un reinicio del worker.
+- Una lease perdida no finaliza el job; el nuevo propietario lo reanuda.
+- Los elementos completados no se descargan de nuevo.
 
-## Tests
+## Pruebas
 
-Worker queue behavior is covered by backend integration tests:
+El comportamiento de la cola del worker está cubierto por las pruebas de integración de backend:
 
 ```bash
 ./terra test backend integration
 ```
 
-The tests validate claim exclusivity, heartbeat, cancellation, idempotency and
-restricted job listing against PostgreSQL. Drive HTTP itself is not contacted by
-these tests; external Drive tests require controlled credentials and are manual.
+Las pruebas validan la exclusividad del claim, el heartbeat, la cancelación, la idempotencia y
+el listado restringido de jobs contra PostgreSQL. Estas pruebas no contactan con el HTTP de Drive
+en sí; las pruebas externas de Drive requieren credenciales controladas y son manuales.
 
-## Storage
+## Almacenamiento
 
-The worker mounts the local document path read/write:
+El worker monta la ruta local de documentos en lectura/escritura:
 
 ```text
 ../data/dev → /var/lib/terra
 ```
 
-The API mounts it read-only.
+La API la monta en solo lectura.

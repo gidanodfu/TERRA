@@ -31,9 +31,9 @@ const userJoins = `
 	LEFT JOIN user_roles ur ON ur.user_id = u.id
 	LEFT JOIN system_roles r ON r.id = ur.role_id`
 
-// workerCondition is the single source of truth for worker classification in
-// SQL. Only accounts whose sole role is 'user' qualify; administrative, mixed
-// and unknown roles are excluded (deny by default).
+// workerCondition es la única fuente de verdad para la clasificación de trabajadores en
+// SQL. Solo califican las cuentas cuyo único rol es 'user'; las administrativas, mixtas
+// y desconocidas se excluyen (denegación por defecto).
 func workerCondition(alias string) string {
 	return fmt.Sprintf(`EXISTS (
 			SELECT 1 FROM user_roles wur JOIN system_roles wsr ON wsr.id = wur.role_id
@@ -229,7 +229,7 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]User, int, error
 	return out, total, rows.Err()
 }
 
-// AdminUpdate applies organisational or status changes and records history.
+// AdminUpdate aplica cambios organizativos o de estado y registra el historial.
 func (r *Repository) AdminUpdate(ctx context.Context, userID uuid.UUID, areaID, positionID *uuid.UUID, status Status, actorID uuid.UUID) (*User, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -314,9 +314,9 @@ func (r *Repository) GetAdministrativeByID(ctx context.Context, id uuid.UUID) (*
 	return scanUser(r.pool.QueryRow(ctx, q, id))
 }
 
-// SetAdministrativeStatus is the persistence guard for administrative accounts:
-// only accounts with an administrative role can be updated here. The database
-// trigger invalidates sessions when the new status is disabled.
+// SetAdministrativeStatus es la guarda de persistencia para cuentas administrativas:
+// solo se pueden actualizar aquí cuentas con un rol administrativo. El trigger de
+// base de datos invalida las sesiones cuando el nuevo estado es disabled.
 func (r *Repository) SetAdministrativeStatus(ctx context.Context, id uuid.UUID, status Status) (*User, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {

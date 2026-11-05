@@ -1,5 +1,5 @@
-// Package ratelimit provides in-process sliding-window limits. The API runs as a
-// single container, so a shared store is not required; limits reset on restart.
+// El paquete ratelimit proporciona límites de ventana deslizante en proceso. La API se ejecuta como un
+// único contenedor, por lo que no se requiere un almacén compartido; los límites se reinician al reiniciar.
 package ratelimit
 
 import (
@@ -39,7 +39,7 @@ func (l *Limiter) Allow(key string) bool {
 	return true
 }
 
-// Cleanup drops expired windows; call periodically from a goroutine.
+// Cleanup descarta ventanas expiradas; llámalo periódicamente desde una goroutine.
 func (l *Limiter) Cleanup() {
 	now := time.Now()
 	l.mu.Lock()

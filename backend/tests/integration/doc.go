@@ -1,3 +1,3 @@
-// Package integration contains PostgreSQL-backed integration tests.
-// Run with: ./terra test backend integration
+// El paquete integration contiene pruebas de integración respaldadas por PostgreSQL.
+// Ejecutar con: ./terra test backend integration
 package integration

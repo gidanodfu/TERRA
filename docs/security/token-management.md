@@ -16,7 +16,7 @@ Reglas:
 - `.env` no se versiona.
 - No se usan prefijos `VITE_` para secretos; solo la site key pública de Turnstile llega al navegador.
 - Las imágenes no copian `.env`.
-- Los logs no incluyen tokens, códigos OAuth, cookies, contraseñas ni contenido.
+- Los registros no incluyen tokens, códigos OAuth, cookies, contraseñas ni contenido.
 
 ## Refresh tokens de Google
 
@@ -40,7 +40,7 @@ La implementación actual usa una sola clave activa. Para rotar:
 5. arrancar y verificar conexiones.
 
 **Riesgo:** perder la clave inutiliza todos los refresh tokens; los trabajadores deben reconectar.
-Respaldar la clave por un canal separado del backup de PostgreSQL y del volumen.
+Respaldar la clave por un canal separado del copia de seguridad de PostgreSQL y del volumen.
 
 ## Tokens de sesión
 

@@ -1,7 +1,7 @@
 name: terra
 
-# TERRA local development distribution.
-# Exactly four services: web (Vite), api, worker and db.
+# Distribución local de desarrollo de TERRA.
+# Exactamente cuatro servicios: web (Vite), api, worker y db.
 services:
   db:
     image: postgres:18-alpine

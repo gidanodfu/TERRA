@@ -1,48 +1,48 @@
-# Local backups
+# Copias de seguridad locales
 
-Backups are local development artifacts under `backups/<timestamp>/`. They are
-ignored by Git.
+Las copias de seguridad son artefactos locales de desarrollo bajo `backups/<timestamp>/`. Git los
+ignora.
 
-## Create
+## Creación
 
 ```bash
 ./terra backup
 ```
 
-Contents:
+Contenido:
 
 ```
 backups/<timestamp>/
-├── terra.dump          # PostgreSQL custom format (or .gpg)
-├── storage.tar.gz      # document volume (or .gpg)
+├── terra.dump          # formato personalizado de PostgreSQL (o .gpg)
+├── storage.tar.gz      # volumen de documentos (o .gpg)
 ├── metadata.json
 └── SHA256SUMS
 ```
 
-The script verifies checksums, tar integrity and pg_restore compatibility, and never
-overwrites an existing backup.
+El script verifica checksums, la integridad del tar y la compatibilidad con pg_restore, y nunca
+sobrescribe una copia de seguridad existente.
 
-Optional encryption:
+Cifrado opcional:
 
 ```bash
 BACKUP_GPG_RECIPIENT=backup@example.test ./terra backup
 ```
 
-## Verify
+## Verificación
 
 ```bash
 ./deploy/scripts/verify-backup.sh backups/<timestamp>
 ```
 
-## Restore
+## Restauración
 
-Latest backup:
+Última copia de seguridad:
 
 ```bash
 ./terra restore
 ```
 
-Specific backup:
+Copia de seguridad específica:
 
 ```bash
 ./terra restore backups/<timestamp>
@@ -50,26 +50,26 @@ Specific backup:
 ./terra restore backups/<timestamp> --storage
 ```
 
-The script:
-1. validates metadata and checksums;
-2. checks available space;
-3. shows the components to replace;
-4. asks for confirmation (`CONFIRM=yes` for non-interactive);
-5. stops web/api/worker;
-6. restores PostgreSQL and/or documents;
-7. restarts and verifies all services;
-8. checks database/disk consistency when restoring both.
+El script:
+1. valida metadatos y checksums;
+2. comprueba el espacio disponible;
+3. muestra los componentes que se reemplazarán;
+4. solicita confirmación (`CONFIRM=yes` para modo no interactivo);
+5. detiene web/api/worker;
+6. restaura PostgreSQL y/o los documentos;
+7. reinicia y verifica todos los servicios;
+8. comprueba la consistencia entre base de datos y disco cuando restaura ambos.
 
-The backup is kept after restoration. A restore is destructive only for the selected
-components.
+La copia de seguridad se conserva después de la restauración. Una restauración solo es destructiva para los
+componentes seleccionados.
 
-## Encryption key
+## Clave de cifrado
 
-`TOKEN_ENCRYPTION_KEY` is **not** inside the backup. Store it separately. Without it,
-refresh tokens cannot be decrypted and workers must reconnect Drive.
+`TOKEN_ENCRYPTION_KEY` **no** está dentro de la copia de seguridad. Guárdela por separado. Sin ella,
+los refresh tokens no se pueden descifrar y los workers deben reconectar Drive.
 
-## Tested recovery
+## Recuperación probada
 
-During development, a marker row was created after a backup, the backup was restored,
-and the marker disappeared while the original users and migrations remained. This
-validates the local restore path.
+Durante el desarrollo, se creó una fila marcadora después de una copia de seguridad, se restauró la copia de seguridad,
+y la marca desapareció mientras los usuarios y las migraciones originales permanecían. Esto
+valida la ruta de restauración local.

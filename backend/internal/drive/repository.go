@@ -157,7 +157,7 @@ func (r *Repository) AdminList(ctx context.Context, status string, page, size in
 	return out, total, rows.Err()
 }
 
-// --- Drive node metadata ---
+// --- metadatos de nodos de Drive ---
 
 func (r *Repository) UpsertNode(ctx context.Context, connectionID uuid.UUID, f RemoteFile) (uuid.UUID, error) {
 	var id uuid.UUID
@@ -226,7 +226,7 @@ func (r *Repository) NodeByInternalID(ctx context.Context, id uuid.UUID) (*Node,
 	return &n, err
 }
 
-// --- institutional policy ---
+// --- política institucional ---
 
 func (r *Repository) LatestPolicy(ctx context.Context) (*Policy, error) {
 	var p Policy

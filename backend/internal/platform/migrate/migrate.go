@@ -1,4 +1,4 @@
-// Package migrate applies embedded SQL migrations exactly once, under an advisory lock.
+// El paquete migrate aplica las migraciones SQL embebidas exactamente una vez, bajo un bloqueo de asesoría.
 package migrate
 
 import (

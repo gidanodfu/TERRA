@@ -102,16 +102,16 @@ func (s *Service) CompleteLogin(ctx context.Context, rawState, code, userAgent, 
 		if !errors.As(err, &e) || e.Status != http.StatusNotFound {
 			return nil, err
 		}
-		// Link a verified Google email to an existing TERRA account only when it has
-		// no Google identity yet; otherwise create a new pending profile.
+		// Vincula un correo de Google verificado con una cuenta TERRA existente solo cuando aún
+		// no tiene identidad de Google; en caso contrario, crea un perfil pendiente nuevo.
 		existing, findByEmailErr := s.users.GetByEmail(ctx, identity.Email)
 		switch {
 		case findByEmailErr == nil:
 			if attachErr := s.users.AttachGoogleIdentity(ctx, existing.ID, identity.Subject); attachErr != nil {
 				return nil, attachErr
 			}
-			// Never mix an administrative (or unknown) account into the worker
-			// role. Mixed accounts are classified as administrative and excluded.
+			// Nunca mezcles una cuenta administrativa (o desconocida) con el rol de
+			// trabajador. Las cuentas mixtas se clasifican como administrativas y se excluyen.
 			if existing.IsWorker() || len(existing.Roles) == 0 {
 				_ = s.users.EnsureRole(ctx, existing.ID, string(users.RoleUser))
 			}
@@ -248,8 +248,8 @@ func (s *Service) Me(ctx context.Context, identity principal.Identity) map[strin
 	mustRotate, _ := s.repo.HasLocalCredentialFlag(ctx, identity.ID)
 	fullUser, err := s.users.GetByID(ctx, identity.ID)
 	if err != nil {
-		// The session is valid but the profile could not be read; return the minimal
-		// identity rather than failing the whole application shell.
+		// La sesión es válida pero no se pudo leer el perfil; devuelve la identidad
+		// mínima en lugar de fallar todo el shell de la aplicación.
 		fullUser = &users.User{ID: identity.ID, FirstName: identity.FirstName, LastName: identity.LastName,
 			DisplayName: identity.DisplayName, Email: identity.Email, AreaID: identity.AreaID,
 			PositionID: identity.PositionID, Status: users.Status(identity.Status), Roles: identity.Roles}

@@ -90,7 +90,7 @@ fi
 ok "Espacio libre suficiente"
 
 if [[ -n "$(terra_backups)" ]]; then
-  ok "Backups locales previos detectados"
+  ok "Copias de seguridad locales previas detectadas"
 fi
 
 printf '\n%s[TERRA]%s Entorno local validado correctamente.\n' "$TERRA_C_GREEN" "$TERRA_C_RESET"

@@ -1,5 +1,5 @@
-// Package oauthstate persists single-use OAuth state values with PKCE verifiers.
-// It is shared by identity login and the separate Drive authorization flow.
+// El paquete oauthstate persiste valores de estado OAuth de un solo uso con verificadores PKCE.
+// Se comparte entre el inicio de sesión de identidad y el flujo separado de autorización de Drive.
 package oauthstate
 
 import (
@@ -40,7 +40,7 @@ func (r *Repository) Create(ctx context.Context, stateHash []byte, flow string, 
 	return err
 }
 
-// Consume is atomic: a state value succeeds once, then is unusable.
+// Consume es atómico: un valor de estado tiene éxito una vez y luego queda inutilizable.
 func (r *Repository) Consume(ctx context.Context, stateHash []byte, flow string) (*State, error) {
 	var s State
 	err := r.pool.QueryRow(ctx, `UPDATE oauth_states SET consumed_at = now()

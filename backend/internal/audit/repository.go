@@ -1,5 +1,5 @@
-// Package audit stores sensitive administrative operations. Secrets and document
-// contents are never written here.
+// El paquete audit almacena operaciones administrativas sensibles. Los secretos y el
+// contenido de documentos nunca se escriben aquí.
 package audit
 
 import (

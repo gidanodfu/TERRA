@@ -2,10 +2,10 @@
 # =============================================================================
 # TERRA - verify-backup.sh
 # Versión: 2.0.0
-# Descripción: verifica checksums y estructura de un backup sin restaurarlo.
+# Descripción: verifica checksums y estructura de una copia de seguridad sin restaurarla.
 # Uso: ./deploy/scripts/verify-backup.sh <backup-dir>
 # Requisitos: Docker para validar el dump con pg_restore.
-# Efectos: solo lectura; no modifica el backup.
+# Efectos: solo lectura; no modifica la copia de seguridad.
 # Códigos: 0 válido · 1 inválido · 2 uso incorrecto.
 # =============================================================================
 set -Eeuo pipefail
@@ -51,4 +51,4 @@ else
   terra_compose exec -T db pg_restore --list < "$dump" >/dev/null \
     || terra_die "pg_restore no reconoce el dump."
 fi
-terra_ok "Backup válido: $dir"
+terra_ok "Copia de seguridad válida: $dir"

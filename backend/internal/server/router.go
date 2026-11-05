@@ -1,5 +1,5 @@
-// Package server wires modules into the public HTTP surface. Business logic stays
-// in the use cases; this file only maps routes and authorization boundaries.
+// El paquete server conecta los módulos con la superficie HTTP pública. La lógica de negocio permanece
+// en los casos de uso; este archivo solo mapea rutas y límites de autorización.
 package server
 
 import (
@@ -48,7 +48,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 		httpx.WriteJSON(w, http.StatusOK, map[string]any{"status": "ready"})
 	})
 
-	// --- public ---
+	// --- público ---
 	mux.HandleFunc("GET /api/v1/public/areas", h.Org.PublicAreas)
 	mux.HandleFunc("GET /api/v1/public/areas/{areaId}/positions", h.Org.PublicPositions)
 	mux.HandleFunc("GET /api/v1/public/policy", h.Drive.PolicyPublic)
@@ -85,21 +85,21 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 		return h.Auth.RequireAdmin(limited(adminOpsLimiter, "admin")(next))
 	}
 
-	// --- session and own profile ---
+	// --- sesión y perfil propio ---
 	mux.Handle("POST /api/v1/auth/logout", requireAuth(http.HandlerFunc(h.Auth.Logout)))
 	mux.Handle("GET /api/v1/auth/me", requireAuth(http.HandlerFunc(h.Auth.Me)))
 	mux.Handle("GET /api/v1/me", requireAuth(http.HandlerFunc(h.Auth.Me)))
 	mux.Handle("PATCH /api/v1/me/profile", requireAuth(http.HandlerFunc(h.Users.UpdateProfile)))
 	mux.Handle("POST /api/v1/auth/password", requireAuth(http.HandlerFunc(h.Auth.ChangePassword)))
 
-	// --- own Drive ---
+	// --- Drive propio ---
 	mux.Handle("GET /api/v1/me/drive/connection", requireAuth(requireActive(http.HandlerFunc(h.Drive.GetMine))))
 	mux.Handle("POST /api/v1/me/drive/connect", requireAuth(requireActive(http.HandlerFunc(h.Drive.ConnectMine))))
 	mux.Handle("DELETE /api/v1/me/drive/connection", requireAuth(requireActive(http.HandlerFunc(h.Drive.DisconnectMine))))
 	mux.Handle("POST /api/v1/me/drive/consent", requireAuth(requireActive(http.HandlerFunc(h.Drive.AcceptPolicy))))
 	mux.Handle("GET /api/v1/me/stored-files", requireAuth(requireActive(http.HandlerFunc(h.Download.MyFiles))))
 
-	// --- jobs accessible to owner/requester (admin sees all, enforced in use case) ---
+	// --- trabajos accesibles al propietario/solicitante (el admin ve todos, aplicado en el caso de uso) ---
 	mux.Handle("GET /api/v1/download-jobs", requireAuth(requireActive(limited(jobReadLimiter, "jobs")(http.HandlerFunc(h.Download.List)))))
 	mux.Handle("GET /api/v1/download-jobs/{id}", requireAuth(requireActive(limited(jobReadLimiter, "jobs")(http.HandlerFunc(h.Download.Get)))))
 	mux.Handle("GET /api/v1/download-jobs/{id}/items", requireAuth(requireActive(limited(jobReadLimiter, "jobs")(http.HandlerFunc(h.Download.Items)))))
@@ -107,7 +107,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 	mux.Handle("POST /api/v1/download-jobs/{id}/cancel", requireAuth(requireActive(limited(jobReadLimiter, "jobs")(http.HandlerFunc(h.Download.Cancel)))))
 	mux.Handle("GET /api/v1/files/{id}/content", requireAuth(requireActive(limited(fileReadLimiter, "files")(http.HandlerFunc(h.Download.FileContent)))))
 
-	// --- administration ---
+	// --- administración ---
 	mux.Handle("GET /api/v1/admin/dashboard", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.Dashboard))))
 
 	mux.Handle("GET /api/v1/admin/users", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.Users))))

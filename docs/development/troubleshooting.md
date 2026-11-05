@@ -1,66 +1,66 @@
-# Troubleshooting
+# Resolución de problemas
 
-## Docker not running
+## Docker no está en ejecución
 
-**Identify:** `./terra check` fails at Docker daemon.
-**Fix:** start Docker/Desktop and verify `docker info`.
-**Verify:** `./terra check`.
+**Identificar:** `./terra check` falla en el daemon de Docker.
+**Corrección:** inicie Docker/Desktop y verifique `docker info`.
+**Verificar:** `./terra check`.
 
-## Compose missing
+## Falta Compose
 
-**Identify:** `docker compose version` fails.
-**Fix:** install the Compose v2 plugin.
-**Verify:** `./terra check`.
+**Identificar:** falla `docker compose version`.
+**Corrección:** instale el plugin de Compose v2.
+**Verificar:** `./terra check`.
 
-## Missing or invalid .env
+## .env faltante o inválido
 
-**Identify:** `./terra check` names the missing variable or file.
-**Fix:**
+**Identificar:** `./terra check` indica la variable o el archivo faltante.
+**Corrección:**
 
 ```bash
 cp .env.example .env
 chmod 600 .env
-# complete local values
+# completa los valores locales
 ```
 
-**Verify:** `./terra check`.
+**Verificar:** `./terra check`.
 
-## Port occupied
+## Puerto ocupado
 
-**Identify:** `./terra up` cannot bind 8080 or 5432.
-**Fix:** stop the conflicting process or change `WEB_PORT`/`DB_PORT`.
-**Verify:** `./terra status`.
+**Identificar:** `./terra up` no puede enlazar 8080 o 5432.
+**Corrección:** detenga el proceso en conflicto o cambie `WEB_PORT`/`DB_PORT`.
+**Verificar:** `./terra status`.
 
-## PostgreSQL unhealthy
+## PostgreSQL no saludable
 
-**Identify:** `db` unhealthy.
-**Logs:** `./terra logs db`.
-**Fix:** check credentials, disk space and volume compatibility. Do not delete the
-volume.
-**Verify:** `./terra doctor`.
+**Identificar:** `db` no está saludable.
+**Registros:** `./terra logs db`.
+**Corrección:** revise credenciales, espacio en disco y compatibilidad del volumen. No elimine el
+volumen.
+**Verificar:** `./terra doctor`.
 
-## API unhealthy
+## API no saludable
 
-**Identify:** `api` not healthy.
-**Logs:** `./terra logs api`.
-**Causes:** invalid `.env`, missing storage, database, migration error.
-**Fix:** correct the cause, then `./terra up`.
-**Verify:** `./terra status` and `/api/v1/ready`.
+**Identificar:** `api` no está saludable.
+**Registros:** `./terra logs api`.
+**Causas:** `.env` inválido, almacenamiento faltante, base de datos, error de migración.
+**Corrección:** corrija la causa y luego ejecute `./terra up`.
+**Verificar:** `./terra status` y `/api/v1/ready`.
 
-## Worker not processing
+## Worker sin procesar
 
-**Identify:** jobs remain queued.
-**Logs:** `./terra logs worker`.
-**Fix:** verify the worker container, database connectivity and job policy/authorization.
-**Verify:** `./terra db -c "SELECT status, count(*) FROM download_jobs GROUP BY status;"`.
+**Identificar:** los jobs permanecen en cola.
+**Registros:** `./terra logs worker`.
+**Corrección:** verifique el contenedor del worker, la conectividad con la base de datos y la política/autorización de jobs.
+**Verificar:** `./terra db -c "SELECT status, count(*) FROM download_jobs GROUP BY status;"`.
 
-## Blank page / /@vite/client errors
+## Página en blanco / errores de /@vite/client
 
-**Identify:** blank UI; browser requests `/@vite/client` and receives 404 or HTML.
-**Cause:** the web container cannot see its image-layer `node_modules/vite`
-(incomplete or outdated image), or a static server is serving development HTML.
-`node_modules` is not mounted from the host.
-**Diagnose:**
+**Identificar:** UI en blanco; el navegador solicita `/@vite/client` y recibe 404 o HTML.
+**Causa:** el contenedor web no puede ver su `node_modules/vite` de la capa de imagen
+(imagen incompleta o desactualizada), o un servidor estático está sirviendo el HTML de desarrollo.
+`node_modules` no se monta desde el host.
+**Diagnóstico:**
 
 ```bash
 curl -sS -D - -o /dev/null http://localhost:8080/@vite/client
@@ -68,41 +68,41 @@ docker compose exec -T web test -f node_modules/vite/dist/client/client.mjs && e
 ./terra doctor
 ```
 
-The response must be `Content-Type: text/javascript`.
-**Fix:**
+La respuesta debe ser `Content-Type: text/javascript`.
+**Corrección:**
 
 ```bash
 ./terra build web
 ./terra up
 ```
 
-`up` force-recreates web so obsolete mounts cannot persist.
-**Verify:** `./terra doctor` and `./terra test e2e`.
+`up` fuerza la recreación de web para que no persistan montajes obsoletos.
+**Verificar:** `./terra doctor` y `./terra test e2e`.
 
-## Vite not reachable
+## Vite inaccesible
 
-**Identify:** `http://localhost:8080` fails.
-**Logs:** `./terra logs web`.
-**Fix:** rebuild web after lockfile changes (`./terra build web`), verify the port and
-Vite proxy.
-**Verify:** `curl -i http://localhost:8080/api/v1/health`.
+**Identificar:** falla `http://localhost:8080`.
+**Registros:** `./terra logs web`.
+**Corrección:** reconstruya web después de cambios en el lockfile (`./terra build web`), verifique el puerto y
+el proxy de Vite.
+**Verificar:** `curl -i http://localhost:8080/api/v1/health`.
 
-## Proxy/API failure
+## Fallo de proxy/API
 
-**Identify:** frontend loads but API calls fail.
-**Logs:** `./terra logs web api`.
-**Fix:** verify API health and `VITE_API_PROXY` target `http://api:8080`.
-**Verify:** `./terra doctor`.
+**Identificar:** el frontend carga pero las llamadas a la API fallan.
+**Registros:** `./terra logs web api`.
+**Corrección:** verifique la salud de la API y el destino de `VITE_API_PROXY` `http://api:8080`.
+**Verificar:** `./terra doctor`.
 
-## Migration failure
+## Fallo de migración
 
-**Identify:** API unhealthy or `./terra migrate up` fails.
-**Logs:** `./terra logs api`.
-**Fix:** restore a local backup if the schema is inconsistent; add a new migration for
-future changes. Do not edit an applied migration.
-**Verify:** `./terra migrate status`.
+**Identificar:** API no saludable o falla `./terra migrate up`.
+**Registros:** `./terra logs api`.
+**Corrección:** restaure una copia de seguridad local si el esquema es inconsistente; agregue una nueva migración para
+cambios futuros. No edite una migración ya aplicada.
+**Verificar:** `./terra migrate status`.
 
-## Tests fail
+## Fallan las pruebas
 
 ```bash
 ./terra test backend unit
@@ -112,46 +112,46 @@ future changes. Do not edit an applied migration.
 ./terra test e2e
 ```
 
-Check `artifacts/tests/` and the service logs. Integration tests use a disposable
-database; they do not alter development data.
+Revise `artifacts/tests/` y los logs de los servicios. Las pruebas de integración usan una base de datos
+desechable; no alteran los datos de desarrollo.
 
-## Playwright/Chromium fails
+## Playwright/Chromium falla
 
-Chromium is installed in the web image. Rebuild the web image:
+Chromium está instalado en la imagen web. Reconstruya la imagen web:
 
 ```bash
 ./terra build web --no-cache
 ./terra up
 ```
 
-Run `./terra test e2e` or `docker compose exec -T web npm run test:e2e` for details.
+Ejecute `./terra test e2e` o `docker compose exec -T web npm run test:e2e` para más detalles.
 
-## Container removed accidentally
+## Contenedor eliminado accidentalmente
 
 ```bash
 ./terra init
 ```
 
-Volumes and documents remain. Do not create a new empty database if the volume is
-missing and documents/backups exist; restore instead.
+Los volúmenes y documentos permanecen. No cree una nueva base de datos vacía si el volumen
+falta y existen documentos o copias de seguridad; en su lugar, restaure.
 
-## Volume missing
+## Volumen faltante
 
-**Identify:** `./terra status` shows the volume missing.
-**Fix:** check for local backups and restore:
+**Identificar:** `./terra status` muestra el volumen faltante.
+**Corrección:** busque copias de seguridad locales y restaure:
 
 ```bash
 ./terra restore backups/<timestamp>
 ```
 
-The scripts never remove volumes automatically.
+Los scripts nunca eliminan volúmenes automáticamente.
 
-## Insufficient disk
+## Disco insuficiente
 
-**Fix:** free space or adjust local capacity limits. Do not delete the database.
-**Verify:** `./terra status`.
+**Corrección:** libere espacio o ajuste los límites de capacidad locales. No elimine la base de datos.
+**Verificar:** `./terra status`.
 
-## Logs
+## Registros
 
 ```bash
 ./terra logs

@@ -66,7 +66,7 @@ PRUEBAS
   ./terra test frontend integration
   ./terra test e2e
 
-BACKUP Y RESTAURACIÓN
+COPIAS DE SEGURIDAD Y RESTAURACIÓN
   ./terra backup
   ./terra restore
   ./terra restore backups/<timestamp>

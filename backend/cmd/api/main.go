@@ -1,4 +1,4 @@
-// Command api serves the TERRA REST API and SSE endpoints.
+// Comando api sirve la API REST de TERRA y los endpoints SSE.
 package main
 
 import (

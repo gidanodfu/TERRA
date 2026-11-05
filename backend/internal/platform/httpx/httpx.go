@@ -1,4 +1,4 @@
-// Package httpx holds transport-level helpers shared by every HTTP module.
+// El paquete httpx contiene helpers de nivel de transporte compartidos por todos los módulos HTTP.
 package httpx
 
 import (
@@ -133,7 +133,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	WriteJSON(w, e.Status, body)
 }
 
-// Decode strictly decodes a JSON body with a hard size limit.
+// Decode decodifica estrictamente un cuerpo JSON con un límite de tamaño estricto.
 func Decode(w http.ResponseWriter, r *http.Request, dst any) error {
 	if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
 		return apperr.BadRequest("Content-Type debe ser application/json.")
@@ -194,7 +194,7 @@ func atoiDefault(raw string, fallback int) int {
 	return n
 }
 
-// ClientIP trusts X-Real-IP only because the API is reachable solely through the web proxy.
+// ClientIP confía en X-Real-IP solo porque la API es accesible únicamente a través del proxy web.
 func ClientIP(r *http.Request) string {
 	if ip := strings.TrimSpace(r.Header.Get("X-Real-IP")); ip != "" {
 		return ip

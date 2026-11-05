@@ -1,5 +1,5 @@
-// Package bootstrap owns the idempotent recovery of the principal administrator
-// identifier. It never overwrites an existing identifier.
+// El paquete bootstrap se encarga de la recuperación idempotente del identificador del
+// administrador principal. Nunca sobrescribe un identificador existente.
 package bootstrap
 
 import (
@@ -15,10 +15,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// EnsureExistingPrincipal records bootstrap_state.details.admin_user_id when the
-// bootstrap username already exists, the account really holds the admin role and
-// no identifier has been stored yet. The operation is transactional and preserves
-// any existing identifier, even an invalid one.
+// EnsureExistingPrincipal registra bootstrap_state.details.admin_user_id cuando el
+// nombre de usuario de bootstrap ya existe, la cuenta realmente tiene el rol admin y
+// aún no se ha almacenado ningún identificador. La operación es transaccional y preserva
+// cualquier identificador existente, incluso uno inválido.
 func EnsureExistingPrincipal(ctx context.Context, pool *pgxpool.Pool, username string, log *slog.Logger) error {
 	if log == nil {
 		log = slog.Default()

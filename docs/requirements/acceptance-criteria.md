@@ -79,7 +79,7 @@
   shell, db, migrate, bootstrap, test, backup, restore, help.
 - [x] Recuperación tras eliminar contenedores conservando el volumen.
 - [x] `down --remove` conserva volúmenes.
-- [x] Backup/verificación/restauración local.
+- [x] Copia de seguridad, verificación y restauración local.
 - [x] `bash -n` y ShellCheck sin advertencias.
 - [x] Documentación en `docs/development/`.
 - [x] Dockerfile y Compose sin configuraciones de producción.

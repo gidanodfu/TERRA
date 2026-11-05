@@ -194,7 +194,7 @@ func (h *Handler) Retry(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusAccepted, job)
 }
 
-// Events streams progress over SSE; PostgreSQL remains the source of truth.
+// Events transmite el progreso por SSE; PostgreSQL sigue siendo la fuente de verdad.
 func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 	actor, _ := principal.Current(r.Context())
 	jobID, err := uuid.Parse(r.PathValue("id"))

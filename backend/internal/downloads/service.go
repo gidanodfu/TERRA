@@ -35,8 +35,8 @@ type CreateInput struct {
 	RootFolderIDs []string `json:"root_folder_ids"`
 }
 
-// Create validates authorization, scope, capacity, connection and policy, then
-// enqueues the job. It never downloads anything inside the HTTP request.
+// Create valida autorización, alcance, capacidad, conexión y política, y luego
+// encola el trabajo. Nunca descarga nada dentro de la petición HTTP.
 func (s *Service) Create(ctx context.Context, actorID, ownerID uuid.UUID, in CreateInput,
 	idempotencyKey, ipHash string) (*Job, bool, error) {
 	if in.ScopeType != ScopeMyDriveFull && in.ScopeType != ScopeSelectedFolders {
@@ -50,8 +50,8 @@ func (s *Service) Create(ctx context.Context, actorID, ownerID uuid.UUID, in Cre
 		return nil, false, apperr.Invalid("Seleccione al menos una carpeta.",
 			map[string]string{"root_folder_ids": "Seleccione al menos una carpeta."})
 	}
-	// A repeated request returns the original job even if the connection changed
-	// since the first attempt.
+	// Una petición repetida devuelve el trabajo original aunque la conexión haya cambiado
+	// desde el primer intento.
 	if existing, err := s.repo.GetByIdempotency(ctx, actorID, strings.TrimSpace(idempotencyKey)); err != nil {
 		return nil, false, err
 	} else if existing != nil {
@@ -211,7 +211,7 @@ func (s *Service) StoredFiles(ctx context.Context, actorID uuid.UUID, admin bool
 	return files, total, err
 }
 
-// OpenFile returns a stored document only after checking job ownership or admin rights.
+// OpenFile devuelve un documento almacenado solo después de comprobar la propiedad del trabajo o los derechos de administrador.
 func (s *Service) OpenFile(ctx context.Context, actorID uuid.UUID, admin bool, fileID uuid.UUID, ipHash string) (*os.File, os.FileInfo, *StoredFile, error) {
 	file, err := s.repo.GetStoredFile(ctx, fileID)
 	if err != nil {

@@ -233,7 +233,7 @@ Ver [docs/development/database-development.md](docs/development/database-develop
 Se ejecutan dentro del contenedor `api` (`go run ./cmd/migrate`). No hay contenedor
 de migraciones. Ver [docs/development/database-development.md](docs/development/database-development.md).
 
-## 18. Testing
+## 18. Pruebas
 
 Todas las pruebas se ejecutan dentro de Docker.
 
@@ -253,7 +253,7 @@ temporal. Resultados en `artifacts/`.
 
 Referencia completa: [docs/development/testing.md](docs/development/testing.md).
 
-## 19. Logs
+## 19. Registros
 
 ```bash
 ./terra logs
@@ -285,7 +285,7 @@ volúmenes, almacenamiento y errores recientes.
 `./terra down` detiene sin borrar datos. `./terra down --remove` elimina contenedores
 y red, **nunca** volúmenes ni documentos.
 
-## 22. Backups locales
+## 22. Copias de seguridad locales
 
 ```bash
 ./terra backup
@@ -298,7 +298,7 @@ Genera dump de PostgreSQL, almacenamiento, metadatos y checksums. La clave
 
 Ver [docs/development/local-backups.md](docs/development/local-backups.md).
 
-## 23. Troubleshooting
+## 23. Solución de problemas
 
 Consulte [docs/development/troubleshooting.md](docs/development/troubleshooting.md).
 Nunca elimine volúmenes para resolver un problema de arranque.
@@ -313,7 +313,7 @@ pruebas y mantener Docker como único entorno de ejecución.
 - [Entorno Docker](docs/development/docker-environment.md)
 - [Inicialización y recuperación](docs/development/initialization.md)
 - [Referencia de comandos](docs/development/commands-reference.md)
-- [Testing](docs/development/testing.md)
+- [Pruebas](docs/development/testing.md)
 - [Integración continua](docs/development/continuous-integration.md)
 - [Arquitectura](docs/architecture/overview.md)
 - [Modelo de datos](docs/architecture/database-design.md)

@@ -6,7 +6,7 @@
 | RNF-02 | Arquitectura | API y worker separados, sin descargas en peticiones HTTP. | `cmd/api`, `cmd/worker` |
 | RNF-03 | Persistencia | PostgreSQL es la fuente de verdad; cola persistente sin broker. | `download_jobs`, `SKIP LOCKED` |
 | RNF-04 | Integridad | Restricciones, FKs e índices para reglas de negocio. | `migrations/0001` |
-| RNF-05 | Seguridad | Refresh tokens cifrados; secretos fuera de logs y frontend. | AES-GCM, revisión de logs |
+| RNF-05 | Seguridad | Refresh tokens cifrados; secretos fuera de registros y frontend. | AES-GCM, revisión de registros |
 | RNF-06 | Seguridad | Cookies HttpOnly, CSRF, Turnstile, rate limiting. | middleware + Siteverify |
 | RNF-07 | Seguridad | Validación de entrada y errores estables sin filtrar internals. | `apperr`, `httpx.Decode` |
 | RNF-08 | Almacenamiento | Rutas contenidas, sin traversal ni symlinks. | tests de storage |
@@ -24,7 +24,7 @@
 | RNF-20 | Mantenibilidad | Módulos por capacidad, sin lógica de negocio en handlers. | estructura backend |
 | RNF-21 | Documentación | Arquitectura, API, seguridad, operación y pruebas sincronizadas. | `docs/` |
 | RNF-22 | Privacidad | Auditoría sin tokens, contraseñas, cookies ni contenido documental. | `audit` |
-| RNF-23 | Recuperación | Backups coordinados de BD, volumen y clave separada. | scripts + doc |
+| RNF-23 | Recuperación | Copias de seguridad coordinadas de BD, volumen y clave separada. | scripts + doc |
 | RNF-24 | Escalabilidad | Un worker puede procesar elementos con goroutines bajo límites. | worker |
 | RNF-25 | Compatibilidad | PostgreSQL 18, navegadores modernos con SSE. | versiones fijadas |
 

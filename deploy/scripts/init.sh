@@ -25,7 +25,7 @@ Si los contenedores fueron eliminados, los recrea sin tocar datos.
 Opciones:
   --rebuild         reconstruye imágenes antes de arrancar
   --no-cache        reconstruye sin caché (implica --rebuild)
-  --allow-empty-db  autoriza una base vacía si detecta datos/backups previos
+  --allow-empty-db  autoriza una base vacía si detecta datos o copias de seguridad previas
   -h, --help        muestra esta ayuda
 USAGE
 }
@@ -61,13 +61,13 @@ if ((volume_present == 1)); then
 else
   terra_warn "No existe el volumen PostgreSQL $TERRA_DB_VOLUME."
   if ((storage_data == 1)) || [[ -n "$backups" ]]; then
-    terra_warn "Hay documentos o backups previos; crear una base vacía puede ocultar datos."
-    if [[ -n "$backups" ]]; then terra_warn "Backups disponibles: $backups"; fi
+    terra_warn "Hay documentos o copias de seguridad previas; crear una base vacía puede ocultar datos."
+    if [[ -n "$backups" ]]; then terra_warn "Copias de seguridad disponibles: $backups"; fi
     if [[ "$allow_empty" != "1" ]]; then
-      terra_error "Use --allow-empty-db solo si acepta iniciar sin esos datos, o restaure un backup."
+      terra_error "Use --allow-empty-db solo si acepta iniciar sin esos datos, o restaure una copia de seguridad."
       exit 3
     fi
-    terra_confirm "¿Confirma crear una base vacía pese a existir datos/backups?" || exit 3
+    terra_confirm "¿Confirma crear una base vacía pese a existir datos o copias de seguridad?" || exit 3
   fi
 fi
 if ((volume_present == 1 && storage_data == 0)); then

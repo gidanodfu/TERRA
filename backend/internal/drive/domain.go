@@ -1,5 +1,5 @@
-// Package drive implements the Google Drive API v3 integration and the separate
-// per-worker OAuth authorization used for document access.
+// El paquete drive implementa la integración con la API v3 de Google Drive y la
+// autorización OAuth por worker utilizada para acceder a los documentos.
 package drive
 
 import (
@@ -58,7 +58,7 @@ const (
 	MimeVids         = "application/vnd.google-apps.vid"
 )
 
-// ExportMime maps native Google documents to the required export format.
+// ExportMime asigna los documentos nativos de Google al formato de exportación requerido.
 func ExportMime(source string) (string, bool) {
 	switch source {
 	case MimeDocument:
@@ -82,7 +82,7 @@ func IsNative(mime string) bool {
 	return false
 }
 
-// Root is a validated top-level selection inside Mi unidad.
+// Root es una selección de nivel superior validada dentro de Mi unidad.
 type Root struct {
 	GoogleID   string `json:"google_folder_id"`
 	Name       string `json:"folder_name"`

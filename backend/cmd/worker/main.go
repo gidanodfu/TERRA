@@ -1,5 +1,5 @@
-// Command worker claims download jobs from PostgreSQL and transfers documents.
-// It is a separate process and never serves HTTP.
+// Comando worker reclama trabajos de descarga desde PostgreSQL y transfiere documentos.
+// Es un proceso independiente y nunca sirve HTTP.
 package main
 
 import (

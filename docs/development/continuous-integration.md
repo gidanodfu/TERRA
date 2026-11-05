@@ -1,84 +1,87 @@
-# Continuous integration
+# Integración continua
 
-## Workflow
+## Flujo de trabajo
 
-`.github/workflows/ci.yml` validates code quality with GitHub Actions.
+`.github/workflows/ci.yml` valida la calidad del código con GitHub Actions.
 
-Triggers:
+Disparadores:
 
 - push;
 - pull request;
-- manual `workflow_dispatch`.
+- `workflow_dispatch` manual.
 
-It runs on `ubuntu-latest` with `contents: read` permissions and a concurrency group
-that cancels superseded runs on the same ref. Checkout uses
+Se ejecuta en `ubuntu-latest` con permisos `contents: read` y un grupo de concurrencia
+que cancela las ejecuciones reemplazadas sobre la misma ref. La clonación usa
 `persist-credentials: false`.
 
-## Stages
+## Etapas
 
-1. Checkout.
-2. Verify required repository structure.
-3. Generate a controlled local `.env` from `.env.example` with fictitious values.
+1. Clonación del repositorio.
+2. Verificar la estructura requerida del repositorio.
+3. Generar un `.env` local controlado a partir de `.env.example` con valores ficticios.
 4. `./terra check`.
 5. `./terra build`.
 6. `./terra init`.
 7. `./terra test all`.
-8. On failure: status, doctor and logs saved to `artifacts/`.
-9. Upload `artifacts/` (tests, coverage, Playwright report, diagnostics).
-10. Stop containers with `./terra down --remove` (no volume deletion).
+8. En caso de fallo: el estado, el diagnóstico y los registros se guardan en `artifacts/`.
+9. Subir `artifacts/` (pruebas, cobertura, informe de Playwright, diagnósticos).
+10. Detener los contenedores con `./terra down --remove` (sin eliminar volúmenes).
 
-## Docker-only
+## Solo Docker
 
-No setup action installs Go, Node, npm or PostgreSQL on the runner. All compilation,
-tests and browsers run inside the Compose images. The workflow delegates to `./terra`
-so CI and local development share the same commands.
+Ninguna acción de setup instala Go, Node, npm ni PostgreSQL en el runner. Toda la
+compilación, las pruebas y los navegadores se ejecutan dentro de las imágenes de Compose.
+El flujo de trabajo delega en `./terra` para que CI y el desarrollo local compartan los
+mismos comandos.
 
-## Tests executed
+## Pruebas ejecutadas
 
-- Backend unit and `go vet`.
-- Backend integration against disposable `terra_test`.
-- Frontend lint.
-- Frontend unit.
-- Frontend integration.
-- Frontend coverage.
-- Frontend build.
-- Playwright E2E against Vite and its API proxy.
+- Pruebas unitarias del backend y `go vet`.
+- Integración del backend contra `terra_test` desechable.
+- Lint del frontend.
+- Pruebas unitarias del frontend.
+- Integración del frontend.
+- Cobertura del frontend.
+- Build del frontend.
+- E2E con Playwright contra Vite y su proxy de API.
 
-Any failing suite fails the job. A suite that cannot run is a failure, not a skip.
+Cualquier suite que falle hace fallar el job. Una suite que no puede ejecutarse es un
+fallo, no un skip.
 
-## Credentials
+## Credenciales
 
-The workflow contains only fictitious values for Google and Turnstile. Normal tests
-never call those external services. Real OAuth/Drive tests remain manual and require
-credentials outside the repository. No secrets are printed or committed.
+El flujo de trabajo contiene solo valores ficticios para Google y Turnstile. Las pruebas
+normales nunca llaman a esos servicios externos. Las pruebas reales de OAuth/Drive siguen
+siendo manuales y requieren credenciales fuera del repositorio. No se imprimen secretos
+ni se incluyen en commits.
 
-## Artifacts
+## Artefactos
 
-`artifacts/` contains:
+`artifacts/` contiene:
 
 - `artifacts/tests/*.log`
 - `artifacts/coverage/backend-*.out`
 - `artifacts/coverage/frontend/`
 - `artifacts/playwright-report/`
-- failure diagnostics (`ci-status.txt`, `ci-doctor.txt`, `ci-logs.txt`)
+- diagnósticos de fallo (`ci-status.txt`, `ci-doctor.txt`, `ci-logs.txt`)
 
-Download them from the workflow run page in GitHub Actions.
+Descárgalos desde la página de ejecución del flujo de trabajo en GitHub Actions.
 
-## Docker context and Git metadata
+## Contexto de Docker y metadatos de Git
 
-`backend/.dockerignore` and `frontend/.dockerignore` exclude `.git`, `.github`,
-caches, `node_modules`, `dist`, coverage and test reports. The images do not contain
-Git history or credentials. Containers receive only the source directories needed
-for development through bind mounts; the repository root (and `.git`) is not mounted
-into any service.
+`backend/.dockerignore` y `frontend/.dockerignore` excluyen `.git`, `.github`,
+cachés, `node_modules`, `dist`, cobertura e informes de pruebas. Las imágenes no contienen
+historial de Git ni credenciales. Los contenedores reciben solo los directorios de código
+fuente necesarios para el desarrollo mediante bind mounts; la raíz del repositorio (y
+`.git`) no se monta en ningún servicio.
 
-## Extending CI
+## Ampliar CI
 
-Add validation as a new step that delegates to `./terra` or to an existing script.
-Do not install language runtimes on the runner and do not add deployment jobs.
-Update this document when a stage changes.
+Añade validaciones como un nuevo paso que delegue en `./terra` o en un script existente.
+No instales runtimes de lenguajes en el runner y no añadas jobs de despliegue.
+Actualiza este documento cuando cambie una etapa.
 
-## Local reproduction
+## Reproducción local
 
 ```bash
 ./terra check
@@ -88,8 +91,8 @@ Update this document when a stage changes.
 ./terra down --remove
 ```
 
-## Limitations
+## Limitaciones
 
-The workflow can only be fully executed on GitHub Actions with Docker available.
-Local validation covers the same commands; remote execution should be confirmed from
-the Actions run page.
+El flujo de trabajo solo puede ejecutarse por completo en GitHub Actions con Docker
+disponible. La validación local cubre los mismos comandos; la ejecución remota debe
+confirmarse desde la página de ejecución de Actions.

@@ -63,7 +63,7 @@ Docker y no incluye despliegue productivo.
   `logs`, `shell`, `db`, `migrate`, `bootstrap`, `test`, `backup-local`,
   `restore-local`, `help`.
 - [x] Recuperación tras eliminar contenedores conservando volúmenes.
-- [x] Backups y restauración local verificados.
+- [x] Copias de seguridad y restauración local verificados.
 - [x] Documentación en `docs/development/`.
 
 ## Correspondencia

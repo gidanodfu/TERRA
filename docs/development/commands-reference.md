@@ -1,57 +1,57 @@
-# Commands reference
+# Referencia de comandos
 
-All scripts resolve the repository root automatically and can be executed from any
-directory. `./terra` is the official interface and delegates to `deploy/scripts/`.
-No command requires Go, Node or PostgreSQL on the host.
+Todos los scripts resuelven la raíz del repositorio automáticamente y se pueden ejecutar
+desde cualquier directorio. `./terra` es la interfaz oficial y delega en `deploy/scripts/`.
+Ningún comando requiere Go, Node ni PostgreSQL en el host.
 
-## Main interface
+## Interfaz principal
 
-| Command | Responsibility |
+| Comando | Responsabilidad |
 |---|---|
-| `./terra help` | Command reference |
-| `./terra check` | Preflight validation |
-| `./terra doctor` | Full runtime diagnosis |
-| `./terra build [--no-cache] [web|api]` | Build local images |
-| `./terra init [--rebuild] [--no-cache]` | First init or recovery |
-| `./terra up [--build]` | Routine startup |
-| `./terra down [--remove]` | Stop; `--remove` keeps volumes |
-| `./terra restart [service]` | Restart all or one service |
-| `./terra status` | Containers, health, volumes, PostgreSQL, API, Vite |
-| `./terra logs [service] [-f] [-n N]` | Logs |
-| `./terra shell <service>` | Shell inside web/api/worker/db |
-| `./terra db [-c "SQL"]` | psql in the db container |
-| `./terra migrate <up|status|version>` | Migrations |
-| `./terra bootstrap` | Idempotent administrator bootstrap |
-| `./terra test [suite]` | Docker-only test suites |
-| `./terra backup` | Local PostgreSQL + documents backup |
-| `./terra restore [backup-dir]` | Restore latest or specified local backup |
+| `./terra help` | Referencia de comandos |
+| `./terra check` | Validación previa |
+| `./terra doctor` | Diagnóstico completo del entorno de ejecución |
+| `./terra build [--no-cache] [web|api]` | Construir imágenes locales |
+| `./terra init [--rebuild] [--no-cache]` | Primera inicialización o recuperación |
+| `./terra up [--build]` | Arranque rutinario |
+| `./terra down [--remove]` | Detener; `--remove` conserva los volúmenes |
+| `./terra restart [service]` | Reiniciar todos los servicios o uno |
+| `./terra status` | Contenedores, salud, volúmenes, PostgreSQL, API, Vite |
+| `./terra logs [service] [-f] [-n N]` | Registros |
+| `./terra shell <service>` | Shell dentro de web/api/worker/db |
+| `./terra db [-c "SQL"]` | psql en el contenedor db |
+| `./terra migrate <up|status|version>` | Migraciones |
+| `./terra bootstrap` | Bootstrap idempotente del administrador |
+| `./terra test [suite]` | Suites de pruebas solo con Docker |
+| `./terra backup` | Copia de seguridad local de PostgreSQL + documentos |
+| `./terra restore [backup-dir]` | Restaurar la copia de seguridad local más reciente o la indicada |
 
 ## Scripts
 
-| Script | Docker operations | Modifies data? |
+| Script | Operaciones Docker | ¿Modifica datos? |
 |---|---|---|
-| `check.sh` | `docker info`, compose config | No |
-| `doctor.sh` | inspect, compose exec, HTTP checks | No |
+| `check.sh` | `docker info`, configuración de compose | No |
+| `doctor.sh` | inspect, compose exec, comprobaciones HTTP | No |
 | `build.sh` | `docker compose build` | No |
-| `init.sh` | build, up, exec migrate/bootstrap | Creates DB schema/admin if missing |
+| `init.sh` | build, up, exec migrate/bootstrap | Crea el esquema de la base de datos/administrador si faltan |
 | `up.sh` | compose up, healthchecks | No |
-| `down.sh` | compose stop/down | No; never `-v` |
+| `down.sh` | compose stop/down | No; nunca `-v` |
 | `restart.sh` | compose restart | No |
-| `status.sh` | compose ps/inspect, psql read | No |
+| `status.sh` | compose ps/inspect, lectura con psql | No |
 | `logs.sh` | compose logs | No |
-| `shell.sh` | compose exec sh | Depends on user commands |
-| `db.sh` | compose exec psql | Depends on user SQL |
-| `migrate.sh` | compose exec `go run ./cmd/migrate` | Schema only |
-| `bootstrap.sh` | compose exec `go run ./cmd/bootstrap` | Creates admin if missing |
-| `test.sh` | compose exec Go/Vitest/Playwright | Uses disposable `terra_test` DB |
-| `backup-local.sh` | pg_dump, tar | Creates a new backup directory |
-| `restore-local.sh` | pg_restore, tar, compose restart | **Destructive**, confirmed |
+| `shell.sh` | compose exec sh | Depende de los comandos del usuario |
+| `db.sh` | compose exec psql | Depende del SQL del usuario |
+| `migrate.sh` | compose exec `go run ./cmd/migrate` | Solo el esquema |
+| `bootstrap.sh` | compose exec `go run ./cmd/bootstrap` | Crea el administrador si falta |
+| `test.sh` | compose exec Go/Vitest/Playwright | Usa la base de datos desechable `terra_test` |
+| `backup-local.sh` | pg_dump, tar | Crea un nuevo directorio de copia de seguridad |
+| `restore-local.sh` | pg_restore, tar, compose restart | **Destructivo**, con confirmación |
 | `verify-backup.sh` | checksum/tar/pg_restore | No |
-| `consistency-check.sh` | psql + filesystem | No |
-| `retention.sh` | psql + filesystem | Only with `--apply` |
-| `help.sh` | none | No |
+| `consistency-check.sh` | psql + sistema de archivos | No |
+| `retention.sh` | psql + sistema de archivos | Solo con `--apply` |
+| `help.sh` | ninguno | No |
 
-## Examples
+## Ejemplos
 
 ```bash
 ./terra build --no-cache
@@ -62,17 +62,17 @@ No command requires Go, Node or PostgreSQL on the host.
 CONFIRM=yes ./terra restore backups/20261103T210000Z
 ```
 
-## Exit codes
+## Códigos de salida
 
-- `0`: success.
-- `1`: validation, build, service or test failure.
-- `2`: invalid arguments.
-- `3`: destructive action not authorized or cancelled.
+- `0`: éxito.
+- `1`: fallo de validación, compilación, servicio o pruebas.
+- `2`: argumentos no válidos.
+- `3`: acción destructiva no autorizada o cancelada.
 
-## Safety rules
+## Reglas de seguridad
 
-- `down.sh` never uses `docker compose down -v`.
-- No script removes volumes.
-- Bootstrap never overwrites credentials.
-- Tests use a disposable `terra_test` database and never the development database.
-- Backups are never overwritten.
+- `down.sh` nunca usa `docker compose down -v`.
+- Ningún script elimina volúmenes.
+- El bootstrap nunca sobrescribe credenciales.
+- Las pruebas usan una base de datos desechable `terra_test` y nunca la base de datos de desarrollo.
+- Las copias de seguridad nunca se sobrescriben.

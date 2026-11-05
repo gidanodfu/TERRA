@@ -44,8 +44,8 @@ const adminNav = [
   { to: '/app/security', label: 'Seguridad', icon: ShieldCheck },
 ]
 
-// Future administrative profiles have no worker modules until their explicit
-// permissions and screens are defined.
+// Los perfiles administrativos futuros no tienen módulos de trabajador hasta que se definan
+// expresamente sus permisos y pantallas.
 const restrictedAdminNav = [{ to: '/app/security', label: 'Seguridad', icon: ShieldCheck }]
 
 const roleLabels = {

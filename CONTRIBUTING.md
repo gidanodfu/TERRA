@@ -53,7 +53,16 @@ Documentación: [docs/development/testing.md](docs/development/testing.md).
 - SQL: migraciones con restricciones e índices; sin borrados en cascada del historial documental.
 - Infraestructura: un único `deploy/compose.yaml` y scripts bajo `deploy/scripts/`.
 
-## Checklist de PR
+## Idioma y estilo de documentación
+
+1. Los comentarios explicativos del código deben redactarse en español.
+2. La documentación del proyecto debe mantenerse en español.
+3. Se conservan los términos técnicos establecidos y los nombres oficiales de tecnologías, protocolos, herramientas y productos.
+4. No se traducen identificadores, rutas, variables, claves, códigos de error, comandos, contratos de API ni nombres de archivos.
+5. Los nuevos módulos deben respetar estas convenciones desde su creación.
+6. Toda modificación futura debe mantener la uniformidad lingüística del repositorio.
+
+## Lista de verificación del PR
 
 - [ ] `./terra test all` ejecutado y resultados reales incluidos.
 - [ ] Sin secretos nuevos en el repositorio.

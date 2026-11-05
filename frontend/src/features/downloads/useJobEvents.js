@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
-// Subscribes to the job SSE channel. PostgreSQL stays authoritative: the snapshot
-// event carries the current row, and reconnection re-sends it.
+// Se suscribe al canal SSE del trabajo. PostgreSQL sigue siendo la fuente de verdad: el evento
+// de snapshot transporta la fila actual y la reconexión lo vuelve a enviar.
 export function useJobEvents(jobId, onSnapshot) {
   const [connected, setConnected] = useState(false)
 
@@ -12,7 +12,7 @@ export function useJobEvents(jobId, onSnapshot) {
       try {
         onSnapshot(JSON.parse(event.data))
       } catch {
-        // Ignore malformed frames; polling remains available.
+        // Ignora tramas malformadas; el polling sigue disponible.
       }
     }
     const onOpen = () => setConnected(true)
