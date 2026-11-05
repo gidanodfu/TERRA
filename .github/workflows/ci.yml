@@ -48,7 +48,6 @@ jobs:
             -e 's|^POSTGRES_DB=.*|POSTGRES_DB=terra|' \
             -e 's|^POSTGRES_USER=.*|POSTGRES_USER=terra|' \
             -e 's|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=ci-local-db-password|' \
-            -e 's|^DATABASE_URL=.*|DATABASE_URL=postgres://terra:ci-local-db-password@db:5432/terra?sslmode=disable|' \
             -e "s|^SESSION_SECRET=.*|SESSION_SECRET=$SESSION_SECRET|" \
             -e 's|^GOOGLE_CLIENT_ID=.*|GOOGLE_CLIENT_ID=ci-local-client-id|' \
             -e 's|^GOOGLE_CLIENT_SECRET=.*|GOOGLE_CLIENT_SECRET=ci-local-client-secret|' \

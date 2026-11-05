@@ -34,6 +34,22 @@ else
   note_issue "Configuración o Compose inválidos"
 fi
 
+terra_step "2b. Variables y conexión a PostgreSQL"
+if terra_check_required_vars; then
+  terra_ok "Variables obligatorias válidas"
+else
+  note_issue "Variables obligatorias inválidas"
+fi
+db_host="$(terra_env_get DATABASE_HOST)"
+db_host="${db_host:-db}"
+db_internal_port="$(terra_env_get DATABASE_PORT)"
+db_internal_port="${db_internal_port:-5432}"
+terra_info "Externa: 127.0.0.1:$(terra_db_port) · base $(terra_env_get POSTGRES_DB) · usuario $(terra_env_get POSTGRES_USER)"
+terra_info "Interna: $db_host:$db_internal_port · servicio Compose db"
+if [[ -n "$(terra_env_get DATABASE_URL)" ]]; then
+  terra_info "DATABASE_URL presente pero ignorada: el DSN se construye desde POSTGRES_*."
+fi
+
 terra_step "3. Contenedores"
 for service in "${TERRA_ALLOWED_SERVICES[@]}"; do
   status="$(terra_container_health "$service")"
@@ -69,6 +85,9 @@ terra_step "4. PostgreSQL"
 if terra_require_db_running >/dev/null 2>&1; then
   user="$(terra_env_get POSTGRES_USER)"
   db="$(terra_env_get POSTGRES_DB)"
+  db_port="$(terra_db_port)"
+  terra_info "Conexión externa: 127.0.0.1:$db_port · base $db · usuario $user"
+  terra_check_db_port_mapping || note_issue "Mapeo de puerto PostgreSQL incorrecto"
   if terra_compose exec -T db pg_isready -U "$user" -d "$db" >/dev/null 2>&1; then
     terra_ok "pg_isready correcto"
   else

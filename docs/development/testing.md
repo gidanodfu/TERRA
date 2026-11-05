@@ -34,7 +34,7 @@ Las pruebas internas de Go también permanecen junto a sus paquetes, siguiendo l
 | Backend | Go `testing`, `httptest`, pgx |
 | Unitarias/integración de frontend | Vitest, React Testing Library, jsdom |
 | E2E de frontend | Playwright + Chromium dentro de `web` |
-| Base de datos de integración | Contenedor PostgreSQL, `terra_test` desechable |
+| Base de datos de integración | Contenedor PostgreSQL, `${POSTGRES_DB}_test` desechable |
 | Cobertura | Coverprofile de Go, Vitest v8 |
 | CI | GitHub Actions solo con Docker |
 
@@ -72,9 +72,10 @@ Etiqueta de build: `integration`. Ejecutor de pruebas:
 ./terra test backend integration
 ```
 
-El script crea `terra_test`, pasa `TEST_DATABASE_URL` al contenedor `api`,
-ejecuta las pruebas y elimina la base de datos. Si la base de datos no está disponible, la suite
-falla.
+El script crea `${POSTGRES_DB}_test`, pasa `TEST_DATABASE_NAME` al contenedor `api` (el helper
+construye el DSN desde `POSTGRES_*`), ejecuta las pruebas y elimina la base de datos.
+`TEST_DATABASE_URL` sigue admitiéndose para ejecuciones controladas. Si la base de datos
+no está disponible, la suite falla.
 
 Comportamiento cubierto:
 

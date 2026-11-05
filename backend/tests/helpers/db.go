@@ -3,6 +3,8 @@ package helpers
 
 import (
 	"context"
+	"net"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -15,13 +17,43 @@ import (
 	"terra/migrations"
 )
 
+// testDatabaseURL usa TEST_DATABASE_URL cuando existe (compatibilidad) o construye
+// el DSN desde las variables POSTGRES_* y el nombre de la base de pruebas.
+func testDatabaseURL() string {
+	if value := os.Getenv("TEST_DATABASE_URL"); value != "" {
+		return value
+	}
+	name := os.Getenv("TEST_DATABASE_NAME")
+	user := os.Getenv("POSTGRES_USER")
+	password := os.Getenv("POSTGRES_PASSWORD")
+	if name == "" || user == "" || password == "" {
+		return ""
+	}
+	host := os.Getenv("DATABASE_HOST")
+	if host == "" {
+		host = "db"
+	}
+	port := os.Getenv("DATABASE_PORT")
+	if port == "" {
+		port = "5432"
+	}
+	u := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(user, password),
+		Host:     net.JoinHostPort(host, port),
+		Path:     "/" + name,
+		RawQuery: "sslmode=disable",
+	}
+	return u.String()
+}
+
 // Pool abre TEST_DATABASE_URL, aplica las migraciones y parte de un esquema vacío.
 // El runner de pruebas crea y destruye la base desechable; los datos de desarrollo nunca se usan.
 func Pool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	url := os.Getenv("TEST_DATABASE_URL")
+	url := testDatabaseURL()
 	if url == "" {
-		t.Fatal("TEST_DATABASE_URL no está definida; ejecute ./terra test backend integration")
+		t.Fatal("TEST_DATABASE_URL o TEST_DATABASE_NAME no están definidas; ejecute ./terra test backend integration")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

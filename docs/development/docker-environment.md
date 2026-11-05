@@ -29,11 +29,16 @@ No hay Nginx, Traefik, Redis, broker, Compose de producción ni contenedor auxil
 |---|---|
 | `${WEB_PORT:-8080}` | Acceso del navegador a Vite |
 | `5173` | Vite dentro del contenedor web |
-| `${DB_PORT:-5432}` | PostgreSQL vinculado solo a 127.0.0.1 |
+| `${DB_PORT}` (obligatorio en `.env`) | PostgreSQL vinculado solo a 127.0.0.1 |
 | `8080` | API dentro de la red de Docker |
 
 Vite redirige `/api` (REST y SSE) mediante proxy a `http://api:8080`. La comunicación
 entre contenedores usa los nombres de servicio, nunca `localhost`.
+
+`DB_PORT` no tiene valor por defecto: Compose falla si falta en `.env`. El puerto interno
+de PostgreSQL es siempre `5432`; `DB_PORT` solo cambia la publicación en loopback.
+Los parámetros de conexión externa y su uso desde DBeaver están en
+[database-development.md](database-development.md).
 
 ## Volúmenes y montajes
 

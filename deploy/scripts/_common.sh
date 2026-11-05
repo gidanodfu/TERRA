@@ -176,16 +176,43 @@ terra_validate_aes_key() {
   return 0
 }
 
-terra_validate_database_url() {
-  local url host
-  url="$(terra_env_get DATABASE_URL)"
-  if [[ ! "$url" =~ ^postgres(ql)?:// ]]; then
-    terra_error "DATABASE_URL debe comenzar con postgres:// o postgresql://."
+terra_validate_db_port() {
+  local port
+  port="$(terra_env_get DB_PORT)"
+  if [[ ! "$port" =~ ^[0-9]+$ ]] || ((port < 1 || port > 65535)); then
+    terra_error "DB_PORT debe ser un puerto numérico entre 1 y 65535."
     return 1
   fi
-  host="$(printf '%s' "$url" | sed -E 's#^postgres(ql)?://([^@/]*@)?([^:/?]+).*#\3#')"
+  return 0
+}
+
+terra_validate_postgres_names() {
+  local db user
+  db="$(terra_env_get POSTGRES_DB)"
+  user="$(terra_env_get POSTGRES_USER)"
+  if [[ ! "$db" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    terra_error "POSTGRES_DB debe ser un identificador PostgreSQL válido (letras, números y guion bajo)."
+    return 1
+  fi
+  if [[ ! "$user" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    terra_error "POSTGRES_USER debe ser un identificador PostgreSQL válido (letras, números y guion bajo)."
+    return 1
+  fi
+  return 0
+}
+
+terra_validate_db_host() {
+  local host port
+  host="$(terra_env_get DATABASE_HOST)"
+  host="${host:-db}"
   if [[ "$host" != "db" ]]; then
-    terra_error "DATABASE_URL debe apuntar al servicio Docker 'db'."
+    terra_error "DATABASE_HOST debe ser el servicio interno 'db' de Docker Compose."
+    return 1
+  fi
+  port="$(terra_env_get DATABASE_PORT)"
+  port="${port:-5432}"
+  if [[ ! "$port" =~ ^[0-9]+$ ]]; then
+    terra_error "DATABASE_PORT debe ser un puerto numérico."
     return 1
   fi
   return 0
@@ -277,7 +304,7 @@ terra_validate_compose() {
 terra_check_required_vars() {
   local for_init="${1:-0}" failed=0 key critical
   local required=(
-    APP_ENV APP_PUBLIC_URL DATABASE_URL POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD
+    APP_ENV APP_PUBLIC_URL POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD DB_PORT
     SESSION_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URL
     GOOGLE_DRIVE_REDIRECT_URL TOKEN_ENCRYPTION_KEY TURNSTILE_SITE_KEY TURNSTILE_SECRET_KEY
     STORAGE_ROOT STORAGE_HOST_PATH DOWNLOAD_MIN_INTERVAL_MS WORKER_CONCURRENCY
@@ -317,7 +344,9 @@ terra_check_required_vars() {
     failed=1
   fi
   terra_validate_aes_key || failed=1
-  terra_validate_database_url || failed=1
+  terra_validate_db_port || failed=1
+  terra_validate_postgres_names || failed=1
+  terra_validate_db_host || failed=1
   terra_validate_storage_root || failed=1
   return "$failed"
 }
@@ -392,6 +421,12 @@ terra_web_port() {
   printf '%s' "${port:-8080}"
 }
 
+terra_db_port() {
+  local port
+  port="$(terra_env_get DB_PORT)"
+  printf '%s' "$port"
+}
+
 terra_db_psql() {
   local sql="$1" user db
   user="$(terra_env_get POSTGRES_USER)"
@@ -434,8 +469,25 @@ terra_require_stack() {
   return 0
 }
 
-terra_check_web_port_mapping() {
+terra_check_db_port_mapping() {
   local id mapping host_port
+  id="$(terra_service_container db)"
+  if [[ -z "$id" ]]; then
+    terra_error "No existe el contenedor db."
+    return 1
+  fi
+  host_port="$(terra_db_port)"
+  mapping="$("$TERRA_DOCKER_BIN" port "$id" 5432/tcp 2>/dev/null || true)"
+  if [[ "$mapping" == "127.0.0.1:$host_port" ]]; then
+    terra_ok "Puerto PostgreSQL publicado: 127.0.0.1:$host_port → 5432/tcp"
+    return 0
+  fi
+  terra_error "El puerto publicado de PostgreSQL no coincide con DB_PORT ($host_port)."
+  terra_error "Mapeo actual: ${mapping:-<ninguno>}"
+  return 1
+}
+
+terra_check_web_port_mapping() {  local id mapping host_port
   id="$(terra_service_container web)"
   if [[ -z "$id" ]]; then
     terra_error "No existe el contenedor web."

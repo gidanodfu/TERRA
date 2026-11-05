@@ -45,7 +45,7 @@ embebidas en los binarios mediante `go:embed`.
 | web | 5173 | `${WEB_PORT:-8080}:5173` |
 | api | 8080 | No |
 | worker | — | No |
-| db | 5432 | `127.0.0.1:${DB_PORT:-5432}:5432` |
+| db | 5432 | `127.0.0.1:${DB_PORT}:5432` (solo loopback) |
 
 Vite proxy:
 

@@ -95,7 +95,7 @@ chmod 600 .env
 
 Complete como mínimo:
 
-- `POSTGRES_PASSWORD`, `DATABASE_URL`
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_PORT`
 - `SESSION_SECRET` (`openssl rand -hex 32`)
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, redirect URIs locales
 - `TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`)
@@ -253,7 +253,22 @@ Ver [docs/development/worker-development.md](docs/development/worker-development
 ```
 
 El volumen `terra_terra-db` es persistente. PostgreSQL solo publica en
-`127.0.0.1:${DB_PORT}`.
+`127.0.0.1:${DB_PORT}` (loopback, nunca `0.0.0.0`).
+
+### Conexión desde DBeaver, pgAdmin u otro cliente
+
+Use los valores de `.env` sin copiar la contraseña a scripts ni registros:
+
+| Parámetro | Variable |
+|---|---|
+| Host | `127.0.0.1` |
+| Puerto | `DB_PORT` |
+| Base de datos | `POSTGRES_DB` |
+| Usuario | `POSTGRES_USER` |
+| Contraseña | `POSTGRES_PASSWORD` |
+
+La API y el worker no usan esa dirección: se conectan internamente a `db:5432`.
+El DSN se construye desde `POSTGRES_*`; `DATABASE_URL` ya no es necesaria.
 
 Ver [docs/development/database-development.md](docs/development/database-development.md).
 

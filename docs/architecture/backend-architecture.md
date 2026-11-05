@@ -90,5 +90,5 @@ administrativa; eso vive en `downloads.Create` y en las políticas HTTP.
 
 ## Configuración
 
-`config.Load()` valida todo al arrancar: `DATABASE_URL`, `SESSION_SECRET`, OAuth, Turnstile
-y una clave AES de 32 bytes. La distribución local no exige HTTPS.
+`config.Load()` valida todo al arrancar: `POSTGRES_*` (construye el DSN interno), `SESSION_SECRET`,
+OAuth, Turnstile y una clave AES de 32 bytes. La distribución local no exige HTTPS.

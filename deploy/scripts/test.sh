@@ -6,7 +6,7 @@
 # Uso: ./deploy/scripts/test.sh [all|unit|integration|frontend|backend|e2e]
 #                              [unit|integration]
 # Requisitos: TERRA activo (./terra up). No usa Go/Node del host.
-# Efectos: pruebas de solo lectura; crea una base PostgreSQL temporal terra_test.
+# Efectos: pruebas de solo lectura; crea una base PostgreSQL temporal ${POSTGRES_DB}_test.
 #          Registra resultados en artifacts/.
 # Códigos: 0 todo correcto · 1 prueba fallida · 2 uso incorrecto.
 # =============================================================================
@@ -92,8 +92,6 @@ backend_integration() {
   user="$(terra_env_get POSTGRES_USER)"
   db="$(terra_env_get POSTGRES_DB)"
   test_db="${db}_test"
-  database_url="$(terra_env_get DATABASE_URL)"
-  test_url="$(printf '%s' "$database_url" | sed -E "s#/${db}(\\?|$)#/${test_db}\\1#")"
   cleanup_db() {
     "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
       -f "$TERRA_COMPOSE_FILE" exec -T db psql -U "$user" -d postgres \
@@ -108,7 +106,7 @@ backend_integration() {
     return
   fi
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
-      -f "$TERRA_COMPOSE_FILE" exec -T -e "TEST_DATABASE_URL=$test_url" api \
+      -f "$TERRA_COMPOSE_FILE" exec -T -e "TEST_DATABASE_NAME=$test_db" api \
       go test -tags=integration -count=1 -coverprofile=/tmp/backend-integration.out ./tests/integration/...; then
     terra_ok "Pruebas de integración de backend correctas."
     "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \

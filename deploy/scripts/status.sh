@@ -69,6 +69,12 @@ printf '\n%s\n' "PostgreSQL"
 if [[ "$(terra_container_health db)" == "healthy" || "$(terra_container_health db)" == "running" ]]; then
   user="$(terra_env_get POSTGRES_USER)"
   db="$(terra_env_get POSTGRES_DB)"
+  printf '  Conexión externa: 127.0.0.1:%s · base %s · usuario %s\n' "$(terra_db_port)" "$db" "$user"
+  if terra_check_db_port_mapping >/dev/null 2>&1; then
+    printf '  Puerto publicado: OK\n'
+  else
+    printf '  Puerto publicado: FALLO (no coincide con DB_PORT)\n'
+  fi
   if terra_compose exec -T db pg_isready -U "$user" -d "$db" >/dev/null 2>&1; then
     printf '  Conexión: OK\n'
   else

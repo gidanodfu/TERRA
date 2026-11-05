@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -73,11 +75,15 @@ func (c Config) IsProduction() bool { return c.Env == "production" }
 // Load lee y valida el entorno. La ausencia de valores obligatorios es fatal:
 // TERRA nunca debe arrancar con una configuración de seguridad degradada silenciosamente.
 func Load() (Config, error) {
+	dsn, err := databaseURL()
+	if err != nil {
+		return Config{}, err
+	}
 	c := Config{
 		Env:            env("APP_ENV", "development"),
 		PublicURL:      strings.TrimRight(env("APP_PUBLIC_URL", "http://localhost:8080"), "/"),
 		APIInternalURL: env("API_INTERNAL_URL", "http://api:8080"),
-		DatabaseURL:    os.Getenv("DATABASE_URL"),
+		DatabaseURL:    dsn,
 		SessionSecret:  os.Getenv("SESSION_SECRET"),
 		SessionCookie:  env("SESSION_COOKIE_NAME", "terra_session"),
 		SessionTTL:     time.Duration(envInt("SESSION_TTL_HOURS", 12)) * time.Hour,
@@ -127,7 +133,6 @@ func Load() (Config, error) {
 
 	var missing []string
 	for name, value := range map[string]string{
-		"DATABASE_URL":              c.DatabaseURL,
 		"SESSION_SECRET":            c.SessionSecret,
 		"GOOGLE_CLIENT_ID":          c.Google.ClientID,
 		"GOOGLE_CLIENT_SECRET":      c.Google.ClientSecret,
@@ -159,6 +164,35 @@ func Load() (Config, error) {
 		}
 	}
 	return c, nil
+}
+
+// databaseURL construye el DSN interno a partir de la única fuente de verdad de
+// credenciales (POSTGRES_*), codificando usuario y contraseña con net/url. Solo si
+// esas variables no existen se acepta DATABASE_URL como compatibilidad heredada.
+func databaseURL() (string, error) {
+	user := strings.TrimSpace(os.Getenv("POSTGRES_USER"))
+	name := strings.TrimSpace(os.Getenv("POSTGRES_DB"))
+	password := os.Getenv("POSTGRES_PASSWORD")
+	if user == "" && name == "" {
+		legacy := strings.TrimSpace(os.Getenv("DATABASE_URL"))
+		if legacy == "" {
+			return "", errors.New("missing required configuration: POSTGRES_USER, POSTGRES_DB, POSTGRES_PASSWORD")
+		}
+		return legacy, nil
+	}
+	if user == "" || name == "" || password == "" {
+		return "", errors.New("POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB must all be set")
+	}
+	host := env("DATABASE_HOST", "db")
+	port := env("DATABASE_PORT", "5432")
+	u := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(user, password),
+		Host:     net.JoinHostPort(host, port),
+		Path:     "/" + name,
+		RawQuery: "sslmode=disable",
+	}
+	return u.String(), nil
 }
 
 func env(key, fallback string) string {
