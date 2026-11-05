@@ -40,6 +40,11 @@ jobs:
           set -eu
           cp .env.example .env
           chmod 600 .env
+          STORAGE_DIR="${RUNNER_TEMP}/terra/storage"
+          BACKUP_DIR="${RUNNER_TEMP}/terra/backups"
+          mkdir -p "$STORAGE_DIR/staging" "$STORAGE_DIR/areas" "$BACKUP_DIR"
+          chmod 750 "$STORAGE_DIR" "$STORAGE_DIR/staging" "$STORAGE_DIR/areas"
+          chmod 700 "$BACKUP_DIR"
           SESSION_SECRET="$(openssl rand -hex 32)"
           TOKEN_KEY="$(openssl rand -base64 32)"
           sed -i \
@@ -57,17 +62,73 @@ jobs:
             -e 's|^TURNSTILE_SITE_KEY=.*|TURNSTILE_SITE_KEY=ci-local-site-key|' \
             -e 's|^TURNSTILE_SECRET_KEY=.*|TURNSTILE_SECRET_KEY=ci-local-turnstile-secret|' \
             -e 's|^TURNSTILE_HOSTNAME=.*|TURNSTILE_HOSTNAME=localhost|' \
-            -e 's|^STORAGE_HOST_PATH=.*|STORAGE_HOST_PATH=../data/dev|' \
+            -e "s|^STORAGE_HOST_PATH=.*|STORAGE_HOST_PATH=${STORAGE_DIR}|" \
+            -e "s|^BACKUP_HOST_PATH=.*|BACKUP_HOST_PATH=${BACKUP_DIR}|" \
             -e 's|^WEB_PORT=.*|WEB_PORT=8080|' \
             -e 's|^DB_PORT=.*|DB_PORT=55432|' \
             -e 's|^MIN_FREE_DISK_BYTES=.*|MIN_FREE_DISK_BYTES=104857600|' \
             -e 's|^BOOTSTRAP_ADMIN_USERNAME=.*|BOOTSTRAP_ADMIN_USERNAME=admin|' \
             -e 's|^BOOTSTRAP_ADMIN_PASSWORD=.*|BOOTSTRAP_ADMIN_PASSWORD=ci-local-admin-password|' \
             .env
+          dups="$(cut -d= -f1 .env | sort | uniq -d)"
+          if [ -n "$dups" ]; then
+            echo "Claves duplicadas en .env: $dups" >&2
+            exit 1
+          fi
           echo "Archivo .env de CI generado con valores ficticios (no secretos reales)."
+
+      - name: Validar rutas temporales externas
+        run: |
+          set -eu
+          STORAGE_DIR="$(sed -n 's/^STORAGE_HOST_PATH=//p' .env)"
+          BACKUP_DIR="$(sed -n 's/^BACKUP_HOST_PATH=//p' .env)"
+          STORAGE_REAL="$(realpath -m "$STORAGE_DIR")"
+          BACKUP_REAL="$(realpath -m "$BACKUP_DIR")"
+          WORKSPACE_REAL="$(realpath -m "$GITHUB_WORKSPACE")"
+          test -d "$STORAGE_REAL"
+          test -d "$BACKUP_REAL"
+          test -w "$STORAGE_REAL"
+          test -w "$BACKUP_REAL"
+          case "$STORAGE_REAL/" in "$WORKSPACE_REAL/"*) echo "storage dentro del checkout" >&2; exit 1 ;; esac
+          case "$BACKUP_REAL/" in "$WORKSPACE_REAL/"*) echo "backups dentro del checkout" >&2; exit 1 ;; esac
+          test "$STORAGE_REAL" != "$BACKUP_REAL"
+          case "$STORAGE_REAL/" in "$BACKUP_REAL/"*) echo "rutas solapadas" >&2; exit 1 ;; esac
+          case "$BACKUP_REAL/" in "$STORAGE_REAL/"*) echo "rutas solapadas" >&2; exit 1 ;; esac
+          echo "Rutas CI externas verificadas."
 
       - name: Validar entorno
         run: ./terra check
+
+      - name: Validar montajes de Compose
+        run: |
+          set -eu
+          docker compose --env-file .env -p terra -f deploy/compose.yaml config --quiet
+          docker compose --env-file .env -p terra -f deploy/compose.yaml config --format json > /tmp/terra-compose.json
+          python3 - <<'PY'
+          import json, os
+          env = {}
+          with open('.env', encoding='utf-8') as handle:
+              for line in handle:
+                  line = line.strip()
+                  if line and not line.startswith('#') and '=' in line:
+                      key, value = line.split('=', 1)
+                      env.setdefault(key, value)
+          expected = os.path.realpath(env['STORAGE_HOST_PATH'])
+          workspace = os.path.realpath(os.environ['GITHUB_WORKSPACE'])
+          with open('/tmp/terra-compose.json', encoding='utf-8') as handle:
+              compose = json.load(handle)
+          for service in ('api', 'worker'):
+              mounts = [v for v in compose['services'][service].get('volumes', []) if v.get('target') == '/var/lib/terra']
+              assert len(mounts) == 1, f'{service}: montaje /var/lib/terra ausente o duplicado'
+              source = os.path.realpath(mounts[0]['source'])
+              assert source == expected, f'{service}: monta {source}, se esperaba {expected}'
+              assert not (source == workspace or source.startswith(workspace + os.sep)), f'{service}: monta el checkout'
+              if service == 'api':
+                  assert mounts[0].get('read_only') is True, 'api debe montar solo lectura'
+              else:
+                  assert mounts[0].get('read_only') is not True, 'worker debe montar lectura/escritura'
+          print('Montajes /var/lib/terra verificados contra la ruta externa.')
+          PY
 
       - name: Construir imágenes Docker
         run: ./terra build
