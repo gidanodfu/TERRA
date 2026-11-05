@@ -72,20 +72,20 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-shell px-4 py-10 sm:px-6">
+    <main className="flex min-h-screen flex-col items-center bg-shell px-4 py-8 sm:justify-center sm:px-6 sm:py-10">
       <div className="w-full max-w-[460px]">
-        <header className="mb-7 text-center">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">TERRA</h1>
-          <p className="mt-1.5 text-sm text-slate-500">Gestión documental</p>
+        <header className="mb-6 flex items-center justify-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-700 text-lg font-semibold text-white shadow-sm">
+            T
+          </span>
+          <div className="text-left">
+            <h1 className="text-lg font-semibold tracking-tight text-slate-900">TERRA</h1>
+            <p className="text-sm text-slate-500">Gestión documental</p>
+          </div>
         </header>
 
         <section className="rounded-[20px] border border-slate-200 bg-card p-6 shadow-sm sm:p-8">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Iniciar sesión</h2>
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
-              Acceda al sistema utilizando su cuenta institucional o sus credenciales administrativas.
-            </p>
-          </div>
+          <h2 className="text-center text-2xl font-semibold tracking-tight text-slate-900">Iniciar sesión</h2>
 
           {error ? (
             <div className="mt-5">
@@ -96,12 +96,7 @@ export default function LoginPage() {
           ) : null}
 
           <section className="mt-6 rounded-2xl border border-slate-200 bg-muted p-5">
-            <div className="text-center">
-              <h3 className="text-sm font-semibold text-slate-900">Trabajadores</h3>
-              <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
-                Utilice su cuenta personal de Google autorizada por la institución.
-              </p>
-            </div>
+            <h3 className="text-sm font-semibold text-slate-900">Trabajadores</h3>
             <button
               type="button"
               className="btn-secondary mt-4 w-full justify-center"
@@ -114,15 +109,10 @@ export default function LoginPage() {
             </button>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-slate-200 bg-card p-5">
-            <div className="text-center">
-              <h3 className="text-sm font-semibold text-slate-900">Administración</h3>
-              <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
-                Acceso al sistema mediante credenciales administrativas.
-              </p>
-            </div>
+          <section className="mt-5 rounded-2xl border border-slate-200 bg-muted p-5">
+            <h3 className="text-sm font-semibold text-slate-900">Administración</h3>
 
-            <form onSubmit={submit} noValidate className="mt-5 space-y-4">
+            <form onSubmit={submit} noValidate className="mt-4 space-y-4">
               <Field label="Usuario" htmlFor="username" error={fieldErrors.username}>
                 <Input
                   id="username"
@@ -130,7 +120,7 @@ export default function LoginPage() {
                   value={form.username}
                   onChange={(e) => setForm({ ...form, username: e.target.value })}
                   error={fieldErrors.username}
-                  placeholder="admin"
+                  placeholder="Usuario"
                   disabled={submitting}
                 />
               </Field>
@@ -153,7 +143,7 @@ export default function LoginPage() {
               </Field>
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? <Spinner className="h-4 w-4" /> : null}
-                {submitting ? 'Verificando…' : 'Entrar como administrador'}
+                {submitting ? 'Verificando…' : 'Iniciar sesión'}
                 {!submitting ? <ArrowRight className="h-4 w-4" /> : null}
               </Button>
             </form>

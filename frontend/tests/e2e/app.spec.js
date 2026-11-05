@@ -8,8 +8,12 @@ test('la página de acceso se renderiza sin sesión', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Trabajadores' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible()
   await expect(page.getByText('Gestión documental', { exact: true })).toBeVisible()
+  await expect(page.locator('header').getByText('TERRA', { exact: true })).toBeVisible()
   await expect(page.getByText('Respaldo documental institucional, con trazabilidad y control.')).toHaveCount(0)
-  await expect(page.locator('header span')).toHaveCount(0)
+  await expect(page.getByText('Acceda al sistema utilizando su cuenta institucional o sus credenciales administrativas.')).toHaveCount(0)
+  await expect(page.getByText('Utilice su cuenta personal de Google autorizada por la institución.')).toHaveCount(0)
+  await expect(page.getByText('Acceso al sistema mediante credenciales administrativas.')).toHaveCount(0)
+  await expect(page.getByPlaceholder('Usuario')).toHaveValue('')
   for (const document of ['Política de privacidad', 'Términos y condiciones', 'Aviso legal', 'Política de cookies']) {
     await expect(page.getByRole('link', { name: document, exact: true })).toBeVisible()
   }
@@ -77,7 +81,25 @@ test('el login no desborda horizontalmente en móvil', async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
   expect(overflow).toBeFalsy()
   await expect(page.getByLabel('Usuario')).toBeVisible()
-  await expect(page.getByRole('button', { name: /Entrar como administrador/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible()
+})
+
+test('el login mantiene la jerarquía vertical en todos los anchos', async ({ page }) => {
+  for (const width of [1920, 1440, 1366, 1024, 768, 390, 360]) {
+    await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 })
+    await page.goto('/')
+    await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
+    const workers = await page.getByRole('heading', { name: 'Trabajadores' }).boundingBox()
+    const admin = await page.getByRole('heading', { name: 'Administración' }).boundingBox()
+    const legal = await page.getByRole('heading', { name: 'Información legal' }).boundingBox()
+    expect(workers.y, `trabajadores antes que administración a ${width}px`).toBeLessThan(admin.y)
+    expect(legal.y, `legal debajo de administración a ${width}px`).toBeGreaterThan(admin.y)
+    const { client, scroll } = await page.evaluate(() => ({
+      client: document.documentElement.clientWidth,
+      scroll: document.documentElement.scrollWidth,
+    }))
+    expect(scroll, `desbordamiento a ${width}px`).toBeLessThanOrEqual(client + 1)
+  }
 })
 
 test('el inicio de OAuth conserva el flujo existente', async ({ request }) => {

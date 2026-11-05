@@ -137,7 +137,7 @@ for (const [index, { role, permissions }] of accounts.entries()) {
 
     await page.getByLabel('Usuario').fill(role)
     await page.getByLabel('Contraseña').fill('InicialSegura-123')
-    await page.getByRole('button', { name: /Entrar como administrador/i }).click()
+    await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
     await expect(page).toHaveURL(/\/app\/security$/)
     await expect(page.getByText('Debe cambiar su contraseña inicial')).toBeVisible()

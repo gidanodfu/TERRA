@@ -73,7 +73,7 @@ function fillCredentials(password = 'incorrecta') {
 }
 
 function submit() {
-  fireEvent.click(screen.getByRole('button', { name: /Entrar como administrador/i }))
+  fireEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }))
 }
 
 describe('LoginPage y ciclo de Turnstile', () => {
@@ -96,7 +96,7 @@ describe('LoginPage y ciclo de Turnstile', () => {
     await waitFor(() => expect(resetMock).toHaveBeenCalledWith(77))
     expect(renderMock).toHaveBeenCalledTimes(1)
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Entrar como administrador/i })).not.toBeDisabled(),
+      expect(screen.getByRole('button', { name: 'Iniciar sesión' })).not.toBeDisabled(),
     )
 
     // El token anterior ya no existe: el formulario no puede reenviarse sin verificación.
@@ -151,7 +151,7 @@ describe('LoginPage y ciclo de Turnstile', () => {
       )
       await waitFor(() => expect(resetMock).toHaveBeenCalledTimes(attempt))
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /Entrar como administrador/i })).not.toBeDisabled(),
+        expect(screen.getByRole('button', { name: 'Iniciar sesión' })).not.toBeDisabled(),
       )
     }
 

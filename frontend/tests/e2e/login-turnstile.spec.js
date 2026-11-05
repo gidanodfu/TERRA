@@ -109,7 +109,7 @@ test('contraseña incorrecta reinicia Turnstile y el segundo intento usa un toke
 
   await page.getByLabel('Usuario').fill('admin')
   await page.getByLabel('Contraseña').fill('incorrecta')
-  await page.getByRole('button', { name: /Entrar como administrador/i }).click()
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
   await expect(page.getByText('Usuario o contraseña incorrectos.')).toBeVisible()
   await expect.poll(() => loginBodies.length).toBe(1)
@@ -121,14 +121,14 @@ test('contraseña incorrecta reinicia Turnstile y el segundo intento usa un toke
   expect(new URL(page.url()).pathname).toBe('/')
 
   // El token anterior ya no puede reutilizarse.
-  await page.getByRole('button', { name: /Entrar como administrador/i }).click()
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click()
   await expect(page.getByText('Complete la verificación de seguridad.')).toBeVisible()
   await expect.poll(() => loginBodies.length).toBe(1)
 
   // Nuevo token tras la nueva verificación.
   await page.evaluate(() => window.__turnstileOptions.callback('token-2'))
   await page.getByLabel('Contraseña').fill('correcta')
-  await page.getByRole('button', { name: /Entrar como administrador/i }).click()
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
   await expect(page).toHaveURL(/\/app\/admin$/)
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
