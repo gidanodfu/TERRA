@@ -55,7 +55,7 @@ export default function SecurityPage() {
         </Alert>
       ) : null}
 
-      <div className={`grid gap-6 ${hasLocalCredentials ? '@4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : 'max-w-2xl'}`}>
+      <div className="grid gap-6 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Card>
           <CardBody>
             <div className="mb-4 flex items-center gap-3">
@@ -75,12 +75,39 @@ export default function SecurityPage() {
               </DetailRow>
               <DetailRow label="Último acceso">{formatDate(user?.last_login_at)}</DetailRow>
             </dl>
-            <p className="mt-4 rounded-xl bg-muted p-3 text-xs text-slate-500">
-              La sesión se mantiene en una cookie HttpOnly y no es accesible desde JavaScript. No se almacenan tokens de
-              Google en el navegador.
-            </p>
+            {hasLocalCredentials ? (
+              <p className="mt-4 rounded-xl bg-muted p-3 text-xs text-slate-500">
+                La sesión se mantiene en una cookie HttpOnly y no es accesible desde JavaScript. No se almacenan tokens de
+                Google en el navegador.
+              </p>
+            ) : null}
           </CardBody>
         </Card>
+
+        {!hasLocalCredentials ? (
+          <Card>
+            <CardBody>
+              <div className="mb-4 flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-700">
+                  <ShieldCheck className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className="font-semibold text-slate-900">Protección de sesión</h2>
+                  <p className="text-xs text-slate-500">Su cuenta utiliza Google como método de acceso.</p>
+                </div>
+              </div>
+              <dl className="divide-y divide-slate-100">
+                <DetailRow label="Método de autenticación">Cuenta de Google (OAuth)</DetailRow>
+                <DetailRow label="Sesión">Cookie HttpOnly, no accesible desde JavaScript.</DetailRow>
+                <DetailRow label="Credenciales locales">No configuradas para esta cuenta.</DetailRow>
+                <DetailRow label="Tokens de Google">
+                  El token de actualización se almacena cifrado en el servidor y no se envía al navegador.
+                </DetailRow>
+                <DetailRow label="Contraseña de Google">TERRA nunca la recibe ni la almacena.</DetailRow>
+              </dl>
+            </CardBody>
+          </Card>
+        ) : null}
 
         {hasLocalCredentials ? (
           <Card className="@container">

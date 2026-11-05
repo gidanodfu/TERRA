@@ -30,7 +30,7 @@ export default function WorkerJobs() {
   }, [page, status])
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-none space-y-4">
       <PageHeader
         title="Mis descargas"
         description="Historial de respaldos institucionales asociados a su cuenta. Cada trabajo genera un snapshot independiente."

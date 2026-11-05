@@ -116,7 +116,7 @@ export default function JobDetailPage({ basePath }) {
   const tone = job.status === 'failed' ? 'bg-red-500' : job.status === 'partially_completed' ? 'bg-amber-500' : 'bg-brand-600'
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-none">
       <Link to={basePath} className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
         <ArrowLeft className="h-4 w-4" /> Volver a trabajos
       </Link>
@@ -231,17 +231,37 @@ export default function JobDetailPage({ basePath }) {
             <p className="mt-2 text-sm text-slate-600">
               Se respalda la totalidad de <strong>Mi unidad</strong>, preservando todas las carpetas y archivos permitidos.
             </p>
-          ) : job.roots?.length ? (
-            <ul className="mt-2 space-y-2">
-              {job.roots.map((root) => (
-                <li key={root.google_folder_id} className="rounded-xl bg-muted px-3 py-2 text-sm">
-                  <p className="font-medium text-slate-800">Mi unidad / {root.source_path}</p>
-                  <p className="text-xs text-slate-500">Drive ID: {root.google_folder_id}</p>
-                </li>
-              ))}
-            </ul>
+          ) : job.roots?.length || job.file_roots?.length ? (
+            <div className="mt-3 grid gap-3 @2xl:grid-cols-2">
+              {job.roots?.length ? (
+                <section>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Carpetas raíz</h3>
+                  <ul className="mt-2 space-y-2">
+                    {job.roots.map((root) => (
+                      <li key={root.google_folder_id} className="rounded-xl bg-muted px-3 py-2 text-sm">
+                        <p className="font-medium text-slate-800">Mi unidad / {root.source_path}</p>
+                        <p className="text-xs text-slate-500">Drive ID: {root.google_folder_id}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {job.file_roots?.length ? (
+                <section>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Archivos individuales</h3>
+                  <ul className="mt-2 space-y-2">
+                    {job.file_roots.map((root) => (
+                      <li key={root.google_file_id} className="rounded-xl bg-muted px-3 py-2 text-sm">
+                        <p className="font-medium text-slate-800">Mi unidad / {root.source_path}</p>
+                        <p className="text-xs text-slate-500">Drive ID: {root.google_file_id}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+            </div>
           ) : (
-            <p className="mt-2 text-sm text-slate-500">Sin carpetas raíz registradas.</p>
+            <p className="mt-2 text-sm text-slate-500">Sin raíces registradas.</p>
           )}
         </CardBody>
       </Card>
@@ -290,7 +310,7 @@ export default function JobDetailPage({ basePath }) {
                     {items.map((item) => (
                       <tr key={item.id}>
                         <td>
-                          <p className="max-w-xs truncate font-medium text-slate-800" title={item.name}>
+                          <p className="max-w-md truncate font-medium text-slate-800" title={item.name}>
                             {item.name}
                           </p>
                           <p className="text-xs text-slate-500">{item.mime_type}</p>

@@ -103,8 +103,10 @@ export default function WorkerDrive() {
   const policy = data?.policy
   const consentCurrent = connection && policy && connection.policy_consent_version === policy.version
 
+  const scopes = (connection?.scopes || '').split(/\s+/).filter(Boolean)
+
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="w-full min-w-0 max-w-none space-y-4">
       <PageHeader
         title="Conexión de Google Drive"
         description="TERRA accede únicamente en modo lectura, con su autorización personal e individual."
@@ -150,17 +152,30 @@ export default function WorkerDrive() {
           </div>
 
           {connection ? (
-            <dl className="mt-6 divide-y divide-slate-100 border-t border-slate-100 pt-2">
+            <dl className="mt-6 grid gap-x-8 gap-y-1 border-t border-slate-100 pt-3 text-sm @xl:grid-cols-2">
               <DetailRow label="Correo de Google">{connection.google_email || '—'}</DetailRow>
               <DetailRow label="Conectado desde">{formatDate(connection.connected_at)}</DetailRow>
               <DetailRow label="Última renovación de token">{formatDate(connection.last_refreshed_at)}</DetailRow>
-              <DetailRow label="Permisos otorgados">
-                <span className="break-all text-xs">{connection.scopes || '—'}</span>
-              </DetailRow>
+              <div className="py-2 @xl:col-span-2">
+                <dt className="text-sm text-slate-500">Permisos OAuth</dt>
+                <dd className="mt-2 flex flex-wrap gap-2">
+                  {scopes.length ? scopes.map((scope) => (
+                    <code
+                      key={scope}
+                      className="max-w-full rounded-lg border border-slate-200 bg-muted px-2.5 py-1 text-[11px] leading-relaxed break-all text-slate-700"
+                      title={scope}
+                    >
+                      {scope}
+                    </code>
+                  )) : <span className="text-sm text-slate-500">—</span>}
+                </dd>
+              </div>
               {connection.last_error_code ? (
-                <DetailRow label="Último error">
-                  <span className="text-red-700">{connection.last_error_code}</span>
-                </DetailRow>
+                <div className="py-2 @xl:col-span-2">
+                  <DetailRow label="Último error">
+                    <span className="text-red-700">{connection.last_error_code}</span>
+                  </DetailRow>
+                </div>
               ) : null}
             </dl>
           ) : null}
@@ -177,7 +192,8 @@ export default function WorkerDrive() {
         </CardBody>
       </Card>
 
-      <Card className="mt-6">
+      <div className="grid gap-6 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <Card>
         <CardBody>
           <div className="flex items-start gap-4">
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-600">
@@ -243,12 +259,12 @@ export default function WorkerDrive() {
         </CardBody>
       </Card>
 
-      <Card className="mt-6">
+      <Card>
         <CardBody>
           <h2 className="font-semibold text-slate-900">Qué autoriza TERRA</h2>
           <ul className="mt-3 space-y-2 text-sm text-slate-600">
             <li>• Lectura de archivos y carpetas de su Mi unidad, únicamente cuando un administrador inicia un respaldo.</li>
-            <li>• Descarga de documentos nativos de Google en formato DOCX, XLSX o PPTX.</li>
+            <li>• Descarga de archivos binarios y exportación de documentos nativos (Docs, Sheets, Slides y Drawings). Los formularios se guardan como JSON.</li>
             <li>• Ninguna modificación, movimiento, eliminación o compartición de sus archivos originales.</li>
           </ul>
           <p className="mt-4 text-xs text-slate-500">
@@ -257,6 +273,7 @@ export default function WorkerDrive() {
           </p>
         </CardBody>
       </Card>
+      </div>
 
       <Modal
         open={confirmDisconnect}

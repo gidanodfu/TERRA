@@ -10,12 +10,12 @@ export default function JobTable({ jobs, basePath, showOwner = false }) {
       <table className="table">
         <thead>
           <tr>
-            <th>Trabajo</th>
-            {showOwner ? <th>Trabajador</th> : null}
-            <th>Alcance</th>
-            <th>Estado</th>
-            <th>Progreso</th>
-            <th className="hidden md:table-cell">Fecha</th>
+            <th className="min-w-44">Trabajo</th>
+            {showOwner ? <th className="min-w-44">Trabajador</th> : null}
+            <th className="min-w-40">Alcance</th>
+            <th className="w-28">Estado</th>
+            <th className="min-w-56">Progreso</th>
+            <th className="hidden min-w-36 md:table-cell">Fecha</th>
             <th className="sr-only">Abrir</th>
           </tr>
         </thead>
