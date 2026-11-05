@@ -106,35 +106,42 @@ export default function DownloadWizardPage() {
   if (!users && !error) return <LoadingBlock />
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="w-full min-w-0 max-w-none space-y-4">
       <PageHeader
         title="Nueva descarga institucional"
         description="Seleccione al propietario del Drive y el alcance. El trabajo se procesa de forma asíncrona y conserva la estructura original."
+        descriptionClassName="max-w-4xl"
       />
       {error ? <Alert tone="error" onClose={() => setError('')}>{error}</Alert> : null}
 
       <Card>
         <CardBody>
-          <h2 className="font-semibold text-slate-900">Trabajador</h2>
-          <p className="mt-1 text-sm text-slate-500">Solo se muestran trabajadores activos con área y cargo asignados.</p>
-          <Field label="Trabajador propietario del Drive" htmlFor="worker" error={!workerId ? 'Seleccione un trabajador.' : undefined}>
-            <Select id="worker" value={workerId} onChange={(e) => { setWorkerId(e.target.value); setFolders([]) }}>
-              <option value="">Seleccione un trabajador</option>
-              {(users || []).map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.display_name || `${user.first_name} ${user.last_name}`} · {user.area_name || 'Sin área'}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          {users && users.length === 100 ? (
-            <p className="mt-1 text-xs text-slate-500">Se muestran los primeros 100 trabajadores activos.</p>
-          ) : null}
+          <div className="grid gap-4 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] @3xl:items-end">
+            <div>
+              <h2 className="font-semibold text-slate-900">Trabajador</h2>
+              <p className="mt-1 text-sm text-slate-500">Solo se muestran trabajadores activos con área y cargo asignados.</p>
+            </div>
+            <div>
+              <Field label="Trabajador propietario del Drive" htmlFor="worker" error={!workerId ? 'Seleccione un trabajador.' : undefined}>
+                <Select id="worker" value={workerId} onChange={(e) => { setWorkerId(e.target.value); setFolders([]) }}>
+                  <option value="">Seleccione un trabajador</option>
+                  {(users || []).map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.display_name || `${user.first_name} ${user.last_name}`} · {user.area_name || 'Sin área'}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              {users && users.length === 100 ? (
+                <p className="mt-1 text-xs text-slate-500">Se muestran los primeros 100 trabajadores activos.</p>
+              ) : null}
+            </div>
+          </div>
         </CardBody>
       </Card>
 
       {workerId ? (
-        <Card className="mt-4">
+        <Card>
           <CardBody>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -158,7 +165,7 @@ export default function DownloadWizardPage() {
                 </Button>
               </div>
             ) : connection ? (
-              <dl className="mt-4 grid gap-3 text-sm @lg:grid-cols-2">
+              <dl className="mt-4 grid gap-3 text-sm @xl:grid-cols-2 @6xl:grid-cols-4">
                 <div>
                   <dt className="text-slate-500">Cuenta autorizada</dt>
                   <dd className="font-medium text-slate-800">{connection.google_email || '—'}</dd>
@@ -183,7 +190,7 @@ export default function DownloadWizardPage() {
         </Card>
       ) : null}
 
-      <Card className="mt-4">
+      <Card>
         <CardBody>
           <h2 className="font-semibold text-slate-900">Alcance del snapshot</h2>
           <div className="mt-3 grid gap-3 @lg:grid-cols-2">
@@ -230,7 +237,7 @@ export default function DownloadWizardPage() {
         </CardBody>
       </Card>
 
-      <Card className="mt-4">
+      <Card>
         <CardBody>
           <h2 className="font-semibold text-slate-900">Confirmación</h2>
           {blockingReasons.length > 0 ? (
@@ -248,7 +255,7 @@ export default function DownloadWizardPage() {
             </div>
           )}
 
-          <div className="mt-4 grid gap-3 text-sm @lg:grid-cols-2">
+          <div className="mt-4 grid gap-3 text-sm @xl:grid-cols-2 @6xl:grid-cols-4">
             <div className="rounded-xl bg-muted p-3">
               <p className="text-xs text-slate-500">Trabajador</p>
               <p className="font-medium text-slate-800">{worker?.display_name || '—'}</p>
@@ -282,7 +289,7 @@ export default function DownloadWizardPage() {
       </Card>
 
       {!policy ? (
-        <div className="mt-4 flex items-start gap-2 text-sm text-slate-500">
+        <div className="flex items-start gap-2 text-sm text-slate-500">
           <AlertTriangle className="mt-0.5 h-4 w-4" />
           <span>
             No hay política publicada. Publique una versión aprobada en{' '}
@@ -293,7 +300,7 @@ export default function DownloadWizardPage() {
         </div>
       ) : null}
 
-      <div className="mt-6 flex items-center gap-2 text-xs text-slate-500">
+      <div className="flex items-center gap-2 text-xs text-slate-500">
         <CloudDownload className="h-4 w-4" /> Los archivos se descargan de forma asíncrona con límites de velocidad y
         capacidad configurados por la institución.
         <ArrowRight className="h-4 w-4" />

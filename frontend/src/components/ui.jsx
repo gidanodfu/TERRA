@@ -1,11 +1,11 @@
 import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react'
 
-export function PageHeader({ title, description, actions }) {
+export function PageHeader({ title, description, actions, descriptionClassName = 'max-w-2xl' }) {
   return (
     <div className="mb-6 flex flex-col gap-3 @2xl:flex-row @2xl:items-start @2xl:justify-between">
       <div className="min-w-0">
         <h1 className="wrap-anywhere text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {description ? <p className="mt-1 max-w-2xl wrap-anywhere text-sm text-slate-500">{description}</p> : null}
+        {description ? <p className={`mt-1 ${descriptionClassName} wrap-anywhere text-sm text-slate-500`}>{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>

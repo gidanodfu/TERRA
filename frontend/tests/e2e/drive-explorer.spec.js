@@ -171,7 +171,7 @@ test('explorador de Drive muestra archivos y carpetas y crea el snapshot', async
   await page.getByRole('button', { name: 'Informes' }).click()
   await expect(page.getByText('Informe.pdf')).toBeVisible()
   await expect(page.getByText('Resumen.xlsx')).toBeVisible()
-  await expect(page.getByText('2.3 MB')).toBeVisible()
+  await expect(page.getByRole('cell', { name: '2.3 MB' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Volver a Documentos' }).click()
   await expect(page.getByText('Contratos')).toBeVisible()

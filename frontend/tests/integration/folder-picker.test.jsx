@@ -117,8 +117,9 @@ describe('FolderPicker', () => {
     expect(screen.getByText('Reporte.pdf')).toBeInTheDocument()
     expect(screen.getByText('Resumen')).toBeInTheDocument()
     expect(screen.getByText('Acceso')).toBeInTheDocument()
-    expect(screen.getByText('2.3 MB')).toBeInTheDocument()
-    expect(screen.getByText('application/pdf')).toBeInTheDocument()
+    expect(screen.getAllByText('2.3 MB').length).toBeGreaterThan(0)
+    // El MIME se muestra en la columna Tipo y, en contenedores estrechos, bajo el nombre.
+    expect(screen.getAllByText('application/pdf').length).toBeGreaterThan(0)
     expect(screen.getByText(/No descargable/)).toBeInTheDocument()
     expect(screen.getByText('Privado.bin')).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: 'Seleccionar carpeta Documentos' })).toBeInTheDocument()

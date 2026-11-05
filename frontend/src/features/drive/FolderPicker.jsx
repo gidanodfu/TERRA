@@ -149,7 +149,7 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
   }
 
   return (
-    <div>
+    <div className="@container w-full min-w-0 max-w-full">
       {error ? <Alert tone="error">{error}</Alert> : null}
 
       <div className="flex flex-wrap items-center gap-1 text-sm">
@@ -184,15 +184,15 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
             <Loader2 className="h-4 w-4 animate-spin" /> Consultando Google Drive…
           </div>
         ) : items.length ? (
-          <div className="table-wrap">
-            <table className="table table-fixed">
+          <div className="table-wrap w-full min-w-0">
+            <table className="table table-fixed w-full">
               <thead>
                 <tr>
-                  <th className="w-[40%]">Elemento</th>
-                  <th className="hidden w-[20%] sm:table-cell">Tipo</th>
-                  <th className="w-[12%]">Tamaño</th>
-                  <th className="hidden w-[20%] md:table-cell">Fechas</th>
-                  <th className="w-[8%] text-right">Sel.</th>
+                  <th className="w-[86%] @xl:w-[48%] @3xl:w-[38%] @6xl:w-[40%]">Elemento</th>
+                  <th className="hidden w-[22%] @xl:table-cell @3xl:w-[17%] @6xl:w-[18%]">Tipo</th>
+                  <th className="hidden w-[18%] @xl:table-cell @3xl:w-[11%]">Tamaño</th>
+                  <th className="hidden @3xl:table-cell @3xl:w-[27%] @6xl:w-[24%]">Fechas</th>
+                  <th className="w-[14%] px-2 text-right @xl:w-[12%] @3xl:w-[7%]">Sel.</th>
                 </tr>
               </thead>
               <tbody>
@@ -237,19 +237,32 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
                           {unavailable ? <span>· No descargable</span> : null}
                           {item.description ? <span className="truncate">· {item.description}</span> : null}
                         </div>
+                        <div className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-slate-500 @xl:hidden">
+                          <span className="font-medium text-slate-600">{typeLabel(item)}</span>
+                          <span>{item.size_bytes != null ? formatBytes(item.size_bytes) : 'No informado'}</span>
+                          {item.mime_type ? (
+                            <span className="min-w-0 truncate" title={item.mime_type}>{item.mime_type}</span>
+                          ) : null}
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-slate-500 @3xl:hidden">
+                          <span title={formatDate(item.modified_time)}>Modificado: {formatDate(item.modified_time)}</span>
+                          <span title={formatDate(item.created_time)}>Creado: {formatDate(item.created_time)}</span>
+                        </div>
                       </td>
-                      <td className="hidden sm:table-cell">
+                      <td className="hidden @xl:table-cell">
                         <p className="text-sm text-slate-700">{typeLabel(item)}</p>
-                        <p className="max-w-48 truncate text-[11px] text-slate-400" title={item.mime_type}>{item.mime_type}</p>
+                        {item.mime_type ? (
+                          <p className="min-w-0 truncate text-[11px] text-slate-400" title={item.mime_type}>{item.mime_type}</p>
+                        ) : null}
                       </td>
-                      <td className="whitespace-nowrap text-sm text-slate-600">
+                      <td className="hidden whitespace-nowrap text-sm text-slate-600 @xl:table-cell">
                         {item.size_bytes != null ? formatBytes(item.size_bytes) : 'No informado'}
                       </td>
-                      <td className="hidden whitespace-nowrap text-xs text-slate-500 md:table-cell">
-                        <p>Modificado: {formatDate(item.modified_time)}</p>
-                        <p>Creado: {formatDate(item.created_time)}</p>
+                      <td className="hidden text-xs leading-5 text-slate-500 @3xl:table-cell">
+                        <p title={formatDate(item.modified_time)}>Modificado: {formatDate(item.modified_time)}</p>
+                        <p title={formatDate(item.created_time)}>Creado: {formatDate(item.created_time)}</p>
                       </td>
-                      <td className="text-right">
+                      <td className="px-2 text-right">
                         {isFolder ? (
                           <input
                             type="checkbox"
