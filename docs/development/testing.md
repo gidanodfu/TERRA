@@ -128,6 +128,15 @@ de desarrollo de Vite en ejecución y su proxy `/api`. Valida:
 Chromium y las dependencias se instalan en la imagen web. No se instala ningún navegador de Playwright
 en el host.
 
+### E2E real opt-in
+
+`frontend/tests/e2e/password-change-real.spec.js` valida el cambio de contraseña contra el
+backend, PostgreSQL y `/auth/me` reales, sin simular `has_local_credentials`. Se omite en la
+suite normal y requiere sesiones temporales y credenciales mediante variables de entorno:
+
+`REAL_E2E_SESSION_<ROL>`, `REAL_E2E_CSRF_<ROL>`, `REAL_E2E_CURRENT_PASSWORD` y
+`REAL_E2E_NEW_PASSWORD`, con roles `ADMIN`, `MODERATOR` y `READ_ONLY`.
+
 ## Matriz de cobertura de integraciones
 
 | Integración | Módulo | Tipo | Unitarias | Integración | Estado |

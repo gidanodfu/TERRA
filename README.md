@@ -197,6 +197,19 @@ toolchain incluido en la imagen.
 go test ./...
 ```
 
+La API y el worker ejecutan `go run` y **no recargan automáticamente** los cambios de
+código Go. Después de modificar el backend, reinicie el proceso correspondiente:
+
+```bash
+./terra restart api      # cambios en cmd/api o internal/*
+./terra restart worker   # cambios en cmd/worker
+./terra restart          # ambos procesos
+```
+
+Un cambio normal de código no requiere reconstruir la imagen ni eliminar volúmenes.
+Si el cambio afecta dependencias, Dockerfiles o la configuración de Compose, use
+`./terra build ... && ./terra up`.
+
 Ver [docs/development/backend-development.md](docs/development/backend-development.md).
 
 ## 15. Worker
@@ -302,6 +315,9 @@ Ver [docs/development/local-backups.md](docs/development/local-backups.md).
 
 Consulte [docs/development/troubleshooting.md](docs/development/troubleshooting.md).
 Nunca elimine volúmenes para resolver un problema de arranque.
+
+Si un cambio de backend no aparece en la aplicación, confirme que reinició la API con
+`./terra restart api`; Vite recarga el frontend, pero `go run` no recarga los procesos Go.
 
 ## 24. Contribución
 
