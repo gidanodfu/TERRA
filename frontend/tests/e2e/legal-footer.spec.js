@@ -65,13 +65,9 @@ test('el footer legal distribuye y centra sus elementos', async ({ page }) => {
           linkCenter: linkBox.x + linkBox.width / 2,
         }
       })
-      const heading = element.querySelector('h2')
-      const notice = element.querySelector('p')
       return {
         columns: getComputedStyle(list).gridTemplateColumns.split(' ').filter(Boolean),
         listAlign: getComputedStyle(list).textAlign,
-        headingAlign: getComputedStyle(heading).textAlign,
-        noticeAlign: getComputedStyle(notice).textAlign,
         footerCenter: rect.x + rect.width / 2,
         items,
       }
@@ -82,8 +78,7 @@ test('el footer legal distribuye y centra sus elementos', async ({ page }) => {
       expect(Math.abs(parseFloat(metrics.columns[0]) - parseFloat(metrics.columns[1])), `columnas desiguales en ${width}`).toBeLessThanOrEqual(1)
     }
     expect(metrics.listAlign).toBe('center')
-    expect(metrics.headingAlign).toBe('center')
-    expect(metrics.noticeAlign).toBe('center')
+    expect(await footer.locator('h2, p').count(), `textos extra en ${width}`).toBe(0)
     expect(metrics.items.map((item) => item.text)).toEqual(LEGAL_LINKS.map((link) => link.title))
     expect(metrics.items.map((item) => item.href)).toEqual(LEGAL_LINKS.map((link) => link.href))
 

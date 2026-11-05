@@ -91,7 +91,7 @@ test('el login mantiene la jerarquía vertical en todos los anchos', async ({ pa
     await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
     const workers = await page.getByRole('heading', { name: 'Trabajadores' }).boundingBox()
     const admin = await page.getByRole('heading', { name: 'Administración' }).boundingBox()
-    const legal = await page.getByRole('heading', { name: 'Información legal' }).boundingBox()
+    const legal = await page.getByRole('link', { name: 'Política de privacidad' }).boundingBox()
     expect(workers.y, `trabajadores antes que administración a ${width}px`).toBeLessThan(admin.y)
     expect(legal.y, `legal debajo de administración a ${width}px`).toBeGreaterThan(admin.y)
     const { client, scroll } = await page.evaluate(() => ({

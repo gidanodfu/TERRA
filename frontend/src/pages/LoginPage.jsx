@@ -157,11 +157,8 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <section className="@container mt-4 rounded-2xl border border-slate-200 bg-card px-4 py-5 shadow-sm">
-          <h2 className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Información legal
-          </h2>
-          <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-center text-xs text-slate-500 @[18rem]:grid-cols-2">
+        <section className="@container mt-4 rounded-2xl border border-slate-200 bg-card px-4 py-4 shadow-sm">
+          <ul className="grid grid-cols-1 gap-x-4 gap-y-2 text-center text-xs text-slate-500 @[18rem]:grid-cols-2">
             {LEGAL_LINKS.map((link) => (
               <li key={link.to} className="min-w-0">
                 <Link
@@ -173,9 +170,6 @@ export default function LoginPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-400">
-            Contenido pendiente de aprobación institucional.
-          </p>
         </section>
       </div>
     </main>
