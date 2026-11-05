@@ -21,11 +21,12 @@ que cancela las ejecuciones reemplazadas sobre la misma ref. La clonación usa
 3. Generar un `.env` local controlado a partir de `.env.example` con valores ficticios.
 4. `./terra check`.
 5. `./terra build`.
-6. `./terra init`.
-7. `./terra test all`.
-8. En caso de fallo: el estado, el diagnóstico y los registros se guardan en `artifacts/`.
-9. Subir `artifacts/` (pruebas, cobertura, informe de Playwright, diagnósticos).
-10. Detener los contenedores con `./terra down --remove` (sin eliminar volúmenes).
+6. Construir y validar la imagen `production` sin Go ni Air.
+7. `./terra init`.
+8. `./terra test all`.
+9. En caso de fallo: el estado, el diagnóstico y los registros se guardan en `artifacts/`.
+10. Subir `artifacts/` (pruebas, cobertura, informe de Playwright, diagnósticos).
+11. Detener los contenedores con `./terra down --remove` (sin eliminar volúmenes).
 
 ## Solo Docker
 

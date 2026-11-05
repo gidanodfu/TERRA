@@ -1,0 +1,25 @@
+# Recarga automática del worker en desarrollo.
+# Solo vigila cmd/worker; los cambios en internal/ o migrations/ también lo recargan.
+root = "."
+tmp_dir = "/tmp/air-worker"
+
+[build]
+  cmd = 'go build -ldflags "-X main.buildVersion=dev -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o /tmp/air-worker/worker ./cmd/worker'
+  bin = "/tmp/air-worker/worker"
+  entrypoint = ["/tmp/air-worker/worker"]
+  include_ext = ["go", "sql"]
+  include_dir = ["cmd/worker", "internal", "migrations"]
+  include_file = ["go.mod", "go.sum"]
+  exclude_dir = [".git", ".cache", "vendor", "tmp", "tests", "artifacts", "testdata"]
+  exclude_regex = ["_test.go"]
+  delay = 500
+  stop_on_error = true
+  send_interrupt = true
+  kill_delay = "20s"
+  log = "/tmp/air-worker-errors.log"
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true

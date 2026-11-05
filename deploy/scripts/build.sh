@@ -18,8 +18,9 @@ usage() {
   cat <<'USAGE'
 Uso: build.sh [--no-cache] [--no-pull] [web|api|worker ...]
 
-Construye imágenes locales. api y worker comparten terra-backend:local.
-PostgreSQL usa una imagen fijada y no se reconstruye.
+Construye imágenes de desarrollo. api y worker comparten terra-backend:local
+con Go y Air. PostgreSQL usa una imagen fijada y no se reconstruye.
+La imagen de producción se construye con docker build --target production.
 
 Opciones:
   --no-cache    reconstruye sin caché

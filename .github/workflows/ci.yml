@@ -73,6 +73,11 @@ jobs:
       - name: Construir imágenes Docker
         run: ./terra build
 
+      - name: Validar imagen de producción
+        run: |
+          docker build             --target production             --build-arg VERSION="ci-${GITHUB_SHA::12}"             --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"             -t terra-backend:ci-production             ./backend
+          docker run --rm --entrypoint sh terra-backend:ci-production -c             '! command -v go && ! command -v air && test -x /app/api && test -x /app/worker'
+
       - name: Inicializar TERRA
         run: ./terra init
 

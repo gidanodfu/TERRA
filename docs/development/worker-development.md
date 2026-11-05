@@ -10,20 +10,34 @@ El worker es un contenedor independiente que usa la misma imagen de backend que 
 ./terra status
 ```
 
-Comando: `go run ./cmd/worker`.
+Comando de desarrollo: `air -c .air.worker.toml`.
 Toma jobs de PostgreSQL con `FOR UPDATE ... SKIP LOCKED`, mantiene una lease
 y un heartbeat, escanea Drive, descarga o exporta archivos, escribe de forma atómica y
 actualiza el progreso.
 
-## Ediciones
+## Ediciones y recarga automática
 
-El código fuente del backend se monta mediante bind. Reinicie solo el worker tras cambios en el backend:
+El código fuente del backend se monta mediante bind en `/src`. Air recompila y reinicia
+el worker automáticamente cuando cambian:
+
+- `cmd/worker/`;
+- `internal/`;
+- `migrations/`;
+- `go.mod` o `go.sum`.
+
+No es necesario ejecutar `./terra restart worker` tras cambios Go. El reinicio manual
+solo se usa para diagnóstico excepcional.
+
+Los cambios compartidos en `internal/` recargan API y worker. Un cambio exclusivo de
+`cmd/worker` no reinicia la API. Los binarios temporales están en `/tmp/air-worker`.
+
+Si cambia `.env`, hay que recrear el contenedor para inyectar el nuevo entorno:
 
 ```bash
-./terra restart worker
+./terra up --recreate=worker
 ```
 
-o reconstruya/inicie:
+Reconstruya la imagen solo si cambian dependencias nativas, el Dockerfile o Compose:
 
 ```bash
 ./terra build api
@@ -44,6 +58,7 @@ o reconstruya/inicie:
 - Las leases expiradas se pueden recuperar tras un reinicio del worker.
 - Una lease perdida no finaliza el job; el nuevo propietario lo reanuda.
 - Los elementos completados no se descargan de nuevo.
+- Air envía SIGINT y espera el cierre ordenado antes de forzar el proceso.
 
 ## Pruebas
 

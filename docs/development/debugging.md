@@ -44,6 +44,7 @@ npm run test:e2e
 ```bash
 ./terra logs api -n 300
 ./terra logs worker -f
+# Reinicio manual excepcional; Air ya recarga los cambios Go.
 ./terra restart api
 ./terra restart worker
 ```

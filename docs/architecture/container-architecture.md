@@ -20,8 +20,23 @@ adicionales.
 | api / worker | `terra-backend:local` | `backend/Dockerfile` |
 | db | `postgres:18-alpine` | imagen fijada, no se reconstruye |
 
-Los Dockerfiles incluyen las herramientas de desarrollo: Go en backend y Node,
-Vite, Vitest, Playwright y Chromium en web.
+Los Dockerfiles incluyen las herramientas de desarrollo: Go, Air y pruebas en backend;
+Node, Vite, Vitest, Playwright y Chromium en web.
+
+## Desarrollo y producción
+
+| Aspecto | Desarrollo | Producción |
+|---|---|---|
+| Backend | `target: development`, bind de `backend/` | `target: production`, sin bind |
+| Proceso API | `air -c .air.api.toml` | `/app/api` |
+| Proceso worker | `air -c .air.worker.toml` | `/app/worker` |
+| Herramientas | Go, Air, tests | Solo binarios y runtime mínimo |
+| Cambios Go | Recarga automática | Nueva imagen y sustitución del contenedor |
+| Configuración | `.env` al crear el contenedor | Variables del entorno de despliegue |
+| Datos | Volumen PostgreSQL y documentos | Volumen gestionado, nunca recreado por código |
+
+La imagen de producción no contiene código fuente, Go ni Air. Las migraciones van
+embebidas en los binarios mediante `go:embed`.
 
 ## Redes y puertos
 
@@ -61,9 +76,13 @@ Esto cubre REST y SSE. Los contenedores se comunican por nombre de servicio
 - worker: proceso vivo (`kill -0 1`).
 - web: `GET /@vite/client` verificando JavaScript de Vite (no `index.html`).
 
+Air registra `building...`, `running...` y el arranque del binario. `./terra doctor`
+comprueba que API y worker ejecutan Air y que existe un binario compilado activo.
+
 ## Orden de arranque
 
 `./terra init`: db healthy → api healthy (migraciones) → bootstrap → worker/web.
+Tras el arranque, Air mantiene la recarga de API y worker sin recrear contenedores.
 El worker también puede aplicar migraciones con advisory lock, pero el flujo oficial
 las aplica desde api.
 

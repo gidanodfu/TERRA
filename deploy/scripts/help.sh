@@ -30,6 +30,9 @@ CONSTRUCCIÓN
 
 ARRANQUE Y DETENCIÓN
   ./terra up
+  ./terra up --recreate=api
+  ./terra up --recreate=worker
+  ./terra up --recreate          # todos, conservando volúmenes
   ./terra down
   ./terra down --remove      # elimina contenedores, NO volúmenes
   ./terra restart
@@ -74,6 +77,8 @@ COPIAS DE SEGURIDAD Y RESTAURACIÓN
 
 REGLAS
   - Todo el stack se ejecuta en Docker.
+  - API y worker recargan código Go con Air; no requieren reinicio manual.
+  - Los cambios de .env requieren ./terra up --recreate=servicio.
   - No se requieren Go, Node, npm ni PostgreSQL en el host.
   - Los scripts nunca eliminan volúmenes automáticamente.
   - Los documentos y la base de datos se conservan al detener o eliminar contenedores.

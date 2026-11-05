@@ -139,9 +139,12 @@ Reconstrucción completa:
 ./terra build api
 ```
 
-API y worker comparten `terra-backend:local`. PostgreSQL usa `postgres:18-alpine`
-fijado y no se reconstruye. BuildKit y los lockfiles se respetan; las dependencias se
-descargan dentro de Docker.
+API y worker comparten `terra-backend:local` en modo desarrollo, con Go y Air.
+PostgreSQL usa `postgres:18-alpine` fijado y no se reconstruye. BuildKit y los
+lockfiles se respetan; las dependencias se descargan dentro de Docker.
+
+El `backend/Dockerfile` es multi-stage: `development` incluye Go/Air y `production`
+genera binarios `/app/{api,worker,migrate,bootstrap}` sin Go, Air ni código montado.
 
 ## 10. Arranque
 
@@ -151,6 +154,15 @@ descargan dentro de Docker.
 
 Si los contenedores fueron eliminados, los recrea reutilizando el volumen. No ejecuta
 bootstrap, no reinicializa la base y no borra datos.
+
+API y worker arrancan con Air y recargan automáticamente los cambios Go. Para aplicar
+cambios de `.env` o Compose, recree solo el servicio afectado:
+
+```bash
+./terra up --recreate=api
+./terra up --recreate=worker
+./terra up --recreate        # todos, conservando volúmenes
+```
 
 ## 11. Acceso a TERRA
 
@@ -188,38 +200,48 @@ Ver [docs/development/frontend-development.md](docs/development/frontend-develop
 
 ## 14. Desarrollo backend
 
-`../backend` está montado en `/src`; la API ejecuta `go run ./cmd/api` con el
-toolchain incluido en la imagen.
+`../backend` está montado en `/src`; API y worker arrancan con **Air** dentro de Docker.
+No se requiere Go ni Air en el host.
 
 ```bash
 ./terra logs api -f
+./terra logs worker -f
 ./terra shell api
 go test ./...
 ```
 
-La API y el worker ejecutan `go run` y **no recargan automáticamente** los cambios de
-código Go. Después de modificar el backend, reinicie el proceso correspondiente:
+Air recompila y reinicia automáticamente ante cambios en:
 
-```bash
-./terra restart api      # cambios en cmd/api o internal/*
-./terra restart worker   # cambios en cmd/worker
-./terra restart          # ambos procesos
-```
+- `cmd/api` o `cmd/worker`, según el servicio;
+- `internal/`;
+- `migrations/` y SQL embebido;
+- `go.mod` / `go.sum`.
 
-Un cambio normal de código no requiere reconstruir la imagen ni eliminar volúmenes.
-Si el cambio afecta dependencias, Dockerfiles o la configuración de Compose, use
-`./terra build ... && ./terra up`.
+No ejecute `./terra restart api` después de cada cambio Go. Los binarios temporales se
+generan en `/tmp/air-api` y `/tmp/air-worker`, fuera del repositorio. Un error de
+compilación detiene el binario anterior y se recupera al corregir el archivo.
+
+| Cambio | Operación |
+|---|---|
+| Código Go/SQL, `go.mod`/`go.sum` | Automático con Air |
+| `.env` o secretos | `./terra up --recreate=api` / `--recreate=worker` |
+| Dockerfile o dependencia nativa | `./terra build api && ./terra up` |
+| Migración de BD | `./terra migrate up` |
+
+`./terra restart api` queda para diagnóstico excepcional.
 
 Ver [docs/development/backend-development.md](docs/development/backend-development.md).
 
 ## 15. Worker
 
-Contenedor independiente con la misma imagen backend:
+Contenedor independiente con la misma imagen backend y recarga automática:
 
 ```bash
 ./terra logs worker -f
-./terra restart worker
 ```
+
+Los cambios compartidos de `internal/` recargan API y worker; los cambios exclusivos de
+`cmd/worker` no reinician la API. No es necesario reiniciar el worker tras cada cambio Go.
 
 Ver [docs/development/worker-development.md](docs/development/worker-development.md).
 
@@ -316,8 +338,9 @@ Ver [docs/development/local-backups.md](docs/development/local-backups.md).
 Consulte [docs/development/troubleshooting.md](docs/development/troubleshooting.md).
 Nunca elimine volúmenes para resolver un problema de arranque.
 
-Si un cambio de backend no aparece en la aplicación, confirme que reinició la API con
-`./terra restart api`; Vite recarga el frontend, pero `go run` no recarga los procesos Go.
+Si un cambio de backend no aparece, revise `./terra logs api` o `./terra logs worker`:
+Air muestra los errores de compilación y `./terra doctor` comprueba que la recarga está
+activa. Los cambios de `.env` requieren `./terra up --recreate=servicio`.
 
 ## 24. Contribución
 

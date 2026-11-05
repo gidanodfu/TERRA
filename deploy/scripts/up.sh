@@ -3,7 +3,7 @@
 # TERRA - up.sh
 # Versión: 2.0.0
 # Descripción: arranque habitual reutilizando datos persistentes.
-# Uso: ./deploy/scripts/up.sh [--build]
+# Uso: ./deploy/scripts/up.sh [--build] [--recreate[=servicio]]
 # Requisitos: volumen PostgreSQL existente.
 # Efectos: crea/recrea contenedores. No ejecuta bootstrap ni borra datos.
 # Códigos: 0 correcto · 1 fallo · 2 uso incorrecto · 3 requiere init.
@@ -16,20 +16,30 @@ terra_enable_traps
 
 usage() {
   cat <<'USAGE'
-Uso: up.sh [--build]
+Uso: up.sh [--build] [--recreate[=web|api|worker|db]]
+
 Arranca TERRA. Si faltan imágenes, las construye. No borra datos.
+--recreate        recrea todos los contenedores con la configuración actual.
+--recreate=api    recrea solo el servicio indicado.
 USAGE
 }
 
 build=0
+recreate=""
 while (($# > 0)); do
   case "$1" in
     --build) build=1 ;;
+    --recreate) recreate="all" ;;
+    --recreate=*) recreate="${1#*=}" ;;
     -h|--help) usage; exit 0 ;;
     *) terra_error "Opción desconocida: $1"; usage; exit 2 ;;
   esac
   shift
 done
+case "$recreate" in
+  ""|all|web|api|worker|db) ;;
+  *) terra_error "Servicio inválido para --recreate: $recreate"; usage; exit 2 ;;
+esac
 
 bash "$TERRA_SCRIPT_DIR/check.sh" -q
 terra_ensure_storage
@@ -52,10 +62,16 @@ if ((build == 1)) || [[ -n "$missing" ]]; then
 fi
 
 terra_step "Iniciando servicios"
-terra_compose up -d
-# El servicio web se recrea siempre para no reutilizar un contenedor con
-# montajes/volúmenes de dependencias obsoletos.
-terra_compose up -d --force-recreate web
+if [[ "$recreate" == "all" ]]; then
+  terra_compose up -d --force-recreate
+elif [[ -n "$recreate" ]]; then
+  terra_compose up -d --force-recreate "$recreate"
+else
+  terra_compose up -d
+  # El servicio web se recrea siempre para no reutilizar un contenedor con
+  # montajes/volúmenes de dependencias obsoletos.
+  terra_compose up -d --force-recreate web
+fi
 for service in db api worker web; do
   terra_wait_healthy "$service" 240
 done

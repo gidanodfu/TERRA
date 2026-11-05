@@ -21,6 +21,11 @@ import (
 	"terra/migrations"
 )
 
+var (
+	buildVersion = "dev"
+	buildTime    = "unknown"
+)
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -28,6 +33,7 @@ func main() {
 		os.Exit(1)
 	}
 	log := logx.New("worker", cfg.Env)
+	log.Info("worker_starting", "version", buildVersion, "build_time", buildTime, "env", cfg.Env)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

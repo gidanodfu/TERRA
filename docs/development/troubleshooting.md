@@ -39,26 +39,57 @@ chmod 600 .env
 volumen.
 **Verificar:** `./terra doctor`.
 
-## Cambios de backend no visibles
+## Air no recarga o hay un error de compilación
 
-**Identificar:** el código Go del host contiene un cambio, pero la API responde con el comportamiento anterior.
+**Identificar:** el código Go cambió, pero API/worker mantienen el comportamiento anterior,
+o `./terra doctor` indica que no hay binario compilado activo.
 
-**Causa:** el contenedor `api` ejecuta `go run ./cmd/api`; no tiene recarga automática. Vite sí refleja el frontend al instante, pero la API mantiene el proceso compilado anterior.
-
-**Corrección:** reinicie únicamente la API:
+**Diagnóstico:**
 
 ```bash
-./terra restart api
+./terra doctor
+./terra logs api -f
+./terra logs worker -f
 ```
 
-Si el cambio afecta dependencias o la imagen, reconstruya antes:
+**Causas:**
+- error de sintaxis o de compilación;
+- cambio fuera de las rutas vigiladas (`cmd/api`, `cmd/worker`, `internal`, `migrations`,
+  `go.mod`, `go.sum`);
+- Air no está ejecutándose porque el contenedor es de una imagen antigua.
+
+**Corrección:**
+- si hay un error de compilación, corríjalo; Air recompila al guardar;
+- si cambió el Dockerfile o una dependencia nativa, reconstruya la imagen:
 
 ```bash
 ./terra build api
 ./terra up
 ```
 
-**Verificar:** `./terra status` y una petición a `/api/v1/health` o al endpoint modificado.
+`./terra restart api` o `./terra restart worker` queda reservado para diagnóstico
+excepcional, no para recoger cambios Go rutinarios.
+
+## Cambios de `.env` no aplicados
+
+**Causa:** Docker inyecta las variables al crear el contenedor; reiniciar el proceso no
+actualiza el entorno.
+
+**Corrección:** recree únicamente los servicios afectados:
+
+```bash
+./terra up --recreate=api
+./terra up --recreate=worker
+```
+
+Para recrear todos los contenedores conservando volúmenes:
+
+```bash
+./terra up --recreate
+```
+
+**Verificar:** `./terra doctor` y la variable dentro del contenedor mediante
+`./terra shell api` (`printenv`).
 
 ## API no saludable
 

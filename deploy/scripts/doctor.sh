@@ -44,6 +44,27 @@ for service in "${TERRA_ALLOWED_SERVICES[@]}"; do
   fi
 done
 
+terra_step "3b. Recarga automática del backend"
+if [[ "$(terra_env_get APP_ENV)" == "development" ]]; then
+  terra_ok "APP_ENV=development"
+else
+  note_issue "APP_ENV no es development; Air no es el modo esperado"
+fi
+for service in api worker; do
+  config=".air.${service}.toml"
+  processes="$(terra_compose exec -T "$service" ps -o args 2>/dev/null || true)"
+  if grep -Fq "air -c ${config}" <<<"$processes"; then
+    terra_ok "$service: Air activo (${config})"
+  else
+    note_issue "$service no está ejecutando Air (${config})"
+  fi
+  if grep -Fq "/tmp/air-${service}/${service}" <<<"$processes"; then
+    terra_ok "$service: binario compilado activo"
+  else
+    note_issue "$service: sin binario compilado activo (revise ./terra logs $service)"
+  fi
+done
+
 terra_step "4. PostgreSQL"
 if terra_require_db_running >/dev/null 2>&1; then
   user="$(terra_env_get POSTGRES_USER)"

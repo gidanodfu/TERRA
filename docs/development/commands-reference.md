@@ -13,9 +13,9 @@ Ningún comando requiere Go, Node ni PostgreSQL en el host.
 | `./terra doctor` | Diagnóstico completo del entorno de ejecución |
 | `./terra build [--no-cache] [web|api]` | Construir imágenes locales |
 | `./terra init [--rebuild] [--no-cache]` | Primera inicialización o recuperación |
-| `./terra up [--build]` | Arranque rutinario |
+| `./terra up [--build] [--recreate[=servicio]]` | Arranque; `--recreate` aplica configuración nueva |
 | `./terra down [--remove]` | Detener; `--remove` conserva los volúmenes |
-| `./terra restart [service]` | Reiniciar todos los servicios o uno |
+| `./terra restart [service]` | Reinicio manual excepcional; no recarga `.env` |
 | `./terra status` | Contenedores, salud, volúmenes, PostgreSQL, API, Vite |
 | `./terra logs [service] [-f] [-n N]` | Registros |
 | `./terra shell <service>` | Shell dentro de web/api/worker/db |
@@ -76,3 +76,4 @@ CONFIRM=yes ./terra restore backups/20261103T210000Z
 - El bootstrap nunca sobrescribe credenciales.
 - Las pruebas usan una base de datos desechable `terra_test` y nunca la base de datos de desarrollo.
 - Las copias de seguridad nunca se sobrescriben.
+- Air recarga código Go en desarrollo; los cambios de `.env` requieren `./terra up --recreate=servicio`.

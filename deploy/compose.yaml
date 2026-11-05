@@ -25,6 +25,7 @@ services:
     image: terra-backend:local
     build:
       context: ../backend
+      target: development
     user: "${TERRA_UID:-1000}:${TERRA_GID:-1000}"
     env_file:
       - ../.env
@@ -36,7 +37,7 @@ services:
       GOMODCACHE: /go/pkg/mod
       GOPATH: /tmp/gopath
     working_dir: /src
-    command: ["go", "run", "./cmd/api"]
+    command: ["air", "-c", ".air.api.toml"]
     volumes:
       - ../backend:/src
       - ../.cache/go-mod:/go/pkg/mod
@@ -55,6 +56,9 @@ services:
 
   worker:
     image: terra-backend:local
+    build:
+      context: ../backend
+      target: development
     user: "${TERRA_UID:-1000}:${TERRA_GID:-1000}"
     env_file:
       - ../.env
@@ -66,7 +70,7 @@ services:
       GOMODCACHE: /go/pkg/mod
       GOPATH: /tmp/gopath
     working_dir: /src
-    command: ["go", "run", "./cmd/worker"]
+    command: ["air", "-c", ".air.worker.toml"]
     volumes:
       - ../backend:/src
       - ../.cache/go-mod:/go/pkg/mod

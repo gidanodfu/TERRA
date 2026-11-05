@@ -9,11 +9,11 @@ instalan dentro de los contenedores.
 | Servicio | Imagen | Comando | Propósito |
 |---|---|---|---|
 | `web` | `terra-web:local` | `npm run dev -- --host 0.0.0.0 --port 5173` | Servidor de desarrollo Vite, HMR y proxy `/api` |
-| `api` | `terra-backend:local` | `go run ./cmd/api` | API REST y SSE |
-| `worker` | `terra-backend:local` | `go run ./cmd/worker` | Cola de PostgreSQL y transferencias de Drive |
+| `api` | `terra-backend:local` | `air -c .air.api.toml` | API REST y SSE con recarga automática |
+| `worker` | `terra-backend:local` | `air -c .air.worker.toml` | Cola de PostgreSQL y transferencias de Drive con recarga automática |
 | `db` | `postgres:18-alpine` | PostgreSQL | Fuente de verdad y cola |
 
-La API y el worker comparten la imagen del backend pero tienen comandos independientes.
+La API y el worker comparten la imagen de desarrollo del backend, pero Air usa configuraciones independientes.
 No hay Nginx, Traefik, Redis, broker, Compose de producción ni contenedor auxiliar.
 
 ## Requisitos del host
@@ -65,4 +65,15 @@ documentos.
 ./terra build api
 ```
 
+El objetivo de desarrollo incluye Go, Air y las herramientas de prueba. Los cambios
+Go se recargan con Air sin reconstruir la imagen.
+
 PostgreSQL usa la imagen fijada `postgres:18-alpine` y no se reconstruye.
+
+## Desarrollo y producción
+
+- Desarrollo: bind mount de `backend/`, Air y `terra-backend:local`.
+- Producción: imagen multi-stage con binarios `/app/{api,worker,migrate,bootstrap}`,
+  sin Go, sin Air y sin código fuente montado.
+- La etiqueta de producción debe ser inmutable y desplegarse sustituyendo el
+  contenedor, no con bind mounts.
