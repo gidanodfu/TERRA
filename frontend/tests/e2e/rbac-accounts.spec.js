@@ -88,7 +88,7 @@ async function mockApi(page, { user, permissions, accounts = [] }) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ user, permissions, must_rotate_password: false, pending_profile: false }),
+        body: JSON.stringify({ user, permissions, has_local_credentials: !user.roles?.includes('user'), must_rotate_password: false, pending_profile: false }),
       })
     }
     if (path.endsWith('/admin/dashboard')) {

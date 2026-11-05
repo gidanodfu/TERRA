@@ -79,6 +79,7 @@ function payloadFor(url, getUser) {
     return {
       user: getUser(),
       permissions: ADMIN_PERMISSIONS,
+      has_local_credentials: true,
       must_rotate_password: false,
       pending_profile: false,
     }
@@ -199,6 +200,8 @@ test('el tema oscuro se activa desde administración, persiste y se comparte con
   currentUser = workerUser
   await page.goto('/app')
   await expect(page.locator('html')).toHaveClass(/dark/)
+  await expect(page.getByTestId('worker-workspace')).toBeVisible()
+  await expect(page.locator('.card').first()).toBeVisible()
   const workerDarkColors = await page.evaluate(() => ({
     body: getComputedStyle(document.body).backgroundColor,
     workspace: getComputedStyle(document.querySelector('[data-testid="worker-workspace"]')).backgroundColor,

@@ -252,8 +252,18 @@ func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, sessionT
 	return nil
 }
 
-func (s *Service) Me(ctx context.Context, identity principal.Identity) map[string]any {
-	mustRotate, _ := s.repo.HasLocalCredentialFlag(ctx, identity.ID)
+func (s *Service) Me(ctx context.Context, identity principal.Identity) (map[string]any, error) {
+	hasLocalCredentials, err := s.repo.HasLocalCredential(ctx, identity.ID)
+	if err != nil {
+		return nil, err
+	}
+	mustRotate := false
+	if hasLocalCredentials {
+		mustRotate, err = s.repo.HasLocalCredentialFlag(ctx, identity.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	fullUser, err := s.users.GetByID(ctx, identity.ID)
 	if err != nil {
 		// La sesión es válida pero no se pudo leer el perfil; devuelve la identidad
@@ -263,11 +273,12 @@ func (s *Service) Me(ctx context.Context, identity principal.Identity) map[strin
 			PositionID: identity.PositionID, Status: users.Status(identity.Status), Roles: identity.Roles}
 	}
 	return map[string]any{
-		"user":                 fullUser,
-		"permissions":          PermissionsFor(fullUser.Roles),
-		"must_rotate_password": mustRotate,
-		"pending_profile":      fullUser.Status == users.StatusPendingProfile,
-	}
+		"user":                  fullUser,
+		"permissions":           PermissionsFor(fullUser.Roles),
+		"has_local_credentials": hasLocalCredentials,
+		"must_rotate_password":  mustRotate,
+		"pending_profile":       fullUser.Status == users.StatusPendingProfile,
+	}, nil
 }
 
 // --- middleware ---

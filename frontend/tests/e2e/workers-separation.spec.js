@@ -45,7 +45,8 @@ test('Trabajadores excluye al administrador y permite actualizar solo a un traba
         body: JSON.stringify({
           user: principalAdmin,
           permissions: ADMIN_PERMISSIONS,
-          must_rotate_password: false,
+          has_local_credentials: true,
+      must_rotate_password: false,
           pending_profile: false,
         }),
       })

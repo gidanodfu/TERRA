@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [permissions, setPermissions] = useState([])
   const [mustRotate, setMustRotate] = useState(false)
+  const [hasLocalCredentials, setHasLocalCredentials] = useState(false)
   const [pendingProfile, setPendingProfile] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -16,6 +17,7 @@ export function AuthProvider({ children }) {
     setUser(null)
     setPermissions([])
     setMustRotate(false)
+    setHasLocalCredentials(false)
     setPendingProfile(false)
   }, [])
 
@@ -23,6 +25,7 @@ export function AuthProvider({ children }) {
     setUser(data.user)
     setPermissions(data.permissions || [])
     setMustRotate(Boolean(data.must_rotate_password))
+    setHasLocalCredentials(Boolean(data.has_local_credentials))
     setPendingProfile(Boolean(data.pending_profile))
   }, [])
 
@@ -63,6 +66,7 @@ export function AuthProvider({ children }) {
       user,
       permissions,
       mustRotate,
+      hasLocalCredentials,
       pendingProfile,
       loading,
       error,
@@ -75,7 +79,7 @@ export function AuthProvider({ children }) {
       isWorker: isWorkerAccount(user),
       can: (permission) => permissions.includes(permission),
     }),
-    [user, permissions, mustRotate, pendingProfile, loading, error, refresh, apply, logout, clear],
+    [user, permissions, mustRotate, hasLocalCredentials, pendingProfile, loading, error, refresh, apply, logout, clear],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -18,6 +18,7 @@ function AuthProbe() {
       <p>{auth.isAdmin ? 'admin' : 'worker'}</p>
       <p>{auth.isAdministrative ? 'administrativa' : 'no administrativa'}</p>
       <p>{auth.isWorker ? 'trabajador' : 'no trabajador'}</p>
+      <p>{auth.hasLocalCredentials ? 'credenciales locales' : 'sin credenciales locales'}</p>
       <p>{auth.can('admin.dashboard.read') ? 'puede dashboard' : 'sin permiso'}</p>
       <button type="button" onClick={auth.logout}>salir</button>
     </div>
@@ -37,6 +38,7 @@ describe('AuthProvider', () => {
     expect(screen.getByText('admin')).toBeInTheDocument()
     expect(screen.getByText('administrativa')).toBeInTheDocument()
     expect(screen.getByText('no trabajador')).toBeInTheDocument()
+    expect(screen.getByText('credenciales locales')).toBeInTheDocument()
     expect(screen.getByText('puede dashboard')).toBeInTheDocument()
   })
 

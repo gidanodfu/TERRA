@@ -108,6 +108,7 @@ function payloadFor(url, asAdmin) {
     return {
       user: asAdmin ? adminUser : workerUser,
       permissions: ADMIN_PERMISSIONS,
+      has_local_credentials: asAdmin,
       must_rotate_password: false,
       pending_profile: false,
     }

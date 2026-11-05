@@ -7,7 +7,7 @@ import { StatusBadge } from '../../features/downloads/StatusBadge'
 import { formatDate } from '../../utils/format'
 
 export default function SecurityPage() {
-  const { user, mustRotate, refresh } = useAuth()
+  const { user, mustRotate, hasLocalCredentials, refresh } = useAuth()
   const [form, setForm] = useState({ current_password: '', new_password: '', confirm: '' })
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
@@ -81,7 +81,7 @@ export default function SecurityPage() {
         </CardBody>
       </Card>
 
-      {user?.roles?.includes('admin') ? (
+      {hasLocalCredentials ? (
         <Card className="mt-6">
           <CardBody>
             <div className="mb-4 flex items-center gap-3">
@@ -90,7 +90,7 @@ export default function SecurityPage() {
               </span>
               <div>
                 <h2 className="font-semibold text-slate-900">Cambiar contraseña</h2>
-                <p className="text-xs text-slate-500">Solo para credenciales locales de administración.</p>
+                <p className="text-xs text-slate-500">Solo para cuentas con credenciales locales.</p>
               </div>
             </div>
             {error ? <Alert tone="error">{error}</Alert> : null}

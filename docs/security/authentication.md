@@ -27,8 +27,10 @@ del código intercambiado. No se almacenan access tokens de identidad.
   diferencias de tiempo.
 - **Turnstile obligatorio** validado en backend contra Siteverify.
 - Rate limit por IP y por identidad.
-- `must_rotate_password=true` en el bootstrap; `/app/security` fuerza el cambio.
-- Cambiar contraseña invalida las demás sesiones.
+- `/auth/me` informa `has_local_credentials` y `must_rotate_password` de forma independiente.
+- `has_local_credentials=true` habilita el cambio de contraseña para `admin`, `moderator` y `read_only`.
+- `must_rotate_password=true` en el bootstrap; `/app/security` fuerza el cambio inicial.
+- Cambiar contraseña invalida las demás sesiones y conserva la actual.
 
 ## Sesiones
 

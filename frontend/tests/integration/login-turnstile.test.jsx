@@ -108,6 +108,7 @@ describe('LoginPage y ciclo de Turnstile', () => {
     api.post.mockResolvedValueOnce({
       user: adminUser,
       permissions: ADMIN_PERMISSIONS,
+      has_local_credentials: true,
       must_rotate_password: false,
       pending_profile: false,
     })
@@ -124,6 +125,7 @@ describe('LoginPage y ciclo de Turnstile', () => {
     expect(auth.apply).toHaveBeenCalledWith({
       user: adminUser,
       permissions: ADMIN_PERMISSIONS,
+      has_local_credentials: true,
       must_rotate_password: false,
       pending_profile: false,
     })

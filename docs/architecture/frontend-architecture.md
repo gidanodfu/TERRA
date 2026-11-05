@@ -106,6 +106,8 @@ límites se validan antes de crear la sesión; el frontend no autoriza nada.
   - sin sesión → `/`
   - `pending_profile` → `/onboarding`
   - `must_rotate_password` → `/app/security`
+- `has_local_credentials` controla la visibilidad del formulario de contraseña; no se deduce del rol.
+- `must_rotate_password` solo fuerza el aviso y la redirección del primer acceso.
 
 ## SSE
 

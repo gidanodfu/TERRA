@@ -65,6 +65,7 @@ test('contraseña incorrecta reinicia Turnstile y el segundo intento usa un toke
         body: JSON.stringify({
           user: adminUser,
           permissions: ADMIN_PERMISSIONS,
+          has_local_credentials: true,
           must_rotate_password: false,
           pending_profile: false,
         }),

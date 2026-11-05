@@ -1013,6 +1013,7 @@ components:
         permissions:
           type: array
           items: { type: string }
+        has_local_credentials: { type: boolean }
         must_rotate_password: { type: boolean }
         pending_profile: { type: boolean }
     Area:

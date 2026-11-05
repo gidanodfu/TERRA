@@ -102,6 +102,7 @@ function payloadFor(url, getUser) {
     return {
       user,
       permissions: user.roles?.includes('admin') ? ADMIN_PERMISSIONS : WORKER_PERMISSIONS,
+      has_local_credentials: Boolean(user.roles?.includes('admin')),
       must_rotate_password: false,
       pending_profile: false,
     }

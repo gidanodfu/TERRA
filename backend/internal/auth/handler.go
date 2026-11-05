@@ -121,7 +121,12 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, apperr.Unauthorized("Debe iniciar sesión."))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, h.svc.Me(r.Context(), user))
+	profile, err := h.svc.Me(r.Context(), user)
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, profile)
 }
 
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
