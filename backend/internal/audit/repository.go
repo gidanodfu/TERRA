@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,7 +29,20 @@ type Repository struct{ pool *pgxpool.Pool }
 
 func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: pool} }
 
+type execer interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
 func (r *Repository) Record(ctx context.Context, ev Event) {
+	_ = r.record(ctx, r.pool, ev)
+}
+
+// RecordTx registra el evento dentro de la transacción indicada.
+func (r *Repository) RecordTx(ctx context.Context, tx pgx.Tx, ev Event) error {
+	return r.record(ctx, tx, ev)
+}
+
+func (r *Repository) record(ctx context.Context, ex execer, ev Event) error {
 	meta := ev.Metadata
 	if meta == nil {
 		meta = map[string]any{}
@@ -36,10 +51,11 @@ func (r *Repository) Record(ctx context.Context, ev Event) {
 	if err != nil {
 		raw = []byte("{}")
 	}
-	_, _ = r.pool.Exec(ctx, `INSERT INTO audit_events
+	_, err = ex.Exec(ctx, `INSERT INTO audit_events
 		(actor_user_id, action, target_type, target_id, metadata_json, ip_hash)
 		VALUES ($1,$2,$3,$4,$5,$6)`,
 		ev.ActorUserID, ev.Action, ev.TargetType, nullString(ev.TargetID), raw, nullString(ev.IPHash))
+	return err
 }
 
 type ListFilter struct {

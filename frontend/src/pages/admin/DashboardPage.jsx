@@ -11,10 +11,14 @@ import {
   Users,
 } from 'lucide-react'
 import { api } from '../../services/api'
+import { useAuth } from '../../app/AuthContext'
+import { PERMISSIONS } from '../../features/auth/permissions'
 import { Alert, Card, CardBody, LoadingBlock, PageHeader, StatCard } from '../../components/ui'
 import { formatBytes, formatDate } from '../../utils/format'
 
 export default function AdminDashboard() {
+  const { can } = useAuth()
+  const canCreateJobs = can(PERMISSIONS.JOBS_CREATE)
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
 
@@ -37,11 +41,11 @@ export default function AdminDashboard() {
       <PageHeader
         title="Dashboard"
         description="Estado operativo de TERRA: identidades, conexiones, trabajos y almacenamiento institucional."
-        actions={
+        actions={canCreateJobs ? (
           <Link to="/app/admin/downloads" className="btn-primary whitespace-nowrap">
             <ArrowRight className="h-4 w-4" /> Nueva descarga
           </Link>
-        }
+        ) : null}
       />
 
       <div className="grid gap-4 @sm:grid-cols-2 @3xl:grid-cols-4">
@@ -68,9 +72,11 @@ export default function AdminDashboard() {
           <CardBody>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">Actividad reciente</h2>
-              <Link to="/app/admin/audit" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline">
-                Ver auditoría <ArrowRight className="h-4 w-4" />
-              </Link>
+              {can(PERMISSIONS.AUDIT_READ) ? (
+                <Link to="/app/admin/audit" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline">
+                  Ver auditoría <ArrowRight className="h-4 w-4" />
+                </Link>
+              ) : null}
             </div>
             {data.recent_activity?.length ? (
               <ul className="divide-y divide-slate-100">
@@ -97,18 +103,26 @@ export default function AdminDashboard() {
           <CardBody>
             <h2 className="font-semibold text-slate-900">Accesos rápidos</h2>
             <div className="mt-3 space-y-2">
-              <Link to="/app/admin/workers" className="btn-secondary w-full justify-start">
-                <Users className="h-4 w-4" /> Trabajadores
-              </Link>
-              <Link to="/app/admin/connections" className="btn-secondary w-full justify-start">
-                <Database className="h-4 w-4" /> Conexiones de Drive
-              </Link>
-              <Link to="/app/admin/jobs" className="btn-secondary w-full justify-start">
-                <FileClock className="h-4 w-4" /> Historial de trabajos
-              </Link>
-              <Link to="/app/admin/policy" className="btn-secondary w-full justify-start">
-                <ShieldAlert className="h-4 w-4" /> Política institucional
-              </Link>
+              {can(PERMISSIONS.USERS_READ) ? (
+                <Link to="/app/admin/workers" className="btn-secondary w-full justify-start">
+                  <Users className="h-4 w-4" /> Trabajadores
+                </Link>
+              ) : null}
+              {can(PERMISSIONS.DRIVE_READ) ? (
+                <Link to="/app/admin/connections" className="btn-secondary w-full justify-start">
+                  <Database className="h-4 w-4" /> Conexiones de Drive
+                </Link>
+              ) : null}
+              {can(PERMISSIONS.JOBS_READ) ? (
+                <Link to="/app/admin/jobs" className="btn-secondary w-full justify-start">
+                  <FileClock className="h-4 w-4" /> Historial de trabajos
+                </Link>
+              ) : null}
+              {can(PERMISSIONS.POLICY_WRITE) ? (
+                <Link to="/app/admin/policy" className="btn-secondary w-full justify-start">
+                  <ShieldAlert className="h-4 w-4" /> Política institucional
+                </Link>
+              ) : null}
             </div>
             {data.reauth_drives > 0 ? (
               <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900">

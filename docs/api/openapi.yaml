@@ -490,6 +490,72 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/User" }
         "409": { description: No puede suspenderse a sí mismo }
+  /admin/accounts:
+    get:
+      tags: [Administración]
+      summary: Lista de cuentas administrativas
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - { name: q, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [active, disabled] } }
+        - { name: role, in: query, schema: { type: string, enum: [admin, moderator, read_only] } }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/AdministrativeAccount" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Administración]
+      summary: Crea una cuenta administrativa local
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateAdministrativeAccount" }
+      responses:
+        "201":
+          description: Cuenta creada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdministrativeAccount" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Nombre de usuario duplicado }
+        "422": { $ref: "#/components/responses/Validation" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /admin/accounts/{id}:
+    patch:
+      tags: [Administración]
+      summary: Activa o desactiva una cuenta administrativa
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [active, disabled] }
+      responses:
+        "200":
+          description: Cuenta actualizada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdministrativeAccount" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Cuenta principal protegida o autodesactivación }
+        "503": { description: Administrador principal no resoluble }
   /admin/areas:
     get:
       tags: [Administración]
@@ -903,10 +969,34 @@ components:
         status: { type: string, enum: [pending_profile, active, suspended, disabled] }
         roles:
           type: array
-          items: { type: string, enum: [admin, user] }
+          items: { type: string, enum: [admin, moderator, read_only, user] }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         last_login_at: { type: string, format: date-time }
+    AdministrativeAccount:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        first_name: { type: string }
+        last_name: { type: string }
+        display_name: { type: string }
+        username: { type: string }
+        role: { type: string, enum: [admin, moderator, read_only] }
+        status: { type: string, enum: [active, disabled] }
+        created_at: { type: string, format: date-time }
+        last_login_at: { type: string, format: date-time }
+        is_principal: { type: boolean }
+        must_rotate_password: { type: boolean }
+    CreateAdministrativeAccount:
+      type: object
+      required: [role, first_name, last_name, username, password, password_confirmation]
+      properties:
+        role: { type: string, enum: [admin, moderator, read_only] }
+        first_name: { type: string, maxLength: 100 }
+        last_name: { type: string, maxLength: 100 }
+        username: { type: string, minLength: 3, maxLength: 64, pattern: '^[a-z0-9][a-z0-9._-]{2,63}$' }
+        password: { type: string, minLength: 12 }
+        password_confirmation: { type: string, minLength: 12 }
     LoginResponse:
       type: object
       properties:

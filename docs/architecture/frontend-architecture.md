@@ -115,8 +115,10 @@ la fila obtenida por REST; SSE no es autoridad.
 
 ## Autorización de UI
 
-- El menú y las acciones se ocultan según rol/permisos.
-- `AdminOnly` evita renderizar rutas administrativas a no administradores.
+- El menú y las acciones se construyen desde los permisos devueltos por `/auth/me`.
+- `PermissionOnly` muestra acceso no autorizado en rutas administrativas sin el permiso requerido.
+- El módulo Trabajadores separa las pestañas de trabajadores y cuentas administrativas.
+- La creación y el cambio de estado de cuentas administrativas dependen de permisos explícitos.
 - Ninguna comprobación del navegador sustituye al backend.
 
 ## Diseño

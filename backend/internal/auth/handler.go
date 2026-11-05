@@ -154,3 +154,6 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RequireAuth(next http.Handler) http.Handler   { return h.svc.RequireAuth(next) }
 func (h *Handler) RequireActive(next http.Handler) http.Handler { return h.svc.RequireActive(next) }
 func (h *Handler) RequireAdmin(next http.Handler) http.Handler  { return h.svc.RequireAdmin(next) }
+func (h *Handler) RequirePermission(permission string) func(http.Handler) http.Handler {
+	return h.svc.RequirePermission(permission)
+}

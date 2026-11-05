@@ -16,6 +16,7 @@ import (
 	"terra/internal/platform/crypto"
 	"terra/internal/platform/httpx"
 	"terra/internal/platform/principal"
+	"terra/internal/platform/rbac"
 )
 
 type Handler struct {
@@ -77,7 +78,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
-	if !actor.IsAdmin() {
+	if !actor.Can(rbac.PermJobsRead) {
 		filter.RestrictToUser = &actor.ID
 	}
 	jobs, total, err := h.svc.List(r.Context(), filter)
@@ -137,7 +138,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, apperr.BadRequest("Identificador de trabajo inválido."))
 		return
 	}
-	job, err := h.svc.Get(r.Context(), actor.ID, actor.IsAdmin(), jobID)
+	job, err := h.svc.Get(r.Context(), actor.ID, actor.Can(rbac.PermJobsRead), jobID)
 	if err != nil {
 		httpx.WriteError(w, r, err)
 		return
@@ -153,7 +154,7 @@ func (h *Handler) Items(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page, size, _ := httpx.Pagination(r)
-	items, total, err := h.svc.Items(r.Context(), actor.ID, actor.IsAdmin(), jobID,
+	items, total, err := h.svc.Items(r.Context(), actor.ID, actor.Can(rbac.PermJobsRead), jobID,
 		ItemFilter{Status: r.URL.Query().Get("status"), Page: page, Size: size})
 	if err != nil {
 		httpx.WriteError(w, r, err)
@@ -171,7 +172,7 @@ func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, apperr.BadRequest("Identificador de trabajo inválido."))
 		return
 	}
-	job, err := h.svc.Cancel(r.Context(), actor.ID, actor.IsAdmin(), jobID, h.ip(r))
+	job, err := h.svc.Cancel(r.Context(), actor.ID, actor.Can(rbac.PermJobsCancel), jobID, h.ip(r))
 	if err != nil {
 		httpx.WriteError(w, r, err)
 		return
@@ -202,7 +203,7 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, apperr.BadRequest("Identificador de trabajo inválido."))
 		return
 	}
-	job, err := h.svc.Get(r.Context(), actor.ID, actor.IsAdmin(), jobID)
+	job, err := h.svc.Get(r.Context(), actor.ID, actor.Can(rbac.PermJobsRead), jobID)
 	if err != nil {
 		httpx.WriteError(w, r, err)
 		return
@@ -251,7 +252,7 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 				writeEvent(w, strconv.FormatInt(ev.ID, 10), ev.Type, ev.Payload)
 				lastID = ev.ID
 			}
-			current, err := h.svc.Get(r.Context(), actor.ID, actor.IsAdmin(), jobID)
+			current, err := h.svc.Get(r.Context(), actor.ID, actor.Can(rbac.PermJobsRead), jobID)
 			if err != nil {
 				return
 			}
@@ -319,7 +320,7 @@ func (h *Handler) FileContent(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, apperr.BadRequest("Identificador de documento inválido."))
 		return
 	}
-	file, info, meta, err := h.svc.OpenFile(r.Context(), actor.ID, actor.IsAdmin(), fileID, h.ip(r))
+	file, info, meta, err := h.svc.OpenFile(r.Context(), actor.ID, actor.Can(rbac.PermFilesRead), fileID, h.ip(r))
 	if err != nil {
 		httpx.WriteError(w, r, err)
 		return

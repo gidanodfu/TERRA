@@ -12,6 +12,7 @@ import (
 	"terra/internal/platform/crypto"
 	"terra/internal/platform/httpx"
 	"terra/internal/platform/principal"
+	"terra/internal/platform/rbac"
 	"terra/internal/users"
 )
 
@@ -29,7 +30,8 @@ func (h *Handler) ip(r *http.Request) string {
 }
 
 func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
-	d, err := h.svc.Dashboard(r.Context())
+	actor, _ := principal.Current(r.Context())
+	d, err := h.svc.Dashboard(r.Context(), actor.Can(rbac.PermAuditRead))
 	if err != nil {
 		httpx.WriteError(w, r, err)
 		return
@@ -98,7 +100,8 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) AdministrativeAccounts(w http.ResponseWriter, r *http.Request) {
 	page, size, _ := httpx.Pagination(r)
 	q := r.URL.Query()
-	f := users.ListFilter{Query: strings.TrimSpace(q.Get("q")), Status: q.Get("status"), Page: page, Size: size}
+	f := users.ListFilter{Query: strings.TrimSpace(q.Get("q")), Status: q.Get("status"),
+		Role: strings.TrimSpace(q.Get("role")), Page: page, Size: size}
 	list, total, err := h.svc.AdministrativeAccounts(r.Context(), f)
 	if err != nil {
 		httpx.WriteError(w, r, err)
@@ -107,6 +110,21 @@ func (h *Handler) AdministrativeAccounts(w http.ResponseWriter, r *http.Request)
 	httpx.WriteJSON(w, http.StatusOK, httpx.ListResponse{
 		Data: list, Pagination: httpx.Page{Page: page, PageSize: size, Total: total},
 	})
+}
+
+func (h *Handler) CreateAdministrativeAccount(w http.ResponseWriter, r *http.Request) {
+	actor, _ := principal.Current(r.Context())
+	var body CreateAdministrativeAccountInput
+	if err := httpx.Decode(w, r, &body); err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	created, err := h.svc.CreateAdministrativeAccount(r.Context(), actor.ID, body, h.ip(r))
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusCreated, created)
 }
 
 func (h *Handler) UpdateAdministrativeAccount(w http.ResponseWriter, r *http.Request) {

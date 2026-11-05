@@ -2,7 +2,72 @@ package admin
 
 import (
 	"context"
+	"errors"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
+
+	"terra/internal/audit"
+	"terra/internal/platform/apperr"
+	"terra/internal/users"
 )
+
+type createAdministrativeRecord struct {
+	ID           uuid.UUID
+	FirstName    string
+	LastName     string
+	DisplayName  string
+	Username     string
+	PasswordHash string
+	Role         string
+}
+
+func (s *Service) createAdministrativeAccountRecord(ctx context.Context, rec createAdministrativeRecord,
+	actor uuid.UUID, ipHash string) (*users.User, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if _, err := tx.Exec(ctx, `INSERT INTO users
+		(id, first_name, last_name, display_name, status) VALUES ($1,$2,$3,$4,'active')`,
+		rec.ID, rec.FirstName, rec.LastName, rec.DisplayName); err != nil {
+		return nil, mapUsernameConflict(err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO local_credentials
+		(user_id, username, password_hash, must_rotate_password) VALUES ($1,$2,$3,true)`,
+		rec.ID, rec.Username, rec.PasswordHash); err != nil {
+		return nil, mapUsernameConflict(err)
+	}
+	ct, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id, granted_by)
+		SELECT $1, id, $3 FROM system_roles WHERE key = $2
+		AND key IN ('admin','moderator','read_only')`, rec.ID, rec.Role, actor)
+	if err != nil {
+		return nil, err
+	}
+	if ct.RowsAffected() != 1 {
+		return nil, apperr.Invalid("Rol administrativo inválido.", map[string]string{"role": "Seleccione un rol válido."})
+	}
+	if err := s.audit.RecordTx(ctx, tx, audit.Event{ActorUserID: &actor, Action: "admin.account.created",
+		TargetType: "user", TargetID: rec.ID.String(), Metadata: map[string]any{
+			"kind": "administrative", "role": rec.Role, "username": rec.Username, "result": "created",
+		}, IPHash: ipHash}); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return s.users.GetByID(ctx, rec.ID)
+}
+
+func mapUsernameConflict(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return apperr.Conflict("username_taken", "El nombre de usuario ya está en uso.")
+	}
+	return err
+}
 
 func (s *Service) queryDashboard(ctx context.Context, d *Dashboard) error {
 	return s.poolRef().QueryRow(ctx, `WITH workers AS (

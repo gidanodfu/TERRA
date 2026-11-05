@@ -22,12 +22,14 @@ const userColumns = `
 	COALESCE(u.email,''), u.area_id, COALESCE(a.name,''), COALESCE(a.slug,''),
 	u.position_id, COALESCE(p.name,''), COALESCE(p.slug,''),
 	u.status, u.created_at, u.updated_at, u.last_login_at,
-	COALESCE(array_agg(r.key) FILTER (WHERE r.key IS NOT NULL), '{}') AS roles`
+	COALESCE(array_agg(r.key) FILTER (WHERE r.key IS NOT NULL), '{}') AS roles,
+	COALESCE(MAX(lc.username), ''), COALESCE(BOOL_OR(lc.must_rotate_password), false)`
 
 const userJoins = `
 	FROM users u
 	LEFT JOIN areas a ON a.id = u.area_id
 	LEFT JOIN positions p ON p.id = u.position_id
+	LEFT JOIN local_credentials lc ON lc.user_id = u.id
 	LEFT JOIN user_roles ur ON ur.user_id = u.id
 	LEFT JOIN system_roles r ON r.id = ur.role_id`
 
@@ -53,7 +55,7 @@ func scanUser(row pgx.Row) (*User, error) {
 	var u User
 	err := row.Scan(&u.ID, &u.FirstName, &u.LastName, &u.DisplayName, &u.Email,
 		&u.AreaID, &u.AreaName, &u.AreaSlug, &u.PositionID, &u.PositionName, &u.PositionSlug,
-		&u.Status, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt, &u.Roles)
+		&u.Status, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt, &u.Roles, &u.Username, &u.MustRotatePassword)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apperr.NotFound("Usuario no encontrado.")
@@ -111,6 +113,13 @@ func (r *Repository) CreateGoogleUser(ctx context.Context, email, displayName, s
 		return nil, err
 	}
 	return r.GetByID(ctx, id)
+}
+
+func (r *Repository) UsernameExists(ctx context.Context, username string) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM local_credentials WHERE lower(username)=lower($1))`,
+		username).Scan(&exists)
+	return exists, err
 }
 
 func (r *Repository) TouchIdentity(ctx context.Context, userID uuid.UUID) error {
@@ -174,6 +183,7 @@ type ListFilter struct {
 	AreaID     *uuid.UUID
 	PositionID *uuid.UUID
 	Status     string
+	Role       string
 	Page       int
 	Size       int
 }
@@ -274,16 +284,22 @@ func (r *Repository) ListAdministrative(ctx context.Context, f ListFilter) ([]Us
 		args = append(args, "%"+f.Query+"%")
 		n := len(args)
 		where = append(where, fmt.Sprintf(
-			"(u.display_name ILIKE $%d OR u.email ILIKE $%d)", n, n))
+			"(u.display_name ILIKE $%d OR u.email ILIKE $%d OR lc.username ILIKE $%d)", n, n, n))
 	}
 	if f.Status != "" {
 		args = append(args, f.Status)
 		where = append(where, fmt.Sprintf("u.status = $%d", len(args)))
 	}
+	if f.Role != "" {
+		args = append(args, f.Role)
+		where = append(where, fmt.Sprintf(`EXISTS (
+			SELECT 1 FROM user_roles fr JOIN system_roles fsr ON fsr.id = fr.role_id
+			WHERE fr.user_id = u.id AND fsr.key = $%d)`, len(args)))
+	}
 	whereSQL := strings.Join(where, " AND ")
 
 	var total int
-	if err := r.pool.QueryRow(ctx, "SELECT count(*) FROM users u WHERE "+whereSQL, args...).Scan(&total); err != nil {
+	if err := r.pool.QueryRow(ctx, "SELECT count(*) FROM users u LEFT JOIN local_credentials lc ON lc.user_id=u.id WHERE "+whereSQL, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 

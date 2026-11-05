@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -17,6 +19,9 @@ import (
 	"terra/internal/drive"
 	"terra/internal/organization"
 	"terra/internal/platform/apperr"
+	"terra/internal/platform/password"
+	"terra/internal/platform/rbac"
+	"terra/internal/platform/validate"
 	"terra/internal/users"
 )
 
@@ -54,18 +59,20 @@ type Dashboard struct {
 	RecentAudit       []audit.Event `json:"recent_activity"`
 }
 
-func (s *Service) Dashboard(ctx context.Context) (*Dashboard, error) {
-	d := &Dashboard{}
-	err := s.downloadPoolQuery(ctx, d)
+func (s *Service) Dashboard(ctx context.Context, includeAudit bool) (*Dashboard, error) {
+	d := &Dashboard{RecentAudit: []audit.Event{}}
+	if err := s.downloadPoolQuery(ctx, d); err != nil {
+		return nil, err
+	}
+	if !includeAudit {
+		return d, nil
+	}
+	events, _, err := s.audit.List(ctx, audit.ListFilter{Page: 1, Size: 10})
 	if err != nil {
 		return nil, err
 	}
-	d.RecentAudit, _, err = s.audit.List(ctx, audit.ListFilter{Page: 1, Size: 10})
-	if err != nil {
-		return nil, err
-	}
-	if d.RecentAudit == nil {
-		d.RecentAudit = []audit.Event{}
+	if events != nil {
+		d.RecentAudit = events
 	}
 	return d, nil
 }
@@ -112,6 +119,9 @@ type UpdateUserInput struct {
 }
 
 func (s *Service) UpdateUser(ctx context.Context, actor uuid.UUID, target uuid.UUID, in UpdateUserInput, ipHash string) (*users.User, error) {
+	if err := s.requireActorPermission(ctx, actor, rbac.PermUsersWrite); err != nil {
+		return nil, err
+	}
 	current, err := s.users.GetWorkerByID(ctx, target)
 	if err != nil {
 		return nil, err
@@ -167,18 +177,154 @@ func (s *Service) UpdateUser(ctx context.Context, actor uuid.UUID, target uuid.U
 	return updated, nil
 }
 
-func (s *Service) AdministrativeAccounts(ctx context.Context, f users.ListFilter) ([]users.User, int, error) {
-	list, total, err := s.users.ListAdministrative(ctx, f)
-	if list == nil {
-		list = []users.User{}
+type AdministrativeAccount struct {
+	ID                 uuid.UUID  `json:"id"`
+	FirstName          string     `json:"first_name"`
+	LastName           string     `json:"last_name"`
+	DisplayName        string     `json:"display_name"`
+	Username           string     `json:"username"`
+	Role               string     `json:"role"`
+	Status             string     `json:"status"`
+	CreatedAt          time.Time  `json:"created_at"`
+	LastLoginAt        *time.Time `json:"last_login_at,omitempty"`
+	IsPrincipal        bool       `json:"is_principal"`
+	MustRotatePassword bool       `json:"must_rotate_password"`
+}
+
+func newAdministrativeAccount(u users.User, principalID uuid.UUID, principalResolved bool) AdministrativeAccount {
+	role, _ := rbac.AdministrativeRole(u.Roles)
+	return AdministrativeAccount{
+		ID: u.ID, FirstName: u.FirstName, LastName: u.LastName, DisplayName: u.DisplayName,
+		Username: u.Username, Role: role, Status: string(u.Status), CreatedAt: u.CreatedAt,
+		LastLoginAt: u.LastLoginAt, IsPrincipal: principalResolved && u.ID == principalID,
+		MustRotatePassword: u.MustRotatePassword,
 	}
-	return list, total, err
+}
+
+func (s *Service) AdministrativeAccounts(ctx context.Context, f users.ListFilter) ([]AdministrativeAccount, int, error) {
+	list, total, err := s.users.ListAdministrative(ctx, f)
+	if err != nil {
+		return nil, 0, err
+	}
+	principalID, resolved, err := s.principalAdminID(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	accounts := make([]AdministrativeAccount, 0, len(list))
+	for _, u := range list {
+		accounts = append(accounts, newAdministrativeAccount(u, principalID, resolved))
+	}
+	return accounts, total, nil
+}
+
+type CreateAdministrativeAccountInput struct {
+	Role                 string `json:"role"`
+	FirstName            string `json:"first_name"`
+	LastName             string `json:"last_name"`
+	Username             string `json:"username"`
+	Password             string `json:"password"`
+	PasswordConfirmation string `json:"password_confirmation"`
+}
+
+var usernamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{2,63}$`)
+
+// CreateAdministrativeAccount valida identidad, credenciales y rol, y crea la
+// cuenta completa en una única transacción.
+func (s *Service) CreateAdministrativeAccount(ctx context.Context, actor uuid.UUID,
+	in CreateAdministrativeAccountInput, ipHash string) (*AdministrativeAccount, error) {
+	actorUser, err := s.users.GetByID(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+	if !rbac.HasPermission(actorUser.Roles, rbac.PermAccountsCreate) {
+		return nil, apperr.Forbidden("No tiene permisos para crear cuentas administrativas.")
+	}
+
+	role := strings.ToLower(strings.TrimSpace(in.Role))
+	firstName := strings.TrimSpace(in.FirstName)
+	lastName := strings.TrimSpace(in.LastName)
+	username := strings.ToLower(strings.TrimSpace(in.Username))
+	fields := map[string]string{}
+	if !rbac.IsAdministrativeRole(role) {
+		fields["role"] = "Seleccione un rol administrativo válido."
+	}
+	validate.Required(fields, "first_name", firstName)
+	validate.Required(fields, "last_name", lastName)
+	validate.MaxLen(fields, "first_name", firstName, 100)
+	validate.MaxLen(fields, "last_name", lastName, 100)
+	if username == "" {
+		fields["username"] = "Ingrese un nombre de usuario."
+	} else if !usernamePattern.MatchString(username) {
+		fields["username"] = "Use de 3 a 64 caracteres: letras minúsculas, números, punto, guion o guion bajo."
+	}
+	if in.Password == "" {
+		fields["password"] = "Ingrese una contraseña."
+	} else if err := password.ValidateStrength(in.Password); err != nil {
+		fields["password"] = "La contraseña no cumple la política: " + err.Error() + "."
+	}
+	if in.PasswordConfirmation == "" {
+		fields["password_confirmation"] = "Confirme la contraseña."
+	} else if in.Password != in.PasswordConfirmation {
+		fields["password_confirmation"] = "Las contraseñas no coinciden."
+	}
+	if len(fields) > 0 {
+		return nil, apperr.Invalid("Revise los datos de la cuenta administrativa.", fields)
+	}
+
+	exists, err := s.users.UsernameExists(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, apperr.Conflict("username_taken", "El nombre de usuario ya está en uso.")
+	}
+	hash, err := password.Hash(in.Password)
+	if err != nil {
+		return nil, err
+	}
+	created, err := s.createAdministrativeAccountRecord(ctx, createAdministrativeRecord{
+		ID: uuid.New(), FirstName: firstName, LastName: lastName,
+		DisplayName: firstName + " " + lastName, Username: username,
+		PasswordHash: hash, Role: role,
+	}, actor, ipHash)
+	if err != nil {
+		return nil, err
+	}
+	principalID, resolved, err := s.principalAdminID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	account := newAdministrativeAccount(*created, principalID, resolved)
+	return &account, nil
+}
+
+func (s *Service) requireActorPermission(ctx context.Context, actor uuid.UUID, permission string) error {
+	actorUser, err := s.users.GetByID(ctx, actor)
+	if err != nil {
+		return err
+	}
+	if !rbac.HasPermission(actorUser.Roles, permission) {
+		return apperr.Forbidden("No tiene permisos para esta operación.")
+	}
+	return nil
+}
+
+func (s *Service) accountForUser(ctx context.Context, u *users.User) (*AdministrativeAccount, error) {
+	principalID, resolved, err := s.principalAdminID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	account := newAdministrativeAccount(*u, principalID, resolved)
+	return &account, nil
 }
 
 // UpdateAdministrativeAccount cambia el estado de una cuenta administrativa.
 // Solo el rol admin puede llegar a este caso de uso (guarda de ruta); el
 // administrador principal está protegido y un identificador ausente falla de forma segura.
-func (s *Service) UpdateAdministrativeAccount(ctx context.Context, actor, target uuid.UUID, rawStatus, ipHash string) (*users.User, error) {
+func (s *Service) UpdateAdministrativeAccount(ctx context.Context, actor, target uuid.UUID, rawStatus, ipHash string) (*AdministrativeAccount, error) {
+	if err := s.requireActorPermission(ctx, actor, rbac.PermAccountsWrite); err != nil {
+		return nil, err
+	}
 	status := users.Status(strings.TrimSpace(rawStatus))
 	switch status {
 	case users.StatusActive, users.StatusDisabled:
@@ -229,7 +375,7 @@ func (s *Service) UpdateAdministrativeAccount(ctx context.Context, actor, target
 			"roles":           current.Roles,
 			"result":          "applied",
 		}, IPHash: ipHash})
-	return updated, nil
+	return s.accountForUser(ctx, updated)
 }
 
 func (s *Service) recordAccountEvent(ctx context.Context, actor, target uuid.UUID, action string,

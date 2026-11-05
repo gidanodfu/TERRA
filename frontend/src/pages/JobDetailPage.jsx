@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Ban, RefreshCw, RotateCcw, WifiOff } from 'lucide-react'
 import { useAuth } from '../app/AuthContext'
+import { PERMISSIONS } from '../features/auth/permissions'
 import { api, queryString } from '../services/api'
 import {
   Alert,
@@ -24,7 +25,8 @@ const ACTIVE = ['queued', 'scanning', 'downloading', 'waiting_authorization', 'c
 
 export default function JobDetailPage({ basePath }) {
   const { id } = useParams()
-  const { isAdmin } = useAuth()
+  const { can } = useAuth()
+  const adminView = basePath.startsWith('/app/admin')
   const [job, setJob] = useState(null)
   const [items, setItems] = useState(null)
   const [itemTotal, setItemTotal] = useState(0)
@@ -128,13 +130,13 @@ export default function JobDetailPage({ basePath }) {
                 <WifiOff className="h-4 w-4" /> Sincronización por REST
               </span>
             ) : null}
-            {active ? (
+            {active && (!adminView || can(PERMISSIONS.JOBS_CANCEL)) ? (
               <Button variant="danger" onClick={cancel} disabled={busy || job.status === 'cancel_requested'}>
                 {busy ? <Spinner className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
                 {job.status === 'cancel_requested' ? 'Cancelación solicitada' : 'Cancelar trabajo'}
               </Button>
             ) : null}
-            {isAdmin && ['failed', 'partially_completed'].includes(job.status) ? (
+            {adminView && can(PERMISSIONS.JOBS_RETRY) && ['failed', 'partially_completed'].includes(job.status) ? (
               <Button variant="secondary" onClick={retry} disabled={busy}>
                 <RotateCcw className="h-4 w-4" /> Reintentar fallidos
               </Button>
@@ -151,7 +153,7 @@ export default function JobDetailPage({ basePath }) {
       {job.status === 'waiting_authorization' ? (
         <Alert tone="warning" title="El trabajo está en espera de autorización">
           El propietario del Drive debe reconectar su cuenta de Google Drive y aceptar la política institucional vigente.
-          {isAdmin ? (
+          {adminView ? (
             <>
               {' '}
               <Link className="font-semibold underline" to={`/app/admin/workers/${job.drive_owner_user_id}`}>

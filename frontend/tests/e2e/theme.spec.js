@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { ADMIN_PERMISSIONS } from '../fixtures/permissions'
 
 const longArea = 'Secretaría de Administración y Finanzas Municipal'
 const longPosition = 'Coordinación de Modernización Administrativa, Transparencia y Gobierno Digital'
@@ -77,7 +78,7 @@ function payloadFor(url, getUser) {
   if (path.endsWith('/auth/me')) {
     return {
       user: getUser(),
-      permissions: ['admin.dashboard.read'],
+      permissions: ADMIN_PERMISSIONS,
       must_rotate_password: false,
       pending_profile: false,
     }

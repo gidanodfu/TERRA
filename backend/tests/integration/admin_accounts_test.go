@@ -24,7 +24,9 @@ import (
 	"terra/internal/drive"
 	"terra/internal/organization"
 	"terra/internal/platform/config"
+	"terra/internal/platform/password"
 	"terra/internal/platform/principal"
+	"terra/internal/platform/rbac"
 	"terra/internal/users"
 	"terra/tests/helpers"
 )
@@ -33,6 +35,7 @@ type accountFixture struct {
 	pool         *pgxpool.Pool
 	users        *users.Repository
 	auth         *auth.Service
+	cfg          config.Config
 	adminHandler *admin.Handler
 	userHandler  *users.Handler
 	areaID       uuid.UUID
@@ -96,6 +99,7 @@ func newAccountFixture(t *testing.T) *accountFixture {
 		Env: "development", PublicURL: "http://localhost:8080",
 		SessionCookie: "terra_session", SessionTTL: time.Hour, SessionSecret: strings.Repeat("x", 32),
 	}
+	f.cfg = cfg
 	f.auth = auth.NewService(cfg, auth.NewRepository(pool), f.users, nil, nil, &auth.Turnstile{}, auditRepo)
 	f.adminHandler = admin.NewHandler(adminSvc, "ip-secret")
 	f.userHandler = users.NewHandler(users.NewService(f.users, orgRepo, auditRepo), "ip-secret")
@@ -108,7 +112,7 @@ func (f *accountFixture) identity(t *testing.T, id uuid.UUID) principal.Identity
 	if err != nil {
 		t.Fatalf("identity %s: %v", id, err)
 	}
-	return principal.Identity{ID: u.ID, DisplayName: u.DisplayName, Status: string(u.Status), Roles: u.Roles}
+	return principal.Identity{ID: u.ID, DisplayName: u.DisplayName, Status: string(u.Status), Roles: u.Roles, Permissions: rbac.PermissionsFor(u.Roles)}
 }
 
 func (f *accountFixture) serve(t *testing.T, handler http.Handler, actor uuid.UUID,
@@ -159,6 +163,13 @@ type userListResponse struct {
 	} `json:"pagination"`
 }
 
+type administrativeListResponse struct {
+	Data       []admin.AdministrativeAccount `json:"data"`
+	Pagination struct {
+		Total int `json:"total"`
+	} `json:"pagination"`
+}
+
 func TestWorkersListExcludesAdministrativeAccounts(t *testing.T) {
 	f := newAccountFixture(t)
 
@@ -188,19 +199,42 @@ func TestWorkersListExcludesAdministrativeAccounts(t *testing.T) {
 
 func TestAdministrativeAccountsList(t *testing.T) {
 	f := newAccountFixture(t)
+	password := "ClaveSegura-12345"
+	if rec, _ := f.createAccount(t, f.adminID,
+		accountCreateBody(rbac.RoleModerator, "Listado", "Moderador", "listado-moderador", password, password)); rec.Code != http.StatusCreated {
+		t.Fatalf("crear cuenta para listado: status=%d body=%s", rec.Code, rec.Body.String())
+	}
 
 	rec := f.serve(t, http.HandlerFunc(f.adminHandler.AdministrativeAccounts), f.adminID,
 		http.MethodGet, "/api/v1/admin/accounts?page=1&page_size=50", "", nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("cuentas administrativas: status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	var payload userListResponse
+	var payload administrativeListResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
 		t.Fatal(err)
 	}
+	if strings.Contains(rec.Body.String(), password) || strings.Contains(rec.Body.String(), "$argon2id$") {
+		t.Fatal("el listado administrativo expone credenciales")
+	}
 	found := map[uuid.UUID]bool{}
-	for _, user := range payload.Data {
-		found[user.ID] = true
+	for _, account := range payload.Data {
+		found[account.ID] = true
+		switch account.ID {
+		case f.principalID:
+			if !account.IsPrincipal || account.Role != rbac.RoleAdmin {
+				t.Fatalf("principal mal representado: %+v", account)
+			}
+		case f.adminID:
+			if account.IsPrincipal || account.Role != rbac.RoleAdmin {
+				t.Fatalf("administrador mal representado: %+v", account)
+			}
+		}
+		if account.Username == "listado-moderador" {
+			if account.Role != rbac.RoleModerator || !account.MustRotatePassword || account.Status != "active" {
+				t.Fatalf("cuenta creada mal representada: %+v", account)
+			}
+		}
 	}
 	for _, expected := range []uuid.UUID{f.principalID, f.adminID, f.moderatorID, f.readOnlyID, f.mixedID} {
 		if !found[expected] {
@@ -209,6 +243,32 @@ func TestAdministrativeAccountsList(t *testing.T) {
 	}
 	if found[f.workerID] || found[f.unknownID] {
 		t.Fatal("el listado administrativo incluyó un trabajador o un rol desconocido")
+	}
+
+	search := f.serve(t, http.HandlerFunc(f.adminHandler.AdministrativeAccounts), f.adminID,
+		http.MethodGet, "/api/v1/admin/accounts?page=1&page_size=50&q=listado-moderador", "", nil)
+	var searchPayload administrativeListResponse
+	if err := json.Unmarshal(search.Body.Bytes(), &searchPayload); err != nil {
+		t.Fatal(err)
+	}
+	if searchPayload.Pagination.Total != 1 || len(searchPayload.Data) != 1 ||
+		searchPayload.Data[0].Username != "listado-moderador" {
+		t.Fatalf("búsqueda por usuario incorrecta: %+v", searchPayload)
+	}
+
+	roleFilter := f.serve(t, http.HandlerFunc(f.adminHandler.AdministrativeAccounts), f.adminID,
+		http.MethodGet, "/api/v1/admin/accounts?page=1&page_size=50&role=moderator", "", nil)
+	var rolePayload administrativeListResponse
+	if err := json.Unmarshal(roleFilter.Body.Bytes(), &rolePayload); err != nil {
+		t.Fatal(err)
+	}
+	if len(rolePayload.Data) == 0 {
+		t.Fatal("el filtro por rol no devolvió moderadores")
+	}
+	for _, account := range rolePayload.Data {
+		if account.Role != rbac.RoleModerator {
+			t.Fatalf("el filtro por rol devolvió %s", account.Role)
+		}
 	}
 }
 
@@ -323,7 +383,7 @@ func TestAdministrativeProfileCannotAssignOrganization(t *testing.T) {
 
 func TestWorkerCannotCallAdministrativeEndpoints(t *testing.T) {
 	f := newAccountFixture(t)
-	guarded := f.auth.RequireAdmin(http.HandlerFunc(f.adminHandler.UpdateUser))
+	guarded := f.auth.RequirePermission(rbac.PermUsersWrite)(http.HandlerFunc(f.adminHandler.UpdateUser))
 	body := fmt.Sprintf(`{"area_id":%q,"position_id":%q,"status":"active"}`,
 		f.areaID.String(), f.positionID.String())
 	rec := f.serve(t, guarded, f.workerID, http.MethodPatch,
@@ -335,7 +395,7 @@ func TestWorkerCannotCallAdministrativeEndpoints(t *testing.T) {
 
 func TestAdministrativeStatusAuthorization(t *testing.T) {
 	f := newAccountFixture(t)
-	guarded := f.auth.RequireAdmin(http.HandlerFunc(f.adminHandler.UpdateAdministrativeAccount))
+	guarded := f.auth.RequirePermission(rbac.PermAccountsWrite)(http.HandlerFunc(f.adminHandler.UpdateAdministrativeAccount))
 	body := `{"status":"disabled"}`
 
 	for _, actor := range []uuid.UUID{f.moderatorID, f.readOnlyID, f.workerID} {
@@ -492,5 +552,255 @@ func TestBootstrapDoesNotRecordNonAdminCredential(t *testing.T) {
 	}
 	if count != 0 {
 		t.Fatalf("se registró un principal sin rol admin: %d filas", count)
+	}
+}
+
+func accountCreateBody(role, firstName, lastName, username, password, confirmation string) string {
+	return fmt.Sprintf(`{"role":%q,"first_name":%q,"last_name":%q,"username":%q,"password":%q,"password_confirmation":%q}`,
+		role, firstName, lastName, username, password, confirmation)
+}
+
+func (f *accountFixture) createAccount(t *testing.T, actor uuid.UUID, body string) (*httptest.ResponseRecorder, admin.AdministrativeAccount) {
+	t.Helper()
+	rec := f.serve(t, http.HandlerFunc(f.adminHandler.CreateAdministrativeAccount), actor,
+		http.MethodPost, "/api/v1/admin/accounts", body, nil)
+	var account admin.AdministrativeAccount
+	if rec.Code == http.StatusCreated {
+		if err := json.Unmarshal(rec.Body.Bytes(), &account); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return rec, account
+}
+
+func TestAdminCreatesAdministrativeAccounts(t *testing.T) {
+	f := newAccountFixture(t)
+	password := "ClaveSegura-12345"
+	for _, role := range []string{rbac.RoleAdmin, rbac.RoleModerator, rbac.RoleReadOnly} {
+		username := "nuevo-" + role
+		rec, account := f.createAccount(t, f.adminID,
+			accountCreateBody(role, "Nombre", "Apellido", username, password, password))
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("crear %s: status=%d body=%s", role, rec.Code, rec.Body.String())
+		}
+		if account.ID == uuid.Nil || account.Username != username || account.Role != role ||
+			account.Status != "active" || account.IsPrincipal || !account.MustRotatePassword {
+			t.Fatalf("respuesta de %s incorrecta: %+v", role, account)
+		}
+		if strings.Contains(rec.Body.String(), password) || strings.Contains(rec.Body.String(), "$argon2id$") {
+			t.Fatalf("la respuesta de %s expone credenciales", role)
+		}
+
+		var areaID, positionID *uuid.UUID
+		if err := f.pool.QueryRow(context.Background(),
+			`SELECT area_id, position_id FROM users WHERE id=$1`, account.ID).Scan(&areaID, &positionID); err != nil {
+			t.Fatal(err)
+		}
+		if areaID != nil || positionID != nil {
+			t.Fatalf("la cuenta %s recibió área o cargo", role)
+		}
+		if identities := f.count(t, `SELECT count(*) FROM auth_identities WHERE user_id=$1`, account.ID); identities != 0 {
+			t.Fatalf("la cuenta %s recibió identidad Google", role)
+		}
+		if roles := f.count(t, `SELECT count(*) FROM user_roles WHERE user_id=$1`, account.ID); roles != 1 {
+			t.Fatalf("la cuenta %s tiene %d roles", role, roles)
+		}
+		var storedRole, hash string
+		var mustRotate bool
+		if err := f.pool.QueryRow(context.Background(), `SELECT r.key, lc.password_hash, lc.must_rotate_password
+			FROM user_roles ur JOIN system_roles r ON r.id=ur.role_id
+			JOIN local_credentials lc ON lc.user_id=ur.user_id
+			WHERE ur.user_id=$1`, account.ID).Scan(&storedRole, &hash, &mustRotate); err != nil {
+			t.Fatal(err)
+		}
+		if storedRole != role || !mustRotate || !strings.HasPrefix(hash, "$argon2id$") {
+			t.Fatalf("persistencia de %s incorrecta: role=%s must_rotate=%v hash=%s", role, storedRole, mustRotate, hash[:12])
+		}
+		var metadata string
+		if err := f.pool.QueryRow(context.Background(), `SELECT metadata_json::text FROM audit_events
+			WHERE action='admin.account.created' AND target_id=$1`, account.ID.String()).Scan(&metadata); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(metadata, password) {
+			t.Fatalf("la auditoría de %s expone la contraseña", role)
+		}
+	}
+}
+
+func TestAdministrativeAccountCreationAuthorization(t *testing.T) {
+	f := newAccountFixture(t)
+	guarded := f.auth.RequirePermission(rbac.PermAccountsCreate)(http.HandlerFunc(f.adminHandler.CreateAdministrativeAccount))
+	body := accountCreateBody(rbac.RoleModerator, "No", "Permitido", "sin-permiso", "ClaveSegura-12345", "ClaveSegura-12345")
+	for _, actor := range []uuid.UUID{f.moderatorID, f.readOnlyID, f.workerID} {
+		rec := f.serve(t, guarded, actor, http.MethodPost, "/api/v1/admin/accounts", body, nil)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("actor %s creó una cuenta: status=%d body=%s", actor, rec.Code, rec.Body.String())
+		}
+	}
+	// La comprobación del servicio también rechaza aunque se omita el middleware.
+	for _, actor := range []uuid.UUID{f.moderatorID, f.readOnlyID, f.workerID} {
+		rec, _ := f.createAccount(t, actor, body)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("servicio permitió crear a %s: status=%d body=%s", actor, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+func TestAdministrativeAccountCreationValidation(t *testing.T) {
+	f := newAccountFixture(t)
+	password := "ClaveSegura-12345"
+	cases := []struct {
+		name string
+		body string
+		code int
+	}{
+		{"rol desconocido", accountCreateBody("user", "A", "B", "rol-malo", password, password), http.StatusUnprocessableEntity},
+		{"nombre vacío", accountCreateBody(rbac.RoleModerator, " ", "B", "nombre-malo", password, password), http.StatusUnprocessableEntity},
+		{"apellido vacío", accountCreateBody(rbac.RoleModerator, "A", " ", "apellido-malo", password, password), http.StatusUnprocessableEntity},
+		{"usuario inválido", accountCreateBody(rbac.RoleModerator, "A", "B", "Usuario Inválido", password, password), http.StatusUnprocessableEntity},
+		{"contraseña corta", accountCreateBody(rbac.RoleModerator, "A", "B", "clave-corta", "corta", "corta"), http.StatusUnprocessableEntity},
+		{"confirmación distinta", accountCreateBody(rbac.RoleModerator, "A", "B", "confirmacion-mala", password, password+"x"), http.StatusUnprocessableEntity},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec, _ := f.createAccount(t, f.adminID, tc.body)
+			if rec.Code != tc.code {
+				t.Fatalf("status=%d, se esperaba %d: %s", rec.Code, tc.code, rec.Body.String())
+			}
+		})
+	}
+
+	body := accountCreateBody(rbac.RoleModerator, "Duplicado", "Usuario", "duplicado", password, password)
+	if rec, _ := f.createAccount(t, f.adminID, body); rec.Code != http.StatusCreated {
+		t.Fatalf("creación inicial: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	duplicate := accountCreateBody(rbac.RoleModerator, "Duplicado", "Usuario", "DUPLICADO", password, password)
+	if rec, _ := f.createAccount(t, f.adminID, duplicate); rec.Code != http.StatusConflict {
+		t.Fatalf("usuario duplicado: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if users := f.count(t, `SELECT count(*) FROM users WHERE display_name='Duplicado Usuario'`); users != 1 {
+		t.Fatalf("la creación duplicada dejó un usuario huérfano: %d", users)
+	}
+}
+
+func TestAdministrativeLoginForAllRoles(t *testing.T) {
+	f := newAccountFixture(t)
+	turnstile := newTurnstileFixture(t, 0, map[string]any{
+		"success": true, "action": "admin_login", "hostname": "localhost",
+	})
+	loginSvc := auth.NewService(f.cfg, auth.NewRepository(f.pool), f.users, nil, nil,
+		turnstile.turnstile, audit.NewRepository(f.pool))
+	plainPassword := "ClaveSegura-12345"
+
+	for _, role := range []string{rbac.RoleAdmin, rbac.RoleModerator, rbac.RoleReadOnly} {
+		username := "login-" + role
+		if rec, _ := f.createAccount(t, f.adminID,
+			accountCreateBody(role, "Login", role, username, plainPassword, plainPassword)); rec.Code != http.StatusCreated {
+			t.Fatalf("crear %s: status=%d body=%s", role, rec.Code, rec.Body.String())
+		}
+		result, err := loginSvc.AdminLogin(context.Background(), "192.0.2.60", username, plainPassword, "token-ok", "integration-test")
+		if err != nil {
+			t.Fatalf("login %s: %v", role, err)
+		}
+		if result.User == nil || len(result.User.Roles) != 1 || result.User.Roles[0] != role {
+			t.Fatalf("login %s devolvió roles %v", role, result.User.Roles)
+		}
+		if !result.MustRotate {
+			t.Fatalf("login %s no exige cambio de contraseña", role)
+		}
+		if !rbac.HasPermission(result.User.Roles, rbac.PermDashboardRead) {
+			t.Fatalf("login %s sin permiso de dashboard", role)
+		}
+		if role == rbac.RoleReadOnly {
+			rec := f.serve(t, http.HandlerFunc(f.adminHandler.UpdateAdministrativeAccount), f.adminID,
+				http.MethodPatch, "/api/v1/admin/accounts/"+result.User.ID.String(), `{"status":"disabled"}`,
+				map[string]string{"id": result.User.ID.String()})
+			if rec.Code != http.StatusOK {
+				t.Fatalf("desactivar para login: status=%d body=%s", rec.Code, rec.Body.String())
+			}
+			if _, err := loginSvc.AdminLogin(context.Background(), "192.0.2.62", username, plainPassword, "token-ok", "integration-test"); err == nil {
+				t.Fatalf("el login %s aceptó una cuenta desactivada", role)
+			}
+		}
+	}
+
+	workerPassword := "ClaveTrabajador-12345"
+	hash, err := password.Hash(workerPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(context.Background(), `INSERT INTO local_credentials
+		(user_id, username, password_hash, must_rotate_password) VALUES ($1,'worker-login',$2,false)`,
+		f.workerID, hash); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loginSvc.AdminLogin(context.Background(), "192.0.2.61", "worker-login", workerPassword, "token-ok", "integration-test"); err == nil {
+		t.Fatal("el login administrativo aceptó a un trabajador")
+	}
+}
+
+func TestPermissionMiddlewareByRole(t *testing.T) {
+	f := newAccountFixture(t)
+	allow := func(permission string, actor uuid.UUID) int {
+		handler := f.auth.RequirePermission(permission)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		return f.serve(t, handler, actor, http.MethodGet, "/api/v1/admin/test", "", nil).Code
+	}
+
+	allowed := map[uuid.UUID][]string{
+		f.adminID:     {rbac.PermAccountsCreate, rbac.PermPolicyWrite, rbac.PermFilesRead},
+		f.moderatorID: {rbac.PermUsersWrite, rbac.PermJobsRead},
+		f.readOnlyID:  {rbac.PermUsersRead, rbac.PermStorageRead, rbac.PermAuditRead},
+	}
+	for actor, permissions := range allowed {
+		for _, permission := range permissions {
+			if code := allow(permission, actor); code != http.StatusNoContent {
+				t.Fatalf("actor %s permiso %s: status=%d", actor, permission, code)
+			}
+		}
+	}
+
+	denied := map[uuid.UUID][]string{
+		f.moderatorID: {rbac.PermAccountsCreate, rbac.PermAccountsRead, rbac.PermPolicyWrite, rbac.PermAuditRead, rbac.PermFilesRead},
+		f.readOnlyID:  {rbac.PermUsersWrite, rbac.PermAccountsRead, rbac.PermPolicyWrite, rbac.PermFilesRead},
+		f.workerID:    {rbac.PermDashboardRead, rbac.PermUsersWrite, rbac.PermAccountsCreate},
+	}
+	for actor, permissions := range denied {
+		for _, permission := range permissions {
+			if code := allow(permission, actor); code != http.StatusForbidden {
+				t.Fatalf("actor %s permiso %s: status=%d, se esperaba 403", actor, permission, code)
+			}
+		}
+	}
+}
+
+func TestDashboardHidesAuditFromModerator(t *testing.T) {
+	f := newAccountFixture(t)
+	audit.NewRepository(f.pool).Record(context.Background(), audit.Event{
+		ActorUserID: &f.adminID, Action: "test.dashboard_audit", TargetType: "test", TargetID: "x",
+	})
+
+	moderatorRec := f.serve(t, http.HandlerFunc(f.adminHandler.Dashboard), f.moderatorID,
+		http.MethodGet, "/api/v1/admin/dashboard", "", nil)
+	if moderatorRec.Code != http.StatusOK {
+		t.Fatalf("dashboard moderador: status=%d body=%s", moderatorRec.Code, moderatorRec.Body.String())
+	}
+	var moderatorDashboard admin.Dashboard
+	if err := json.Unmarshal(moderatorRec.Body.Bytes(), &moderatorDashboard); err != nil {
+		t.Fatal(err)
+	}
+	if len(moderatorDashboard.RecentAudit) != 0 {
+		t.Fatalf("el moderador recibió auditoría en el dashboard: %+v", moderatorDashboard.RecentAudit)
+	}
+
+	adminRec := f.serve(t, http.HandlerFunc(f.adminHandler.Dashboard), f.adminID,
+		http.MethodGet, "/api/v1/admin/dashboard", "", nil)
+	var adminDashboard admin.Dashboard
+	if err := json.Unmarshal(adminRec.Body.Bytes(), &adminDashboard); err != nil {
+		t.Fatal(err)
+	}
+	if len(adminDashboard.RecentAudit) == 0 {
+		t.Fatal("el administrador no recibió la actividad de auditoría")
 	}
 }

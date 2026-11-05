@@ -18,6 +18,7 @@ type Identity struct {
 	PositionID  *uuid.UUID `json:"position_id,omitempty"`
 	Status      string     `json:"status"`
 	Roles       []string   `json:"roles"`
+	Permissions []string   `json:"-"`
 }
 
 func (i Identity) HasRole(role string) bool {
@@ -32,6 +33,15 @@ func (i Identity) HasRole(role string) bool {
 func (i Identity) HasAnyRole(roles ...string) bool {
 	for _, role := range roles {
 		if i.HasRole(role) {
+			return true
+		}
+	}
+	return false
+}
+
+func (i Identity) Can(permission string) bool {
+	for _, p := range i.Permissions {
+		if p == permission {
 			return true
 		}
 	}

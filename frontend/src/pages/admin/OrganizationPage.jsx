@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Building2, Pencil, Plus } from 'lucide-react'
 import { api } from '../../services/api'
+import { useAuth } from '../../app/AuthContext'
+import { PERMISSIONS } from '../../features/auth/permissions'
 import {
   Alert,
   Button,
@@ -17,6 +19,8 @@ import {
 } from '../../components/ui'
 
 export default function OrganizationPage() {
+  const { can } = useAuth()
+  const canWrite = can(PERMISSIONS.ORGANIZATION_WRITE)
   const [areas, setAreas] = useState(null)
   const [selectedArea, setSelectedArea] = useState(null)
   const [positions, setPositions] = useState(null)
@@ -109,11 +113,11 @@ export default function OrganizationPage() {
       <PageHeader
         title="Áreas y cargos"
         description="Catálogo organizativo municipal. Los cargos pertenecen siempre a un área y nunca otorgan permisos de sistema."
-        actions={
+        actions={canWrite ? (
           <Button onClick={() => setAreaModal({ name: '', status: 'active' })}>
             <Plus className="h-4 w-4" /> Nueva área
           </Button>
-        }
+        ) : null}
       />
 
       {error ? <Alert tone="error" onClose={() => setError('')}>{error}</Alert> : null}
@@ -145,14 +149,16 @@ export default function OrganizationPage() {
                         {area.status === 'active' ? 'Activa' : 'Inactiva'} · {area.position_count} cargos · {area.user_count} trabajadores
                       </p>
                     </button>
-                    <button
-                      type="button"
-                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                      onClick={() => setAreaModal({ id: area.id, name: area.name, status: area.status })}
-                      aria-label={`Editar ${area.name}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
+                    {canWrite ? (
+                      <button
+                        type="button"
+                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        onClick={() => setAreaModal({ id: area.id, name: area.name, status: area.status })}
+                        aria-label={`Editar ${area.name}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -167,13 +173,15 @@ export default function OrganizationPage() {
                 <h2 className="font-semibold text-slate-900">Cargos</h2>
                 <p className="text-xs text-slate-500">{selectedArea ? selectedArea.name : 'Seleccione un área'}</p>
               </div>
-              <Button
-                variant="secondary"
-                onClick={() => setPositionModal({ name: '', status: 'active' })}
-                disabled={!selectedArea}
-              >
-                <Plus className="h-4 w-4" /> Nuevo cargo
-              </Button>
+              {canWrite ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => setPositionModal({ name: '', status: 'active' })}
+                  disabled={!selectedArea}
+                >
+                  <Plus className="h-4 w-4" /> Nuevo cargo
+                </Button>
+              ) : null}
             </div>
             {!positions ? (
               <LoadingBlock />
@@ -189,14 +197,16 @@ export default function OrganizationPage() {
                       <p className="truncate text-sm font-medium text-slate-800">{position.name}</p>
                       <p className="text-xs text-slate-500">{position.status === 'active' ? 'Activo' : 'Inactivo'}</p>
                     </div>
-                    <button
-                      type="button"
-                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                      onClick={() => setPositionModal({ id: position.id, name: position.name, status: position.status })}
-                      aria-label={`Editar ${position.name}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
+                    {canWrite ? (
+                      <button
+                        type="button"
+                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        onClick={() => setPositionModal({ id: position.id, name: position.name, status: position.status })}
+                        aria-label={`Editar ${position.name}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    ) : null}
                   </li>
                 ))}
               </ul>

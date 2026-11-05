@@ -47,10 +47,10 @@ Resultados:
 - Backend unit + `go vet`: correcto.
 - Backend integration contra `terra_test`: correcto (migraciones, FK compuesta,
   cola/lease/cancelación/idempotencia, sesiones/CSRF, auditoría).
-- Frontend unit: 18 pruebas correctas.
-- Frontend integration: 8 pruebas correctas.
+- Frontend unit: 20 pruebas correctas.
+- Frontend integration: 16 pruebas correctas.
 - Frontend lint/build/coverage: correcto.
-- E2E Playwright: 37 pruebas correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, reset Turnstile, login, rutas legales, 404, Inter, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
+- E2E Playwright: 41 pruebas correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, reset Turnstile, login, RBAC y cuentas administrativas, rutas legales, 404, Inter, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
 - `./terra test all`: correcto.
 
 ### Infraestructura local

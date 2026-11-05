@@ -112,6 +112,13 @@ func newAdminLoginFixture(t *testing.T, turnstile *auth.Turnstile) *adminLoginFi
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := pool.Exec(context.Background(), `DELETE FROM user_roles WHERE user_id=$1`, userID); err != nil {
+		t.Fatalf("reset roles: %v", err)
+	}
+	if _, err := pool.Exec(context.Background(), `INSERT INTO user_roles (user_id, role_id)
+		SELECT $1, id FROM system_roles WHERE key='admin'`, userID); err != nil {
+		t.Fatalf("seed admin role: %v", err)
+	}
 	if _, err := pool.Exec(context.Background(), `INSERT INTO local_credentials
 		(user_id, username, password_hash, must_rotate_password) VALUES ($1,$2,$3,false)`,
 		userID, "admin-test", hash); err != nil {

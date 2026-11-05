@@ -20,6 +20,7 @@ import (
 	"terra/internal/platform/httpx"
 	"terra/internal/platform/principal"
 	"terra/internal/platform/ratelimit"
+	"terra/internal/platform/rbac"
 	"terra/internal/users"
 )
 
@@ -58,6 +59,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 	mux.HandleFunc("POST /api/v1/auth/admin/login", h.Auth.AdminLogin)
 
 	adminOpsLimiter := ratelimit.New(240, time.Minute)
+	accountCreateLimiter := ratelimit.New(10, time.Minute)
 	jobCreateLimiter := ratelimit.New(10, time.Minute)
 	jobReadLimiter := ratelimit.New(120, time.Minute)
 	fileReadLimiter := ratelimit.New(120, time.Minute)
@@ -81,8 +83,10 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 
 	requireAuth := func(next http.Handler) http.Handler { return h.Auth.RequireAuth(next) }
 	requireActive := func(next http.Handler) http.Handler { return h.Auth.RequireActive(next) }
-	requireAdmin := func(next http.Handler) http.Handler {
-		return h.Auth.RequireAdmin(limited(adminOpsLimiter, "admin")(next))
+	requirePermission := func(permission string) func(http.Handler) http.Handler {
+		return func(next http.Handler) http.Handler {
+			return h.Auth.RequirePermission(permission)(limited(adminOpsLimiter, "admin:"+permission)(next))
+		}
 	}
 
 	// --- sesión y perfil propio ---
@@ -108,40 +112,62 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 	mux.Handle("GET /api/v1/files/{id}/content", requireAuth(requireActive(limited(fileReadLimiter, "files")(http.HandlerFunc(h.Download.FileContent)))))
 
 	// --- administración ---
-	mux.Handle("GET /api/v1/admin/dashboard", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.Dashboard))))
+	mux.Handle("GET /api/v1/admin/dashboard",
+		requireAuth(requirePermission(rbac.PermDashboardRead)(http.HandlerFunc(h.Admin.Dashboard))))
 
-	mux.Handle("GET /api/v1/admin/users", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.Users))))
-	mux.Handle("GET /api/v1/admin/users/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.User))))
-	mux.Handle("PATCH /api/v1/admin/users/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.UpdateUser))))
+	mux.Handle("GET /api/v1/admin/users",
+		requireAuth(requirePermission(rbac.PermUsersRead)(http.HandlerFunc(h.Admin.Users))))
+	mux.Handle("GET /api/v1/admin/users/{id}",
+		requireAuth(requirePermission(rbac.PermUsersRead)(http.HandlerFunc(h.Admin.User))))
+	mux.Handle("PATCH /api/v1/admin/users/{id}",
+		requireAuth(requirePermission(rbac.PermUsersWrite)(http.HandlerFunc(h.Admin.UpdateUser))))
 
-	mux.Handle("GET /api/v1/admin/accounts", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.AdministrativeAccounts))))
-	mux.Handle("PATCH /api/v1/admin/accounts/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.UpdateAdministrativeAccount))))
+	mux.Handle("GET /api/v1/admin/accounts",
+		requireAuth(requirePermission(rbac.PermAccountsRead)(http.HandlerFunc(h.Admin.AdministrativeAccounts))))
+	mux.Handle("POST /api/v1/admin/accounts",
+		requireAuth(requirePermission(rbac.PermAccountsCreate)(limited(accountCreateLimiter, "account-create")(
+			http.HandlerFunc(h.Admin.CreateAdministrativeAccount)))))
+	mux.Handle("PATCH /api/v1/admin/accounts/{id}",
+		requireAuth(requirePermission(rbac.PermAccountsWrite)(http.HandlerFunc(h.Admin.UpdateAdministrativeAccount))))
 
-	mux.Handle("GET /api/v1/admin/areas", requireAuth(requireAdmin(http.HandlerFunc(h.Org.AdminAreas))))
-	mux.Handle("POST /api/v1/admin/areas", requireAuth(requireAdmin(http.HandlerFunc(h.Org.CreateArea))))
-	mux.Handle("PATCH /api/v1/admin/areas/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Org.UpdateArea))))
-	mux.Handle("GET /api/v1/admin/areas/{areaId}/positions", requireAuth(requireAdmin(http.HandlerFunc(h.Org.AdminPositions))))
-	mux.Handle("POST /api/v1/admin/areas/{areaId}/positions", requireAuth(requireAdmin(http.HandlerFunc(h.Org.CreatePosition))))
-	mux.Handle("PATCH /api/v1/admin/positions/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Org.UpdatePosition))))
+	mux.Handle("GET /api/v1/admin/areas",
+		requireAuth(requirePermission(rbac.PermOrganizationRead)(http.HandlerFunc(h.Org.AdminAreas))))
+	mux.Handle("POST /api/v1/admin/areas",
+		requireAuth(requirePermission(rbac.PermOrganizationWrite)(http.HandlerFunc(h.Org.CreateArea))))
+	mux.Handle("PATCH /api/v1/admin/areas/{id}",
+		requireAuth(requirePermission(rbac.PermOrganizationWrite)(http.HandlerFunc(h.Org.UpdateArea))))
+	mux.Handle("GET /api/v1/admin/areas/{areaId}/positions",
+		requireAuth(requirePermission(rbac.PermOrganizationRead)(http.HandlerFunc(h.Org.AdminPositions))))
+	mux.Handle("POST /api/v1/admin/areas/{areaId}/positions",
+		requireAuth(requirePermission(rbac.PermOrganizationWrite)(http.HandlerFunc(h.Org.CreatePosition))))
+	mux.Handle("PATCH /api/v1/admin/positions/{id}",
+		requireAuth(requirePermission(rbac.PermOrganizationWrite)(http.HandlerFunc(h.Org.UpdatePosition))))
 
 	mux.Handle("GET /api/v1/admin/users/{userId}/drive/connection",
-		requireAuth(requireAdmin(http.HandlerFunc(h.Drive.AdminConnection))))
+		requireAuth(requirePermission(rbac.PermDriveRead)(http.HandlerFunc(h.Drive.AdminConnection))))
 	mux.Handle("GET /api/v1/admin/users/{userId}/drive/folders",
-		requireAuth(requireAdmin(limited(driveBrowseLimiter, "drive-browse")(http.HandlerFunc(h.Drive.AdminFolders)))))
+		requireAuth(requirePermission(rbac.PermDriveBrowse)(limited(driveBrowseLimiter, "drive-browse")(
+			http.HandlerFunc(h.Drive.AdminFolders)))))
 	mux.Handle("GET /api/v1/admin/drive-connections",
-		requireAuth(requireAdmin(http.HandlerFunc(h.Drive.AdminConnections))))
-	mux.Handle("POST /api/v1/admin/policies", requireAuth(requireAdmin(http.HandlerFunc(h.Drive.PublishPolicy))))
+		requireAuth(requirePermission(rbac.PermDriveRead)(http.HandlerFunc(h.Drive.AdminConnections))))
+	mux.Handle("POST /api/v1/admin/policies",
+		requireAuth(requirePermission(rbac.PermPolicyWrite)(http.HandlerFunc(h.Drive.PublishPolicy))))
 
 	mux.Handle("POST /api/v1/admin/users/{userId}/download-jobs",
-		requireAuth(requireAdmin(limited(jobCreateLimiter, "job-create")(http.HandlerFunc(h.Download.AdminCreate)))))
-	mux.Handle("GET /api/v1/admin/download-jobs", requireAuth(requireAdmin(http.HandlerFunc(h.Download.List))))
-	mux.Handle("GET /api/v1/admin/download-jobs/{id}", requireAuth(requireAdmin(http.HandlerFunc(h.Download.Get))))
+		requireAuth(requirePermission(rbac.PermJobsCreate)(limited(jobCreateLimiter, "job-create")(
+			http.HandlerFunc(h.Download.AdminCreate)))))
+	mux.Handle("GET /api/v1/admin/download-jobs",
+		requireAuth(requirePermission(rbac.PermJobsRead)(http.HandlerFunc(h.Download.List))))
+	mux.Handle("GET /api/v1/admin/download-jobs/{id}",
+		requireAuth(requirePermission(rbac.PermJobsRead)(http.HandlerFunc(h.Download.Get))))
 	mux.Handle("POST /api/v1/admin/download-jobs/{id}/cancel",
-		requireAuth(requireAdmin(http.HandlerFunc(h.Download.Cancel))))
+		requireAuth(requirePermission(rbac.PermJobsCancel)(http.HandlerFunc(h.Download.Cancel))))
 	mux.Handle("POST /api/v1/download-jobs/{id}/retry-failed",
-		requireAuth(requireAdmin(http.HandlerFunc(h.Download.Retry))))
-	mux.Handle("GET /api/v1/admin/storage", requireAuth(requireAdmin(http.HandlerFunc(h.Download.AdminStorage))))
-	mux.Handle("GET /api/v1/admin/audit-events", requireAuth(requireAdmin(http.HandlerFunc(h.Admin.AuditEvents))))
+		requireAuth(requirePermission(rbac.PermJobsRetry)(http.HandlerFunc(h.Download.Retry))))
+	mux.Handle("GET /api/v1/admin/storage",
+		requireAuth(requirePermission(rbac.PermStorageRead)(http.HandlerFunc(h.Download.AdminStorage))))
+	mux.Handle("GET /api/v1/admin/audit-events",
+		requireAuth(requirePermission(rbac.PermAuditRead)(http.HandlerFunc(h.Admin.AuditEvents))))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusNotFound, map[string]any{

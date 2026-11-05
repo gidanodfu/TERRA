@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { ADMIN_PERMISSIONS, WORKER_PERMISSIONS } from '../fixtures/permissions'
 
 test.use({ colorScheme: 'light' })
 
@@ -100,7 +101,7 @@ function payloadFor(url, getUser) {
   if (path.endsWith('/auth/me')) {
     return {
       user,
-      permissions: ['admin.dashboard.read'],
+      permissions: user.roles?.includes('admin') ? ADMIN_PERMISSIONS : WORKER_PERMISSIONS,
       must_rotate_password: false,
       pending_profile: false,
     }

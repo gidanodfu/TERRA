@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { ADMIN_PERMISSIONS } from '../fixtures/permissions'
 
 const adminUser = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -63,7 +64,7 @@ test('contraseña incorrecta reinicia Turnstile y el segundo intento usa un toke
         contentType: 'application/json',
         body: JSON.stringify({
           user: adminUser,
-          permissions: ['admin.dashboard.read'],
+          permissions: ADMIN_PERMISSIONS,
           must_rotate_password: false,
           pending_profile: false,
         }),

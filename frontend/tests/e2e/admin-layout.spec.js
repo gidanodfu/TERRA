@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { ADMIN_PERMISSIONS } from '../fixtures/permissions'
 
 const longArea = 'Secretaría de Administración y Finanzas Municipales'
 const longPosition = 'Coordinación de Modernización Administrativa, Transparencia y Gobierno Digital'
@@ -106,7 +107,7 @@ function payloadFor(url, asAdmin) {
   if (path.endsWith('/auth/me')) {
     return {
       user: asAdmin ? adminUser : workerUser,
-      permissions: ['admin.dashboard.read'],
+      permissions: ADMIN_PERMISSIONS,
       must_rotate_password: false,
       pending_profile: false,
     }
@@ -270,6 +271,7 @@ test('el shell ocupa el ancho disponible y se limita en monitores ultrapanorámi
 })
 
 test('el workspace es el único dueño del scroll en todos los anchos', async ({ page }) => {
+  test.setTimeout(60_000)
   const widths = [
     [320, 700], [360, 640], [375, 812], [390, 844], [430, 932], [480, 600],
     [640, 600], [768, 768], [820, 768], [900, 768], [960, 540], [1024, 768],

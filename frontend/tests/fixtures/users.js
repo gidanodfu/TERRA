@@ -1,3 +1,5 @@
+import { ADMIN_PERMISSIONS } from './permissions'
+
 export const adminUser = {
   id: '11111111-1111-4111-8111-111111111111',
   first_name: 'Ada',
@@ -22,7 +24,7 @@ export const workerUser = {
 
 export const meResponse = {
   user: adminUser,
-  permissions: ['admin.dashboard.read', 'admin.users.read'],
+  permissions: ADMIN_PERMISSIONS,
   must_rotate_password: false,
   pending_profile: false,
 }

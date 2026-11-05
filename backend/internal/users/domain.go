@@ -26,22 +26,24 @@ const (
 )
 
 type User struct {
-	ID           uuid.UUID  `json:"id"`
-	FirstName    string     `json:"first_name"`
-	LastName     string     `json:"last_name"`
-	DisplayName  string     `json:"display_name"`
-	Email        string     `json:"email,omitempty"`
-	AreaID       *uuid.UUID `json:"area_id,omitempty"`
-	AreaName     string     `json:"area_name,omitempty"`
-	AreaSlug     string     `json:"-"`
-	PositionID   *uuid.UUID `json:"position_id,omitempty"`
-	PositionName string     `json:"position_name,omitempty"`
-	PositionSlug string     `json:"-"`
-	Status       Status     `json:"status"`
-	Roles        []string   `json:"roles"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
+	ID                 uuid.UUID  `json:"id"`
+	FirstName          string     `json:"first_name"`
+	LastName           string     `json:"last_name"`
+	DisplayName        string     `json:"display_name"`
+	Email              string     `json:"email,omitempty"`
+	AreaID             *uuid.UUID `json:"area_id,omitempty"`
+	AreaName           string     `json:"area_name,omitempty"`
+	AreaSlug           string     `json:"-"`
+	PositionID         *uuid.UUID `json:"position_id,omitempty"`
+	PositionName       string     `json:"position_name,omitempty"`
+	PositionSlug       string     `json:"-"`
+	Status             Status     `json:"status"`
+	Roles              []string   `json:"roles"`
+	Username           string     `json:"username,omitempty"`
+	MustRotatePassword bool       `json:"must_rotate_password,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	LastLoginAt        *time.Time `json:"last_login_at,omitempty"`
 }
 
 // HasRole y los helpers de clasificación centralizan la separación de cuentas. Un

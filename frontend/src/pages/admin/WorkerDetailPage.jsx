@@ -16,9 +16,12 @@ import {
 } from '../../components/ui'
 import { StatusBadge } from '../../features/downloads/StatusBadge'
 import { isWorkerAccount } from '../../features/auth/roles'
+import { PERMISSIONS } from '../../features/auth/permissions'
+import { useAuth } from '../../app/AuthContext'
 import { formatDate } from '../../utils/format'
 
 export default function WorkerDetailPage() {
+  const { can } = useAuth()
   const { id } = useParams()
   const [detail, setDetail] = useState(null)
   const [areas, setAreas] = useState([])
@@ -94,6 +97,8 @@ export default function WorkerDetailPage() {
 
   const { user, drive_connection: connection, organization_history: history } = detail
   const isWorker = isWorkerAccount(user)
+  const canWrite = can(PERMISSIONS.USERS_WRITE)
+  const canCreateJob = can(PERMISSIONS.JOBS_CREATE)
 
   if (!isWorker) {
     return (
@@ -118,7 +123,7 @@ export default function WorkerDetailPage() {
         title={user.display_name || `${user.first_name} ${user.last_name}`}
         description={`${user.email || 'Sin correo'} · ${user.area_name || 'Sin área'} / ${user.position_name || 'Sin cargo'}`}
         actions={
-          user.status === 'active' ? (
+          isWorker && canCreateJob && user.status === 'active' ? (
             <Link to={`/app/admin/downloads?worker=${user.id}`} className="btn-primary">
               <ArrowRight className="h-4 w-4" /> Iniciar descarga
             </Link>
@@ -146,6 +151,7 @@ export default function WorkerDetailPage() {
               <DetailRow label="Último acceso">{formatDate(user.last_login_at)}</DetailRow>
             </dl>
 
+            {canWrite ? (
             <form onSubmit={save} className="mt-6 space-y-4 border-t border-slate-100 pt-5">
               <h3 className="text-sm font-semibold text-slate-900">Modificar asignación</h3>
               <div className="grid gap-4 @md:grid-cols-2">
@@ -189,6 +195,9 @@ export default function WorkerDetailPage() {
                 {saving ? <Spinner className="h-4 w-4" /> : <Save className="h-4 w-4" />} Guardar cambios
               </Button>
             </form>
+            ) : (
+              <p className="mt-6 border-t border-slate-100 pt-5 text-sm text-slate-500">Su rol permite consultar este trabajador, pero no modificar su asignación ni su estado.</p>
+            )}
           </CardBody>
         </Card>
 

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { ADMIN_PERMISSIONS } from '../fixtures/permissions'
 
 const worker = {
   id: '22222222-2222-4222-8222-222222222222',
@@ -43,7 +44,7 @@ test('Trabajadores excluye al administrador y permite actualizar solo a un traba
         contentType: 'application/json',
         body: JSON.stringify({
           user: principalAdmin,
-          permissions: ['admin.dashboard.read', 'admin.users.read', 'admin.users.write'],
+          permissions: ADMIN_PERMISSIONS,
           must_rotate_password: false,
           pending_profile: false,
         }),

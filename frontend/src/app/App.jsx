@@ -1,5 +1,6 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import { PERMISSIONS } from '../features/auth/permissions'
 import AppLayout from '../layouts/AppLayout'
 import LoginPage from '../pages/LoginPage'
 import OnboardingPage from '../pages/OnboardingPage'
@@ -25,7 +26,7 @@ import PrivacyPage from '../pages/legal/PrivacyPage'
 import TermsPage from '../pages/legal/TermsPage'
 import LegalNoticePage from '../pages/legal/LegalNoticePage'
 import CookiesPage from '../pages/legal/CookiesPage'
-import { Spinner } from '../components/ui'
+import { Spinner, Alert } from '../components/ui'
 
 function FullScreenLoader() {
   return (
@@ -49,10 +50,21 @@ function Protected({ children }) {
   return children
 }
 
-function AdminOnly({ children }) {
-  const { isAdmin } = useAuth()
-  if (!isAdmin) return <Navigate to="/app" replace />
+function PermissionOnly({ permission, children }) {
+  const { can } = useAuth()
+  if (!can(permission)) return <AccessDenied />
   return children
+}
+
+function AccessDenied() {
+  return (
+    <div className="mx-auto max-w-lg">
+      <Alert tone="error" title="Acceso no autorizado">
+        Su cuenta no tiene permisos para acceder a este módulo.
+      </Alert>
+      <Link to="/app" className="btn-secondary">Volver al panel</Link>
+    </div>
+  )
 }
 
 function WorkerOnly({ children }) {
@@ -62,10 +74,10 @@ function WorkerOnly({ children }) {
 }
 
 function AppIndex() {
-  const { isAdmin, isWorker } = useAuth()
-  if (isAdmin) return <Navigate to="/app/admin" replace />
-  if (!isWorker) return <Navigate to="/app/security" replace />
-  return <WorkerHome />
+  const { can, isWorker } = useAuth()
+  if (can(PERMISSIONS.DASHBOARD_READ)) return <Navigate to="/app/admin" replace />
+  if (isWorker) return <WorkerHome />
+  return <Navigate to="/app/security" replace />
 }
 
 export default function App() {
@@ -104,17 +116,17 @@ export default function App() {
         <Route path="documents" element={<WorkerOnly><WorkerDocuments /></WorkerOnly>} />
         <Route path="security" element={<SecurityPage />} />
 
-        <Route path="admin" element={<AdminOnly><AdminDashboard /></AdminOnly>} />
-        <Route path="admin/workers" element={<AdminOnly><AdminWorkers /></AdminOnly>} />
-        <Route path="admin/workers/:id" element={<AdminOnly><WorkerDetailPage /></AdminOnly>} />
-        <Route path="admin/organization" element={<AdminOnly><OrganizationPage /></AdminOnly>} />
-        <Route path="admin/connections" element={<AdminOnly><ConnectionsPage /></AdminOnly>} />
-        <Route path="admin/downloads" element={<AdminOnly><DownloadWizardPage /></AdminOnly>} />
-        <Route path="admin/jobs" element={<AdminOnly><AdminJobsPage /></AdminOnly>} />
-        <Route path="admin/jobs/:id" element={<AdminOnly><JobDetailPage basePath="/app/admin/jobs" /></AdminOnly>} />
-        <Route path="admin/storage" element={<AdminOnly><StoragePage /></AdminOnly>} />
-        <Route path="admin/audit" element={<AdminOnly><AuditPage /></AdminOnly>} />
-        <Route path="admin/policy" element={<AdminOnly><PolicyPage /></AdminOnly>} />
+        <Route path="admin" element={<PermissionOnly permission={PERMISSIONS.DASHBOARD_READ}><AdminDashboard /></PermissionOnly>} />
+        <Route path="admin/workers" element={<PermissionOnly permission={PERMISSIONS.USERS_READ}><AdminWorkers /></PermissionOnly>} />
+        <Route path="admin/workers/:id" element={<PermissionOnly permission={PERMISSIONS.USERS_READ}><WorkerDetailPage /></PermissionOnly>} />
+        <Route path="admin/organization" element={<PermissionOnly permission={PERMISSIONS.ORGANIZATION_READ}><OrganizationPage /></PermissionOnly>} />
+        <Route path="admin/connections" element={<PermissionOnly permission={PERMISSIONS.DRIVE_READ}><ConnectionsPage /></PermissionOnly>} />
+        <Route path="admin/downloads" element={<PermissionOnly permission={PERMISSIONS.JOBS_CREATE}><DownloadWizardPage /></PermissionOnly>} />
+        <Route path="admin/jobs" element={<PermissionOnly permission={PERMISSIONS.JOBS_READ}><AdminJobsPage /></PermissionOnly>} />
+        <Route path="admin/jobs/:id" element={<PermissionOnly permission={PERMISSIONS.JOBS_READ}><JobDetailPage basePath="/app/admin/jobs" /></PermissionOnly>} />
+        <Route path="admin/storage" element={<PermissionOnly permission={PERMISSIONS.STORAGE_READ}><StoragePage /></PermissionOnly>} />
+        <Route path="admin/audit" element={<PermissionOnly permission={PERMISSIONS.AUDIT_READ}><AuditPage /></PermissionOnly>} />
+        <Route path="admin/policy" element={<PermissionOnly permission={PERMISSIONS.POLICY_WRITE}><PolicyPage /></PermissionOnly>} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

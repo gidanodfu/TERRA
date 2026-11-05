@@ -20,6 +20,7 @@ import (
 	"terra/internal/platform/password"
 	"terra/internal/platform/principal"
 	"terra/internal/platform/ratelimit"
+	"terra/internal/platform/rbac"
 	"terra/internal/users"
 )
 
@@ -174,12 +175,19 @@ func (s *Service) AdminLogin(ctx context.Context, ip, username, plainPassword, t
 			Metadata: map[string]any{"username": username, "reason": "credentials"}, IPHash: ip})
 		return nil, apperr.Unauthorized("Usuario o contraseña incorrectos.")
 	}
-	if cred.UserStatus == string(users.StatusSuspended) || cred.UserStatus == string(users.StatusDisabled) {
-		return nil, apperr.Forbidden("La cuenta se encuentra suspendida o desactivada.")
-	}
 	user, err := s.users.GetByID(ctx, cred.UserID)
 	if err != nil {
 		return nil, err
+	}
+	if _, ok := rbac.AdministrativeRole(user.Roles); !ok {
+		s.audit.Record(ctx, audit.Event{Action: "auth.admin.login_failed", TargetType: "user",
+			Metadata: map[string]any{"username": username, "reason": "not_administrative"}, IPHash: ip})
+		return nil, apperr.Forbidden("La cuenta no tiene acceso administrativo.")
+	}
+	if user.Status != users.StatusActive {
+		s.audit.Record(ctx, audit.Event{Action: "auth.admin.login_failed", TargetType: "user",
+			Metadata: map[string]any{"username": username, "reason": "inactive"}, IPHash: ip})
+		return nil, apperr.Forbidden("La cuenta se encuentra suspendida o desactivada.")
 	}
 	_ = s.users.TouchLogin(ctx, user.ID)
 	login, err := s.issueSession(ctx, user, userAgent, ip)
@@ -303,6 +311,7 @@ func (s *Service) RequireAuth(next http.Handler) http.Handler {
 		ctx := principal.With(r.Context(), principal.Principal{SessionID: session.ID, User: principal.Identity{
 			ID: user.ID, FirstName: user.FirstName, LastName: user.LastName, DisplayName: user.DisplayName,
 			Email: user.Email, AreaID: user.AreaID, PositionID: user.PositionID, Status: string(user.Status), Roles: user.Roles,
+			Permissions: PermissionsFor(user.Roles),
 		}})
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -336,6 +345,24 @@ func (s *Service) RequireAdmin(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// RequirePermission aplica la matriz RBAC sobre el principal ya autenticado.
+func (s *Service) RequirePermission(permission string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, ok := principal.Current(r.Context())
+			if !ok {
+				httpx.WriteError(w, r, apperr.Unauthorized("Debe iniciar sesión."))
+				return
+			}
+			if user.Status != string(users.StatusActive) || !user.Can(permission) {
+				httpx.WriteError(w, r, apperr.Forbidden("No tiene permisos para esta operación."))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func isNotFound(err error) bool {

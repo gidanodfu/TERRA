@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../app/AuthContext'
 import ThemeToggle from '../components/ThemeToggle'
+import { PERMISSIONS } from '../features/auth/permissions'
 
 const workerNav = [
   { to: '/app', label: 'Inicio', icon: Home, end: true },
@@ -32,21 +33,18 @@ const workerNav = [
 ]
 
 const adminNav = [
-  { to: '/app/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/app/admin/workers', label: 'Trabajadores', icon: Users },
-  { to: '/app/admin/organization', label: 'Áreas y cargos', icon: Building2 },
-  { to: '/app/admin/connections', label: 'Conexiones Drive', icon: Database },
-  { to: '/app/admin/downloads', label: 'Descargas', icon: ArrowLeftRight },
-  { to: '/app/admin/jobs', label: 'Trabajos', icon: FileClock },
-  { to: '/app/admin/storage', label: 'Almacenamiento', icon: HardDrive },
-  { to: '/app/admin/audit', label: 'Auditoría', icon: ScrollText },
-  { to: '/app/admin/policy', label: 'Política', icon: KeyRound },
-  { to: '/app/security', label: 'Seguridad', icon: ShieldCheck },
+  { to: '/app/admin', label: 'Dashboard', icon: LayoutDashboard, end: true, permission: PERMISSIONS.DASHBOARD_READ },
+  { to: '/app/admin/workers', label: 'Trabajadores', icon: Users, permission: PERMISSIONS.USERS_READ },
+  { to: '/app/admin/organization', label: 'Áreas y cargos', icon: Building2, permission: PERMISSIONS.ORGANIZATION_READ },
+  { to: '/app/admin/connections', label: 'Conexiones Drive', icon: Database, permission: PERMISSIONS.DRIVE_READ },
+  { to: '/app/admin/downloads', label: 'Descargas', icon: ArrowLeftRight, permission: PERMISSIONS.JOBS_CREATE },
+  { to: '/app/admin/jobs', label: 'Trabajos', icon: FileClock, permission: PERMISSIONS.JOBS_READ },
+  { to: '/app/admin/storage', label: 'Almacenamiento', icon: HardDrive, permission: PERMISSIONS.STORAGE_READ },
+  { to: '/app/admin/audit', label: 'Auditoría', icon: ScrollText, permission: PERMISSIONS.AUDIT_READ },
+  { to: '/app/admin/policy', label: 'Política', icon: KeyRound, permission: PERMISSIONS.POLICY_WRITE },
 ]
 
-// Los perfiles administrativos futuros no tienen módulos de trabajador hasta que se definan
-// expresamente sus permisos y pantallas.
-const restrictedAdminNav = [{ to: '/app/security', label: 'Seguridad', icon: ShieldCheck }]
+const securityNav = { to: '/app/security', label: 'Seguridad', icon: ShieldCheck }
 
 const roleLabels = {
   admin: 'Administrador',
@@ -116,18 +114,20 @@ function Sidebar({ nav, user, onLogout, onNavigate }) {
 }
 
 export default function AppLayout() {
-  const { user, isAdmin, isAdministrative, isWorker, logout } = useAuth()
+  const { user, isAdministrative, isWorker, can, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
-  const nav = isAdmin ? adminNav : isWorker ? workerNav : restrictedAdminNav
+  const nav = isWorker
+    ? workerNav
+    : [...adminNav.filter((item) => !item.permission || can(item.permission)), securityNav]
 
   const handleLogout = async () => {
     await logout()
     navigate('/', { replace: true })
   }
 
-  const headerLabel = isAdmin || isAdministrative ? 'Panel administrativo' : isWorker ? 'Panel del trabajador' : 'Panel restringido'
+  const headerLabel = isAdministrative ? 'Panel administrativo' : isWorker ? 'Panel del trabajador' : 'Panel restringido'
   const sectionLabel = currentSection(nav, location.pathname, headerLabel)
   const testIds = isWorker
     ? { sidebar: 'worker-sidebar', workspace: 'worker-workspace', scroll: 'worker-scroll', drawer: 'worker-drawer' }

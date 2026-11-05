@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react'
 import { Download, HardDrive } from 'lucide-react'
 import { api, queryString } from '../../services/api'
 import { Alert, EmptyState, LoadingBlock, PageHeader, Pagination } from '../../components/ui'
+import { useAuth } from '../../app/AuthContext'
+import { PERMISSIONS } from '../../features/auth/permissions'
 import { formatBytes, formatDate } from '../../utils/format'
 
 export default function StoragePage() {
+  const { can } = useAuth()
+  const canDownload = can(PERMISSIONS.FILES_READ)
   const [files, setFiles] = useState(null)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -69,9 +73,13 @@ export default function StoragePage() {
                     <td className="whitespace-nowrap text-sm text-slate-600">{formatBytes(file.size_bytes)}</td>
                     <td className="hidden whitespace-nowrap text-sm text-slate-500 lg:table-cell">{formatDate(file.created_at)}</td>
                     <td className="text-right">
-                      <a href={`/api/v1/files/${file.id}/content`} className="btn-secondary px-3 py-1.5" download aria-label={`Descargar ${file.name}`}>
-                        <Download className="h-4 w-4" /> Descargar
-                      </a>
+                      {canDownload ? (
+                        <a href={`/api/v1/files/${file.id}/content`} className="btn-secondary px-3 py-1.5" download aria-label={`Descargar ${file.name}`}>
+                          <Download className="h-4 w-4" /> Descargar
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400">Solo lectura</span>
+                      )}
                     </td>
                   </tr>
                 ))}

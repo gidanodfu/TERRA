@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { ADMIN_PERMISSIONS } from '../fixtures/permissions'
 
 test.use({ colorScheme: 'light' })
 
@@ -30,7 +31,7 @@ async function mockPolicy(context) {
         contentType: 'application/json',
         body: JSON.stringify({
           user: adminUser,
-          permissions: ['admin.policy.read'],
+          permissions: ADMIN_PERMISSIONS,
           must_rotate_password: false,
           pending_profile: false,
         }),

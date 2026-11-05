@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { ADMIN_PERMISSIONS } from '../fixtures/permissions'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import LoginPage from '../../src/pages/LoginPage'
@@ -106,7 +107,7 @@ describe('LoginPage y ciclo de Turnstile', () => {
     act(() => options.callback('token-2'))
     api.post.mockResolvedValueOnce({
       user: adminUser,
-      permissions: ['admin.dashboard.read'],
+      permissions: ADMIN_PERMISSIONS,
       must_rotate_password: false,
       pending_profile: false,
     })
@@ -122,7 +123,7 @@ describe('LoginPage y ciclo de Turnstile', () => {
     )
     expect(auth.apply).toHaveBeenCalledWith({
       user: adminUser,
-      permissions: ['admin.dashboard.read'],
+      permissions: ADMIN_PERMISSIONS,
       must_rotate_password: false,
       pending_profile: false,
     })
