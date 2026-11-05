@@ -45,7 +45,7 @@ export default function SecurityPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full min-w-0 max-w-none space-y-4">
       <PageHeader title="Seguridad y sesión" description="Información de su cuenta y gestión de credenciales locales." />
 
       {mustRotate ? (
@@ -55,87 +55,89 @@ export default function SecurityPage() {
         </Alert>
       ) : null}
 
-      <Card>
-        <CardBody>
-          <div className="mb-4 flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-700">
-              <ShieldCheck className="h-5 w-5" />
-            </span>
-            <h2 className="font-semibold text-slate-900">Cuenta</h2>
-          </div>
-          <dl className="divide-y divide-slate-100">
-            <DetailRow label="Nombre">{user?.display_name || '—'}</DetailRow>
-            <DetailRow label="Correo">{user?.email || '—'}</DetailRow>
-            <DetailRow label="Estado">
-              <StatusBadge type="user" status={user?.status} />
-            </DetailRow>
-            <DetailRow label="Área / Cargo">
-              {user?.area_name || '—'} / {user?.position_name || '—'}
-            </DetailRow>
-            <DetailRow label="Último acceso">{formatDate(user?.last_login_at)}</DetailRow>
-          </dl>
-          <p className="mt-4 rounded-xl bg-muted p-3 text-xs text-slate-500">
-            La sesión se mantiene en una cookie HttpOnly y no es accesible desde JavaScript. No se almacenan tokens de
-            Google en el navegador.
-          </p>
-        </CardBody>
-      </Card>
-
-      {hasLocalCredentials ? (
-        <Card className="mt-6">
+      <div className={`grid gap-6 ${hasLocalCredentials ? '@4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : 'max-w-2xl'}`}>
+        <Card>
           <CardBody>
             <div className="mb-4 flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-700">
-                <KeyRound className="h-5 w-5" />
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-700">
+                <ShieldCheck className="h-5 w-5" />
               </span>
-              <div>
-                <h2 className="font-semibold text-slate-900">Cambiar contraseña</h2>
-                <p className="text-xs text-slate-500">Solo para cuentas con credenciales locales.</p>
-              </div>
+              <h2 className="font-semibold text-slate-900">Cuenta</h2>
             </div>
-            {error ? <Alert tone="error">{error}</Alert> : null}
-            {success ? <Alert tone="success">{success}</Alert> : null}
-            <form onSubmit={submit} noValidate className="space-y-4">
-              <Field label="Contraseña actual" htmlFor="current_password" error={errors.current_password}>
-                <Input
-                  id="current_password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={form.current_password}
-                  onChange={(e) => setForm({ ...form, current_password: e.target.value })}
-                  error={errors.current_password}
-                />
-              </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Nueva contraseña" htmlFor="new_password" error={errors.new_password} hint="Mínimo 12 caracteres.">
-                  <Input
-                    id="new_password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={form.new_password}
-                    onChange={(e) => setForm({ ...form, new_password: e.target.value })}
-                    error={errors.new_password}
-                  />
-                </Field>
-                <Field label="Confirmar contraseña" htmlFor="confirm" error={errors.confirm}>
-                  <Input
-                    id="confirm"
-                    type="password"
-                    autoComplete="new-password"
-                    value={form.confirm}
-                    onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-                    error={errors.confirm}
-                  />
-                </Field>
-              </div>
-              <Button type="submit" disabled={saving}>
-                {saving ? <Spinner className="h-4 w-4" /> : <KeyRound className="h-4 w-4" />}
-                Actualizar contraseña
-              </Button>
-            </form>
+            <dl className="divide-y divide-slate-100">
+              <DetailRow label="Nombre">{user?.display_name || '—'}</DetailRow>
+              <DetailRow label="Correo">{user?.email || '—'}</DetailRow>
+              <DetailRow label="Estado">
+                <StatusBadge type="user" status={user?.status} />
+              </DetailRow>
+              <DetailRow label="Área / Cargo">
+                {user?.area_name || '—'} / {user?.position_name || '—'}
+              </DetailRow>
+              <DetailRow label="Último acceso">{formatDate(user?.last_login_at)}</DetailRow>
+            </dl>
+            <p className="mt-4 rounded-xl bg-muted p-3 text-xs text-slate-500">
+              La sesión se mantiene en una cookie HttpOnly y no es accesible desde JavaScript. No se almacenan tokens de
+              Google en el navegador.
+            </p>
           </CardBody>
         </Card>
-      ) : null}
+
+        {hasLocalCredentials ? (
+          <Card className="@container">
+            <CardBody>
+              <div className="mb-4 flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-700">
+                  <KeyRound className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className="font-semibold text-slate-900">Cambiar contraseña</h2>
+                  <p className="text-xs text-slate-500">Solo para cuentas con credenciales locales.</p>
+                </div>
+              </div>
+              {error ? <Alert tone="error">{error}</Alert> : null}
+              {success ? <Alert tone="success">{success}</Alert> : null}
+              <form onSubmit={submit} noValidate className="space-y-4">
+                <Field label="Contraseña actual" htmlFor="current_password" error={errors.current_password}>
+                  <Input
+                    id="current_password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={form.current_password}
+                    onChange={(e) => setForm({ ...form, current_password: e.target.value })}
+                    error={errors.current_password}
+                  />
+                </Field>
+                <div className="grid gap-4 @sm:grid-cols-2">
+                  <Field label="Nueva contraseña" htmlFor="new_password" error={errors.new_password} hint="Mínimo 12 caracteres.">
+                    <Input
+                      id="new_password"
+                      type="password"
+                      autoComplete="new-password"
+                      value={form.new_password}
+                      onChange={(e) => setForm({ ...form, new_password: e.target.value })}
+                      error={errors.new_password}
+                    />
+                  </Field>
+                  <Field label="Confirmar contraseña" htmlFor="confirm" error={errors.confirm}>
+                    <Input
+                      id="confirm"
+                      type="password"
+                      autoComplete="new-password"
+                      value={form.confirm}
+                      onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                      error={errors.confirm}
+                    />
+                  </Field>
+                </div>
+                <Button type="submit" disabled={saving}>
+                  {saving ? <Spinner className="h-4 w-4" /> : <KeyRound className="h-4 w-4" />}
+                  Actualizar contraseña
+                </Button>
+              </form>
+            </CardBody>
+          </Card>
+        ) : null}
+      </div>
     </div>
   )
 }
