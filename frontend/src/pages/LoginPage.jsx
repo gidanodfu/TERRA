@@ -96,7 +96,7 @@ export default function LoginPage() {
           ) : null}
 
           <section className="mt-6 rounded-2xl border border-slate-200 bg-muted p-5">
-            <h3 className="text-sm font-semibold text-slate-900">Trabajadores</h3>
+            <h3 className="text-center text-sm font-semibold text-slate-900">Trabajadores</h3>
             <button
               type="button"
               className="btn-secondary mt-4 w-full justify-center"
@@ -110,7 +110,7 @@ export default function LoginPage() {
           </section>
 
           <section className="mt-5 rounded-2xl border border-slate-200 bg-muted p-5">
-            <h3 className="text-sm font-semibold text-slate-900">Administración</h3>
+            <h3 className="text-center text-sm font-semibold text-slate-900">Administración</h3>
 
             <form onSubmit={submit} noValidate className="mt-4 space-y-4">
               <Field label="Usuario" htmlFor="username" error={fieldErrors.username}>
@@ -155,7 +155,6 @@ export default function LoginPage() {
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
             TERRA no solicita ni almacena contraseñas personales de Google.
           </p>
-          <p>¿Problemas de acceso? Contacte al administrador del sistema.</p>
         </div>
 
         <section className="@container mt-4 rounded-2xl border border-slate-200 bg-card px-4 py-5 shadow-sm">
