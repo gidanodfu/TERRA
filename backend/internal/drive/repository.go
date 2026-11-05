@@ -159,32 +159,97 @@ func (r *Repository) AdminList(ctx context.Context, status string, page, size in
 
 // --- metadatos de nodos de Drive ---
 
+type queryRower interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
 func (r *Repository) UpsertNode(ctx context.Context, connectionID uuid.UUID, f RemoteFile) (uuid.UUID, error) {
+	return r.upsertNode(ctx, r.pool, connectionID, f)
+}
+
+func (r *Repository) upsertNode(ctx context.Context, ex queryRower, connectionID uuid.UUID, f RemoteFile) (uuid.UUID, error) {
 	var id uuid.UUID
-	err := r.pool.QueryRow(ctx, `INSERT INTO drive_nodes
-		(id, drive_connection_id, google_file_id, name, mime_type, size_bytes, modified_time,
-		 md5_checksum, can_download, trashed, is_shortcut, shortcut_target_id, source_revision_id, last_seen_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now())
+	err := ex.QueryRow(ctx, `INSERT INTO drive_nodes
+		(id, drive_connection_id, google_file_id, name, mime_type, size_bytes, created_time, modified_time,
+		 md5_checksum, web_view_link, description, starred, shared, can_download, trashed,
+		 is_shortcut, shortcut_target_id, shortcut_target_mime_type, source_revision_id, last_seen_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now())
 		ON CONFLICT (drive_connection_id, google_file_id) DO UPDATE SET
 			name=EXCLUDED.name, mime_type=EXCLUDED.mime_type, size_bytes=EXCLUDED.size_bytes,
-			modified_time=EXCLUDED.modified_time, md5_checksum=EXCLUDED.md5_checksum,
+			created_time=EXCLUDED.created_time, modified_time=EXCLUDED.modified_time,
+			md5_checksum=EXCLUDED.md5_checksum, web_view_link=EXCLUDED.web_view_link,
+			description=EXCLUDED.description, starred=EXCLUDED.starred, shared=EXCLUDED.shared,
 			can_download=EXCLUDED.can_download, trashed=EXCLUDED.trashed,
 			is_shortcut=EXCLUDED.is_shortcut, shortcut_target_id=EXCLUDED.shortcut_target_id,
-			last_seen_at=now()
+			shortcut_target_mime_type=EXCLUDED.shortcut_target_mime_type,
+			source_revision_id=EXCLUDED.source_revision_id, last_seen_at=now()
 		RETURNING id`,
-		uuid.New(), connectionID, f.ID, f.Name, f.MimeType, nullableSize(f.Size), nullableTime(f.ModifiedTime),
-		nullableText(f.MD5), f.CanDownload, f.Trashed, f.IsShortcut, nullableText(f.ShortcutTarget),
-		nullableText(f.RevisionID)).Scan(&id)
+		uuid.New(), connectionID, f.ID, f.Name, f.MimeType, nullableSize(f.Size),
+		nullableTime(f.CreatedTime), nullableTime(f.ModifiedTime), nullableText(f.MD5),
+		nullableText(f.WebViewLink), nullableText(f.Description), f.Starred, f.Shared,
+		f.CanDownload, f.Trashed, f.IsShortcut, nullableText(f.ShortcutTarget),
+		nullableText(f.ShortcutTargetMime), nullableText(f.RevisionID)).Scan(&id)
 	return id, err
 }
 
+// LinkParent conserva la compatibilidad con llamadas antiguas.
 func (r *Repository) LinkParent(ctx context.Context, nodeID uuid.UUID, parentGoogleID string) error {
-	if parentGoogleID == "" {
-		return nil
+	return r.SyncNodeParents(ctx, nodeID, []string{parentGoogleID})
+}
+
+// SyncNodeParents reemplaza las relaciones padre-hijo actuales del nodo.
+func (r *Repository) SyncNodeParents(ctx context.Context, nodeID uuid.UUID, parentIDs []string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
 	}
-	_, err := r.pool.Exec(ctx, `INSERT INTO drive_node_parents (drive_node_id, parent_google_file_id)
-		VALUES ($1,$2) ON CONFLICT DO NOTHING`, nodeID, parentGoogleID)
-	return err
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := syncNodeParents(ctx, tx, nodeID, parentIDs); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func syncNodeParents(ctx context.Context, tx pgx.Tx, nodeID uuid.UUID, parentIDs []string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM drive_node_parents WHERE drive_node_id=$1`, nodeID); err != nil {
+		return err
+	}
+	seen := map[string]bool{}
+	for _, parent := range parentIDs {
+		parent = strings.TrimSpace(parent)
+		if parent == "" || seen[parent] {
+			continue
+		}
+		seen[parent] = true
+		if _, err := tx.Exec(ctx, `INSERT INTO drive_node_parents (drive_node_id, parent_google_file_id)
+			VALUES ($1,$2)`, nodeID, parent); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// UpsertChildren persiste una página completa de Drive en una sola transacción.
+func (r *Repository) UpsertChildren(ctx context.Context, connectionID uuid.UUID, parentID string, files []RemoteFile) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	for _, f := range files {
+		nodeID, err := r.upsertNode(ctx, tx, connectionID, f)
+		if err != nil {
+			return err
+		}
+		parents := f.Parents
+		if len(parents) == 0 && parentID != "" {
+			parents = []string{parentID}
+		}
+		if err := syncNodeParents(ctx, tx, nodeID, parents); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
 }
 
 type Node struct {

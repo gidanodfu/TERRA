@@ -148,6 +148,9 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 	mux.Handle("GET /api/v1/admin/users/{userId}/drive/folders",
 		requireAuth(requirePermission(rbac.PermDriveBrowse)(limited(driveBrowseLimiter, "drive-browse")(
 			http.HandlerFunc(h.Drive.AdminFolders)))))
+	mux.Handle("GET /api/v1/admin/users/{userId}/drive/items",
+		requireAuth(requirePermission(rbac.PermDriveBrowse)(limited(driveBrowseLimiter, "drive-browse")(
+			http.HandlerFunc(h.Drive.AdminItems)))))
 	mux.Handle("GET /api/v1/admin/drive-connections",
 		requireAuth(requirePermission(rbac.PermDriveRead)(http.HandlerFunc(h.Drive.AdminConnections))))
 	mux.Handle("POST /api/v1/admin/policies",

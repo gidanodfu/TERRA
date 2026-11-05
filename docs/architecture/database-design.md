@@ -69,7 +69,7 @@ físicas de snapshots existentes.
 - `users` incluye nombres, correo, área, cargo, estado y último acceso.
 - `auth_identities` liga `provider_subject` (Google `sub`) a un usuario.
 - `local_credentials` solo administradores; `password_hash` Argon2id PHC.
-- `system_roles` (`admin`, `user`) y `user_roles`.
+- `system_roles` (`admin`, `moderator`, `read_only`, `user`) y `user_roles`.
 - `sessions` guarda hash SHA-256 del token, CSRF, expiración, user-agent e IP hasheada.
 - `oauth_states` guarda hash del state, flujo, usuario, PKCE, expiración y consumo único.
 
@@ -77,7 +77,7 @@ físicas de snapshots existentes.
 
 - `policy_versions(version UNIQUE, content, published_at, created_by_user_id)`.
 - `drive_connections` incluye `google_subject`, refresh token cifrado, scopes, estado y consentimiento.
-- `drive_nodes` y `drive_node_parents` conservan metadatos, revisión observada y relaciones.
+- `drive_nodes` conserva metadatos observados (nombre, MIME, tamaño, fechas, enlace, descripción, destacado, compartido, capacidad de descarga, atajos y revisión); `drive_node_parents` mantiene las relaciones padre-hijo actuales.
 - `stored_files` referencia nodo, job, propietario, ruta relativa, MIME exportado, SHA-256 y estado.
 
 ### Trabajos y cola

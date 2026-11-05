@@ -24,6 +24,10 @@
 - `slug` es legible pero estable; no cambia al renombrar el área/cargo.
 - Cada trabajo tiene un directorio `job-<uuid>` independiente: dos trabajos no comparten raíz.
 - En PostgreSQL solo se guarda la ruta **relativa** a `STORAGE_ROOT`.
+- `drive_nodes` conserva los metadatos observados de Drive (nombre, MIME, tamaño, fechas,
+  enlace, descripción, marcas y atajos) para trazabilidad; el contenido binario solo existe
+  en el snapshot cuando el pipeline lo descarga.
+- La exploración no escribe archivos: solo actualiza metadatos y relaciones padre-hijo.
 
 ## Modos
 

@@ -17,6 +17,15 @@ import (
 	"terra/internal/users"
 )
 
+// RemoteAPI es la superficie de Google Drive que usa el caso de uso de exploración.
+type RemoteAPI interface {
+	RootID(context.Context) (string, error)
+	GetFile(context.Context, string) (*RemoteFile, error)
+	PathToRoot(context.Context, string) ([]RemoteFile, error)
+	ListChildrenPage(context.Context, string, string, int64) ([]RemoteFile, string, error)
+	ListFolders(context.Context, string) ([]FolderItem, error)
+}
+
 type Service struct {
 	cfg      config.Config
 	repo     *Repository
@@ -26,12 +35,24 @@ type Service struct {
 	provider *Provider
 	box      *crypto.Box
 	audit    *audit.Repository
+	newAPI   func(context.Context, *Connection) (RemoteAPI, error)
 }
 
 func NewService(cfg config.Config, repo *Repository, usersRepo *users.Repository, google *googleoauth.Client,
 	states *oauthstate.Repository, provider *Provider, box *crypto.Box, auditRepo *audit.Repository) *Service {
+	factory := func(ctx context.Context, conn *Connection) (RemoteAPI, error) {
+		if provider == nil {
+			return nil, errors.New("drive provider not configured")
+		}
+		return provider.NewAPI(ctx, conn)
+	}
 	return &Service{cfg: cfg, repo: repo, users: usersRepo, google: google, states: states,
-		provider: provider, box: box, audit: auditRepo}
+		provider: provider, box: box, audit: auditRepo, newAPI: factory}
+}
+
+// SetRemoteAPI permite inyectar una implementación controlada en pruebas.
+func (s *Service) SetRemoteAPI(factory func(context.Context, *Connection) (RemoteAPI, error)) {
+	s.newAPI = factory
 }
 
 func (s *Service) Connection(ctx context.Context, userID uuid.UUID) (*Connection, error) {
@@ -211,7 +232,7 @@ func (s *Service) EnsureReadyForUser(ctx context.Context, userID uuid.UUID) (*Co
 	return conn, nil
 }
 
-type BrowseResult struct {
+type FolderBrowseResult struct {
 	ParentID   string       `json:"parent_id"`
 	ParentName string       `json:"parent_name"`
 	Path       []string     `json:"path"`
@@ -219,12 +240,29 @@ type BrowseResult struct {
 	Folders    []FolderItem `json:"folders"`
 }
 
-func (s *Service) Browse(ctx context.Context, ownerID uuid.UUID, parentID string) (*BrowseResult, error) {
+type BrowseResult struct {
+	Parent        BrowsePathItem   `json:"parent"`
+	Path          []BrowsePathItem `json:"path"`
+	IsRoot        bool             `json:"is_root"`
+	Items         []BrowseItem     `json:"items"`
+	NextPageToken string           `json:"next_page_token,omitempty"`
+}
+
+type browseContext struct {
+	conn     *Connection
+	api      RemoteAPI
+	parentID string
+	parent   BrowsePathItem
+	path     []BrowsePathItem
+	isRoot   bool
+}
+
+func (s *Service) prepareBrowse(ctx context.Context, ownerID uuid.UUID, parentID string) (*browseContext, error) {
 	conn, err := s.EnsureReadyForUser(ctx, ownerID)
 	if err != nil {
 		return nil, err
 	}
-	api, err := s.provider.NewAPI(ctx, conn)
+	api, err := s.newAPI(ctx, conn)
 	if err != nil {
 		return nil, apperr.Conflict("drive_reauthorization_required", "El trabajador debe reconectar su cuenta de Google Drive.")
 	}
@@ -236,28 +274,79 @@ func (s *Service) Browse(ctx context.Context, ownerID uuid.UUID, parentID string
 		return nil, translateAPI(err)
 	}
 	isRoot := parentID == "root" || parentID == rootID
-	var path []string
-	name := "Mi unidad"
+	path := []BrowsePathItem{{ID: rootID, Name: "Mi unidad"}}
+	parent := path[0]
 	if !isRoot {
 		chain, err := api.PathToRoot(ctx, parentID)
 		if err != nil {
 			return nil, translateAPI(err)
 		}
+		if len(chain) == 0 {
+			return nil, apperr.BadRequest("Carpeta inválida.")
+		}
+		leaf := chain[len(chain)-1]
+		if leaf.MimeType != MimeFolder || leaf.Trashed || leaf.IsShortcut {
+			return nil, apperr.BadRequest("El elemento seleccionado no es una carpeta válida.")
+		}
 		for _, f := range chain {
-			path = append(path, f.Name)
+			path = append(path, BrowsePathItem{ID: f.ID, Name: f.Name})
 		}
-		if len(chain) > 0 {
-			name = chain[len(chain)-1].Name
-		}
+		parent = path[len(path)-1]
 	}
-	folders, err := api.ListFolders(ctx, parentID)
+	return &browseContext{conn: conn, api: api, parentID: parentID, parent: parent, path: path, isRoot: isRoot}, nil
+}
+
+func (s *Service) Browse(ctx context.Context, ownerID uuid.UUID, parentID, pageToken string, pageSize int64) (*BrowseResult, error) {
+	bc, err := s.prepareBrowse(ctx, ownerID, parentID)
+	if err != nil {
+		return nil, err
+	}
+	files, next, err := bc.api.ListChildrenPage(ctx, bc.parentID, pageToken, pageSize)
+	if err != nil {
+		return nil, translateAPI(err)
+	}
+	if err := s.repo.UpsertChildren(ctx, bc.conn.ID, bc.parentID, files); err != nil {
+		return nil, err
+	}
+	items := make([]BrowseItem, 0, len(files))
+	for _, f := range files {
+		kind := "file"
+		if f.MimeType == MimeFolder {
+			kind = "folder"
+		}
+		if f.IsShortcut {
+			kind = "shortcut"
+		}
+		items = append(items, BrowseItem{
+			ID: f.ID, Name: f.Name, MimeType: f.MimeType, Kind: kind,
+			SizeBytes: nullableSize(f.Size), CreatedTime: nullableTime(f.CreatedTime),
+			ModifiedTime: nullableTime(f.ModifiedTime), WebViewLink: f.WebViewLink,
+			Description: f.Description, Starred: f.Starred, Shared: f.Shared,
+			CanDownload: f.CanDownload, IsShortcut: f.IsShortcut,
+			ShortcutTargetID: f.ShortcutTarget, ShortcutTargetMime: f.ShortcutTargetMime,
+		})
+	}
+	return &BrowseResult{Parent: bc.parent, Path: bc.path, IsRoot: bc.isRoot, Items: items, NextPageToken: next}, nil
+}
+
+func (s *Service) BrowseFolders(ctx context.Context, ownerID uuid.UUID, parentID string) (*FolderBrowseResult, error) {
+	bc, err := s.prepareBrowse(ctx, ownerID, parentID)
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(bc.path)-1)
+	for _, item := range bc.path[1:] {
+		names = append(names, item.Name)
+	}
+	folders, err := bc.api.ListFolders(ctx, bc.parentID)
 	if err != nil {
 		return nil, translateAPI(err)
 	}
 	if folders == nil {
 		folders = []FolderItem{}
 	}
-	return &BrowseResult{ParentID: parentID, ParentName: name, Path: path, IsRoot: isRoot, Folders: folders}, nil
+	return &FolderBrowseResult{ParentID: bc.parentID, ParentName: bc.parent.Name, Path: names,
+		IsRoot: bc.isRoot, Folders: folders}, nil
 }
 
 // NormalizeRoots valida los IDs de Drive y elimina los descendientes de raíces ya seleccionadas.
@@ -274,7 +363,7 @@ func (s *Service) NormalizeRoots(ctx context.Context, ownerID uuid.UUID, ids []s
 	if len(ids) > 100 {
 		return nil, apperr.Invalid("Seleccione como máximo 100 carpetas.", nil)
 	}
-	api, err := s.provider.NewAPI(ctx, conn)
+	api, err := s.newAPI(ctx, conn)
 	if err != nil {
 		return nil, apperr.Conflict("drive_reauthorization_required", "El trabajador debe reconectar su cuenta de Google Drive.")
 	}
@@ -362,6 +451,10 @@ func translateAPI(err error) error {
 		return apperr.BadRequest("El elemento no pertenece a Mi unidad de esta conexión.")
 	case apiErr.Code == "not_downloadable":
 		return apperr.BadRequest("El elemento no se puede descargar.")
+	case apiErr.Code == "invalid_drive_id":
+		return apperr.BadRequest("El identificador de Drive no es válido.")
+	case apiErr.Code == "drive_invalid_request":
+		return apperr.BadRequest("La consulta a Google Drive no es válida. Reinicie la exploración.")
 	default:
 		return apperr.New(502, "drive_error", "No fue posible consultar Google Drive. Intente nuevamente.")
 	}

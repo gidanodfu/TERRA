@@ -35,18 +35,24 @@ type Connection struct {
 }
 
 type RemoteFile struct {
-	ID             string
-	Name           string
-	MimeType       string
-	Parents        []string
-	Size           int64
-	ModifiedTime   time.Time
-	MD5            string
-	CanDownload    bool
-	Trashed        bool
-	IsShortcut     bool
-	ShortcutTarget string
-	RevisionID     string
+	ID                 string
+	Name               string
+	MimeType           string
+	Parents            []string
+	Size               int64
+	CreatedTime        time.Time
+	ModifiedTime       time.Time
+	MD5                string
+	WebViewLink        string
+	Description        string
+	Starred            bool
+	Shared             bool
+	CanDownload        bool
+	Trashed            bool
+	IsShortcut         bool
+	ShortcutTarget     string
+	ShortcutTargetMime string
+	RevisionID         string
 }
 
 const (
@@ -93,6 +99,29 @@ type FolderItem struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	MimeType string `json:"mime_type"`
+}
+
+type BrowsePathItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type BrowseItem struct {
+	ID                 string     `json:"id"`
+	Name               string     `json:"name"`
+	MimeType           string     `json:"mime_type"`
+	Kind               string     `json:"kind"`
+	SizeBytes          *int64     `json:"size_bytes"`
+	CreatedTime        *time.Time `json:"created_time"`
+	ModifiedTime       *time.Time `json:"modified_time"`
+	WebViewLink        string     `json:"web_view_link,omitempty"`
+	Description        string     `json:"description,omitempty"`
+	Starred            bool       `json:"starred"`
+	Shared             bool       `json:"shared"`
+	CanDownload        bool       `json:"can_download"`
+	IsShortcut         bool       `json:"is_shortcut"`
+	ShortcutTargetID   string     `json:"shortcut_target_id,omitempty"`
+	ShortcutTargetMime string     `json:"shortcut_target_mime_type,omitempty"`
 }
 
 type Policy struct {

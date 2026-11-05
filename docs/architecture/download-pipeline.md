@@ -1,5 +1,25 @@
 # Pipeline de descarga
 
+## Exploración interactiva
+
+El selector de `/app/admin/downloads` consulta Google Drive como fuente de verdad:
+
+```mermaid
+flowchart LR
+  UI[FolderPicker] -->|GET /drive/items?parentId| API[Backend Go]
+  API -->|files.list + pageToken| G[Google Drive API v3]
+  G -->|archivos y carpetas| API
+  API -->|UpsertChildren transaccional| DB[(PostgreSQL drive_nodes)]
+  API -->|items + next_page_token| UI
+```
+
+- Solo se consulta el contenido inmediato de la carpeta actual.
+- La paginación usa `nextPageToken` opaco; no se recorre Mi unidad completo.
+- Los archivos se muestran pero no se seleccionan como raíces.
+- Los atajos se muestran como referencias y no se recorren.
+- Si Google falla, la UI muestra el error y no presenta metadatos antiguos como actuales.
+- PostgreSQL conserva la última observación para el pipeline; no sustituye a Drive.
+
 ## Estados
 
 ```mermaid

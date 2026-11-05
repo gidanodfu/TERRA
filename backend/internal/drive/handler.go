@@ -140,7 +140,23 @@ func (h *Handler) AdminFolders(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, apperr.BadRequest("Identificador de trabajador inválido."))
 		return
 	}
-	result, err := h.svc.Browse(r.Context(), ownerID, r.URL.Query().Get("parentId"))
+	result, err := h.svc.BrowseFolders(r.Context(), ownerID, r.URL.Query().Get("parentId"))
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) AdminItems(w http.ResponseWriter, r *http.Request) {
+	ownerID, err := uuid.Parse(r.PathValue("userId"))
+	if err != nil {
+		httpx.WriteError(w, r, apperr.BadRequest("Identificador de trabajador inválido."))
+		return
+	}
+	_, size, _ := httpx.Pagination(r)
+	result, err := h.svc.Browse(r.Context(), ownerID, r.URL.Query().Get("parentId"),
+		r.URL.Query().Get("page_token"), int64(size))
 	if err != nil {
 		httpx.WriteError(w, r, err)
 		return

@@ -316,7 +316,11 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 				if err != nil {
 					return err
 				}
-				_ = w.driveRepo.LinkParent(ctx, nodeID, task.id)
+				parents := child.Parents
+				if len(parents) == 0 {
+					parents = []string{task.id}
+				}
+				_ = w.driveRepo.SyncNodeParents(ctx, nodeID, parents)
 				if _, err := w.store.EnsureDir(storage.Child(jobRoot, append(append([]string{}, task.segments...), name)...)); err != nil {
 					return err
 				}
@@ -328,7 +332,11 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 			if err != nil {
 				return err
 			}
-			_ = w.driveRepo.LinkParent(ctx, nodeID, task.id)
+			parents := child.Parents
+			if len(parents) == 0 {
+				parents = []string{task.id}
+			}
+			_ = w.driveRepo.SyncNodeParents(ctx, nodeID, parents)
 
 			if child.MimeType == drive.MimeShortcut {
 				name := storage.UniqueName(used[dirKey], child.Name, child.ID)

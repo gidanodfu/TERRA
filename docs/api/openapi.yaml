@@ -703,6 +703,27 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+  /admin/users/{userId}/drive/items:
+    get:
+      tags: [Administración]
+      summary: Navega archivos y carpetas de Mi unidad del trabajador
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: parentId, in: query, schema: { type: string, default: root } }
+        - { name: page_size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: page_token, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Contenido inmediato de la carpeta
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DriveBrowse" }
+        "400": { description: Carpeta o cursor de paginación inválidos }
+        "409":
+          description: Conexión o política no vigentes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /admin/drive-connections:
     get:
       tags: [Administración]
@@ -1084,6 +1105,44 @@ components:
               id: { type: string }
               name: { type: string }
               mime_type: { type: string }
+    DriveBrowse:
+      type: object
+      properties:
+        parent:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+        path:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+        is_root: { type: boolean }
+        next_page_token: { type: string, nullable: true }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/DriveBrowseItem" }
+    DriveBrowseItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        mime_type: { type: string }
+        kind: { type: string, enum: [folder, file, shortcut] }
+        size_bytes: { type: integer, format: int64, nullable: true }
+        created_time: { type: string, format: date-time, nullable: true }
+        modified_time: { type: string, format: date-time, nullable: true }
+        web_view_link: { type: string }
+        description: { type: string }
+        starred: { type: boolean }
+        shared: { type: boolean }
+        can_download: { type: boolean }
+        is_shortcut: { type: boolean }
+        shortcut_target_id: { type: string }
+        shortcut_target_mime_type: { type: string }
     JobRoot:
       type: object
       properties:

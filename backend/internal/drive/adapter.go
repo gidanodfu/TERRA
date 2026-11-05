@@ -35,7 +35,7 @@ func (e *APIError) Unwrap() error { return e.Err }
 
 var ErrReauthorization = errors.New("drive reauthorization required")
 
-const fileFields = "id,name,mimeType,parents,size,modifiedTime,md5Checksum,capabilities(canDownload),shortcutDetails(targetId,targetMimeType),trashed,headRevisionId"
+const fileFields = "id,name,mimeType,parents,size,createdTime,modifiedTime,md5Checksum,webViewLink,description,starred,shared,capabilities(canDownload),shortcutDetails(targetId,targetMimeType),trashed,headRevisionId"
 
 type Provider struct {
 	google *googleoauth.Client
@@ -112,6 +112,38 @@ func (a *API) ListChildren(ctx context.Context, folderID string) ([]RemoteFile, 
 		}
 		pageToken = resp.NextPageToken
 	}
+}
+
+// ListChildrenPage devuelve una página de archivos y carpetas del directorio.
+// El pageToken es opaco y pertenece a la consulta que lo generó.
+func (a *API) ListChildrenPage(ctx context.Context, folderID, pageToken string, pageSize int64) ([]RemoteFile, string, error) {
+	if !driveIDPattern.MatchString(folderID) {
+		return nil, "", &APIError{Code: "invalid_drive_id", Err: errors.New("invalid drive id")}
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 100
+	}
+	if len(pageToken) > 4096 {
+		return nil, "", &APIError{Code: "drive_invalid_request", Err: errors.New("page token too long")}
+	}
+	q := fmt.Sprintf("'%s' in parents and trashed = false", folderID)
+	call := a.svc.Files.List().Context(ctx).Q(q).PageSize(pageSize).
+		Fields("nextPageToken, files(" + fileFields + ")").OrderBy("name")
+	if pageToken != "" {
+		call = call.PageToken(pageToken)
+	}
+	resp, err := call.Do()
+	if err != nil {
+		return nil, "", classify(err)
+	}
+	out := make([]RemoteFile, 0, len(resp.Files))
+	for _, f := range resp.Files {
+		if f.Trashed {
+			continue
+		}
+		out = append(out, *toRemote(f))
+	}
+	return out, resp.NextPageToken, nil
 }
 
 func (a *API) ListFolders(ctx context.Context, parentID string) ([]FolderItem, error) {
@@ -207,8 +239,10 @@ func (f RemoteFile) IsNative() bool { return IsNative(f.MimeType) }
 func toRemote(f *gdrive.File) *RemoteFile {
 	r := &RemoteFile{
 		ID: f.Id, Name: f.Name, MimeType: f.MimeType, Size: f.Size,
-		ModifiedTime: parseTime(f.ModifiedTime), MD5: f.Md5Checksum,
-		Trashed: f.Trashed, Parents: f.Parents, RevisionID: f.HeadRevisionId,
+		CreatedTime: parseTime(f.CreatedTime), ModifiedTime: parseTime(f.ModifiedTime),
+		MD5: f.Md5Checksum, WebViewLink: f.WebViewLink, Description: f.Description,
+		Starred: f.Starred, Shared: f.Shared, Trashed: f.Trashed,
+		Parents: f.Parents, RevisionID: f.HeadRevisionId,
 	}
 	if f.Capabilities != nil {
 		r.CanDownload = f.Capabilities.CanDownload
@@ -216,6 +250,7 @@ func toRemote(f *gdrive.File) *RemoteFile {
 	if f.ShortcutDetails != nil {
 		r.IsShortcut = true
 		r.ShortcutTarget = f.ShortcutDetails.TargetId
+		r.ShortcutTargetMime = f.ShortcutDetails.TargetMimeType
 	}
 	return r
 }
@@ -252,6 +287,8 @@ func classify(err error) error {
 			} else {
 				apiErr.Code = "drive_forbidden"
 			}
+		case http.StatusBadRequest:
+			apiErr.Code = "drive_invalid_request"
 		case http.StatusNotFound:
 			apiErr.Code = "drive_not_found"
 		default:
