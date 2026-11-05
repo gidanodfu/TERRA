@@ -50,7 +50,7 @@ Resultados:
 - Frontend unit: 20 pruebas correctas.
 - Frontend integration: 16 pruebas correctas.
 - Frontend lint/build/coverage: correcto.
-- E2E Playwright: 41 pruebas correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, reset Turnstile, login, RBAC y cuentas administrativas, rutas legales, 404, Inter, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
+- E2E Playwright: 43 pruebas correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, reset Turnstile, login, RBAC y cuentas administrativas, rutas legales, 404, Inter, OAuth, proxy, montaje React, @vite/client, React Refresh, HMR).
 - `./terra test all`: correcto.
 
 ### Infraestructura local

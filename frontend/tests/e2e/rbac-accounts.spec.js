@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { ADMIN_PERMISSIONS, MODERATOR_PERMISSIONS, READ_ONLY_PERMISSIONS } from '../fixtures/permissions'
+import { ADMIN_PERMISSIONS, MODERATOR_PERMISSIONS, READ_ONLY_PERMISSIONS, WORKER_PERMISSIONS } from '../fixtures/permissions'
 
 const dashboard = {
   active_users: 2,
@@ -150,6 +150,23 @@ async function mockApi(page, { user, permissions, accounts = [] }) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], pagination: { total: 0 } }) })
   })
 }
+
+test('el administrador ve el botón y las pestañas al entrar en trabajadores', async ({ page }) => {
+  await mockApi(page, { user: accountUser('admin'), permissions: ADMIN_PERMISSIONS })
+
+  await page.goto('/app/admin/workers')
+  await expect(page.getByRole('heading', { name: 'Trabajadores', level: 1 })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Nuevo usuario administrativo' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Trabajadores' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Usuarios administrativos' })).toBeVisible()
+})
+
+test('un trabajador no accede al módulo administrativo de trabajadores', async ({ page }) => {
+  await mockApi(page, { user: worker, permissions: WORKER_PERMISSIONS })
+
+  await page.goto('/app/admin/workers')
+  await expect(page.getByText('Acceso no autorizado')).toBeVisible()
+})
 
 test('el administrador crea una cuenta administrativa y la lista se actualiza', async ({ page }) => {
   await mockApi(page, {

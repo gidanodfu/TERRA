@@ -39,6 +39,27 @@ chmod 600 .env
 volumen.
 **Verificar:** `./terra doctor`.
 
+## Cambios de backend no visibles
+
+**Identificar:** el código Go del host contiene un cambio, pero la API responde con el comportamiento anterior.
+
+**Causa:** el contenedor `api` ejecuta `go run ./cmd/api`; no tiene recarga automática. Vite sí refleja el frontend al instante, pero la API mantiene el proceso compilado anterior.
+
+**Corrección:** reinicie únicamente la API:
+
+```bash
+./terra restart api
+```
+
+Si el cambio afecta dependencias o la imagen, reconstruya antes:
+
+```bash
+./terra build api
+./terra up
+```
+
+**Verificar:** `./terra status` y una petición a `/api/v1/health` o al endpoint modificado.
+
 ## API no saludable
 
 **Identificar:** `api` no está saludable.

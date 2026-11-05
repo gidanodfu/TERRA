@@ -106,7 +106,7 @@ adicional y sin rollback automático.
 - `./terra test frontend unit`: 20 pruebas correctas.
 - `./terra test frontend integration`: 16 pruebas correctas.
 - `./terra test frontend`: lint, build y cobertura correctos.
-- `./terra test e2e`: 41 pruebas Playwright correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, reset Turnstile, login, RBAC y cuentas administrativas, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
+- `./terra test e2e`: 43 pruebas Playwright correctas (layout admin, layout trabajador, matriz responsive, tablas, formularios, modal, textos largos, tema claro/oscuro, persistencia, textarea de política, footer legal, reset Turnstile, login, RBAC y cuentas administrativas, rutas legales, 404, Inter, OAuth, proxy, montaje React, Vite client, React Refresh, HMR).
 - `./terra test all`: validación integrada correcta.
 - Recuperación tras eliminar contenedores conservando volumen.
 - Copia de seguridad local, verificación y restauración con marcador.

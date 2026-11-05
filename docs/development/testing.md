@@ -139,7 +139,7 @@ en el host.
 | Integridad de organización | organization/users | DB | slug/normalización | FK compuesta | Cubierto |
 | Sesiones/CSRF | auth | DB + HTTP | helpers de token | httptest + DB | Cubierto |
 | Auditoría | audit | DB | — | registro/listado | Cubierto |
-| Cliente de Vite / montaje de React / HMR | frontend | HTTP + navegador | cliente HTTP | Playwright (41 E2E) | Cubierto |
+| Cliente de Vite / montaje de React / HMR | frontend | HTTP + navegador | cliente HTTP | Playwright (43 E2E) | Cubierto |
 | Layout de admin / responsive | frontend | Navegador | — | Playwright (320–2560 px, altura 500–1080 px, zoom 200 %, container queries) | Cubierto |
 | Shell de worker / scroll / drawer | frontend | Navegador | — | Playwright (320–1920 px, dos superficies, scroll independiente) | Cubierto |
 | Tablas, formularios, modales, texto largo | frontend | Navegador | — | Playwright | Cubierto |
