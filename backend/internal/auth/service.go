@@ -38,12 +38,13 @@ type Service struct {
 }
 
 type LoginResult struct {
-	User       *users.User
-	RawToken   string
-	CSRF       string
-	ExpiresAt  time.Time
-	MustRotate bool
-	Pending    bool
+	User                *users.User
+	RawToken            string
+	CSRF                string
+	ExpiresAt           time.Time
+	HasLocalCredentials bool
+	MustRotate          bool
+	Pending             bool
 }
 
 func NewService(cfg config.Config, repo *Repository, usersRepo *users.Repository, google *googleoauth.Client,
@@ -200,6 +201,12 @@ func (s *Service) AdminLogin(ctx context.Context, ip, username, plainPassword, t
 }
 
 func (s *Service) issueSession(ctx context.Context, user *users.User, userAgent, ipHash string) (*LoginResult, error) {
+	// El estado de credenciales se resuelve antes de crear la sesión: si PostgreSQL
+	// falla, no queda una sesión huérfana y el error no se convierte en un falso.
+	hasLocal, mustRotate, err := s.localCredentialState(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
 	rawToken, err := crypto.RandomToken(32)
 	if err != nil {
 		return nil, err
@@ -212,11 +219,22 @@ func (s *Service) issueSession(ctx context.Context, user *users.User, userAgent,
 	if _, err := s.repo.CreateSession(ctx, user.ID, crypto.HashToken(rawToken), csrf, expires, userAgent, ipHash); err != nil {
 		return nil, err
 	}
-	mustRotate, _ := s.repo.HasLocalCredentialFlag(ctx, user.ID)
 	return &LoginResult{
 		User: user, RawToken: rawToken, CSRF: csrf, ExpiresAt: expires,
-		MustRotate: mustRotate, Pending: user.Status == users.StatusPendingProfile,
+		HasLocalCredentials: hasLocal, MustRotate: mustRotate,
+		Pending: user.Status == users.StatusPendingProfile,
 	}, nil
+}
+
+// localCredentialState devuelve si la cuenta tiene credenciales locales y, solo en ese
+// caso, su indicador de rotación. Los errores de PostgreSQL se propagan sin degradarlos.
+func (s *Service) localCredentialState(ctx context.Context, userID uuid.UUID) (hasLocal, mustRotate bool, err error) {
+	hasLocal, err = s.repo.HasLocalCredential(ctx, userID)
+	if err != nil || !hasLocal {
+		return hasLocal, false, err
+	}
+	mustRotate, err = s.repo.HasLocalCredentialFlag(ctx, userID)
+	return hasLocal, mustRotate, err
 }
 
 func (s *Service) Logout(ctx context.Context, rawToken string, userID string, ipHash string) {
@@ -253,16 +271,9 @@ func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, sessionT
 }
 
 func (s *Service) Me(ctx context.Context, identity principal.Identity) (map[string]any, error) {
-	hasLocalCredentials, err := s.repo.HasLocalCredential(ctx, identity.ID)
+	hasLocalCredentials, mustRotate, err := s.localCredentialState(ctx, identity.ID)
 	if err != nil {
 		return nil, err
-	}
-	mustRotate := false
-	if hasLocalCredentials {
-		mustRotate, err = s.repo.HasLocalCredentialFlag(ctx, identity.ID)
-		if err != nil {
-			return nil, err
-		}
 	}
 	fullUser, err := s.users.GetByID(ctx, identity.ID)
 	if err != nil {

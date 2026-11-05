@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -22,6 +23,7 @@ import (
 	"terra/internal/platform/config"
 	"terra/internal/platform/oauthstate"
 	"terra/internal/platform/password"
+	"terra/internal/platform/rbac"
 	"terra/internal/users"
 	"terra/tests/helpers"
 )
@@ -347,5 +349,170 @@ func TestAdminLoginTurnstileConnectionError(t *testing.T) {
 	}
 	if count := fixture.sessions(t); count != 0 {
 		t.Fatalf("sesión creada sin conexión a Cloudflare: %d", count)
+	}
+}
+
+// authContractResponse replica los campos que consume AuthContext.apply() en el frontend.
+type authContractResponse struct {
+	User struct {
+		ID     uuid.UUID `json:"id"`
+		Roles  []string  `json:"roles"`
+		Status string    `json:"status"`
+	} `json:"user"`
+	Permissions         []string `json:"permissions"`
+	HasLocalCredentials bool     `json:"has_local_credentials"`
+	MustRotatePassword  bool     `json:"must_rotate_password"`
+	PendingProfile      bool     `json:"pending_profile"`
+}
+
+func requireContractKeys(t *testing.T, payload []byte, origin string) {
+	t.Helper()
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &keys); err != nil {
+		t.Fatalf("%s: JSON inválido: %v", origin, err)
+	}
+	for _, key := range []string{"user", "permissions", "has_local_credentials", "must_rotate_password", "pending_profile"} {
+		if _, ok := keys[key]; !ok {
+			t.Fatalf("%s: la respuesta no incluye %q", origin, key)
+		}
+	}
+}
+
+func adminLoginRequest(t *testing.T, handler *auth.Handler, username, plainPassword string) *httptest.ResponseRecorder {
+	t.Helper()
+	body := fmt.Sprintf(`{"username":%q,"password":%q,"turnstile_token":"integration-token"}`, username, plainPassword)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/admin/login", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "192.0.2.77:1234"
+	rec := httptest.NewRecorder()
+	handler.AdminLogin(rec, req)
+	return rec
+}
+
+func meRequest(t *testing.T, svc *auth.Service, handler *auth.Handler, cookieName, token string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
+	req.AddCookie(&http.Cookie{Name: cookieName, Value: token})
+	rec := httptest.NewRecorder()
+	svc.RequireAuth(http.HandlerFunc(handler.Me)).ServeHTTP(rec, req)
+	return rec
+}
+
+func sessionCookie(t *testing.T, rec *httptest.ResponseRecorder, name string) string {
+	t.Helper()
+	for _, cookie := range rec.Result().Cookies() {
+		if cookie.Name == name && cookie.Value != "" {
+			return cookie.Value
+		}
+	}
+	t.Fatalf("la respuesta no estableció la cookie %s", name)
+	return ""
+}
+
+// TestAdminLoginContractMatchesMeForAllRoles conecta la respuesta real del handler de
+// login con el contrato que consume AuthContext y con /auth/me, para los tres roles.
+func TestAdminLoginContractMatchesMeForAllRoles(t *testing.T) {
+	f := newAccountFixture(t)
+	turnstile := newTurnstileFixture(t, 0, map[string]any{
+		"success": true, "action": "admin_login", "hostname": "localhost",
+	})
+	svc := auth.NewService(f.cfg, auth.NewRepository(f.pool), f.users, nil,
+		oauthstate.NewRepository(f.pool), turnstile.turnstile, audit.NewRepository(f.pool))
+	handler := auth.NewHandler(svc, "ip-secret")
+	initial := "InicialSegura-123"
+
+	for _, role := range []string{rbac.RoleAdmin, rbac.RoleModerator, rbac.RoleReadOnly} {
+		t.Run(role, func(t *testing.T) {
+			username := "login-" + role
+			rec, account := f.createAccount(t, f.adminID,
+				accountCreateBody(role, "Login", role, username, initial, initial))
+			if rec.Code != http.StatusCreated {
+				t.Fatalf("crear cuenta %s: status=%d body=%s", role, rec.Code, rec.Body.String())
+			}
+
+			loginRec := adminLoginRequest(t, handler, username, initial)
+			if loginRec.Code != http.StatusOK {
+				t.Fatalf("%s: login status=%d body=%s", role, loginRec.Code, loginRec.Body.String())
+			}
+			requireContractKeys(t, loginRec.Body.Bytes(), "login")
+			t.Logf("login %s: %s", role, loginRec.Body.String())
+			var login authContractResponse
+			if err := json.Unmarshal(loginRec.Body.Bytes(), &login); err != nil {
+				t.Fatalf("%s: login JSON: %v", role, err)
+			}
+			if !login.HasLocalCredentials {
+				t.Fatalf("%s: el login no informó has_local_credentials=true", role)
+			}
+			if !login.MustRotatePassword {
+				t.Fatalf("%s: el login no informó must_rotate_password=true", role)
+			}
+			if login.PendingProfile {
+				t.Fatalf("%s: el login informó pending_profile=true", role)
+			}
+			if !slices.Equal(login.User.Roles, []string{role}) {
+				t.Fatalf("%s: roles en login=%v", role, login.User.Roles)
+			}
+			if len(login.Permissions) == 0 {
+				t.Fatalf("%s: el login no devolvió permisos", role)
+			}
+
+			token := sessionCookie(t, loginRec, f.cfg.SessionCookie)
+			meRec := meRequest(t, svc, handler, f.cfg.SessionCookie, token)
+			if meRec.Code != http.StatusOK {
+				t.Fatalf("%s: me status=%d body=%s", role, meRec.Code, meRec.Body.String())
+			}
+			requireContractKeys(t, meRec.Body.Bytes(), "me")
+			var me authContractResponse
+			if err := json.Unmarshal(meRec.Body.Bytes(), &me); err != nil {
+				t.Fatalf("%s: me JSON: %v", role, err)
+			}
+			if me.HasLocalCredentials != login.HasLocalCredentials ||
+				me.MustRotatePassword != login.MustRotatePassword ||
+				me.PendingProfile != login.PendingProfile {
+				t.Fatalf("%s: login y me discrepan: login=%+v me=%+v", role, login, me)
+			}
+			if me.User.ID != account.ID {
+				t.Fatalf("%s: me devolvió otro usuario: %s != %s", role, me.User.ID, account.ID)
+			}
+			if !slices.Equal(me.Permissions, login.Permissions) {
+				t.Fatalf("%s: permisos distintos entre login y me", role)
+			}
+
+			next := "NuevaSegura-456"
+			if err := svc.ChangePassword(context.Background(), account.ID, token, initial, next, "ip-hash"); err != nil {
+				t.Fatalf("%s: cambiar contraseña: %v", role, err)
+			}
+
+			loginRec = adminLoginRequest(t, handler, username, next)
+			if loginRec.Code != http.StatusOK {
+				t.Fatalf("%s: login tras rotación status=%d body=%s", role, loginRec.Code, loginRec.Body.String())
+			}
+			var rotated authContractResponse
+			if err := json.Unmarshal(loginRec.Body.Bytes(), &rotated); err != nil {
+				t.Fatalf("%s: login rotado JSON: %v", role, err)
+			}
+			if !rotated.HasLocalCredentials {
+				t.Fatalf("%s: tras rotar, has_local_credentials debería seguir siendo true", role)
+			}
+			if rotated.MustRotatePassword {
+				t.Fatalf("%s: tras rotar, must_rotate_password debería ser false", role)
+			}
+			if !slices.Equal(rotated.Permissions, login.Permissions) {
+				t.Fatalf("%s: la rotación alteró los permisos", role)
+			}
+
+			token = sessionCookie(t, loginRec, f.cfg.SessionCookie)
+			meRec = meRequest(t, svc, handler, f.cfg.SessionCookie, token)
+			var meRotated authContractResponse
+			if err := json.Unmarshal(meRec.Body.Bytes(), &meRotated); err != nil {
+				t.Fatalf("%s: me rotado JSON: %v", role, err)
+			}
+			if !meRotated.HasLocalCredentials || meRotated.MustRotatePassword {
+				t.Fatalf("%s: me tras rotar no coincide con el login: %+v", role, meRotated)
+			}
+			if !slices.Equal(meRotated.User.Roles, []string{role}) {
+				t.Fatalf("%s: la rotación alteró los roles: %v", role, meRotated.User.Roles)
+			}
+		})
 	}
 }

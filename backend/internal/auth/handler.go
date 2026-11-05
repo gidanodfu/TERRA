@@ -96,10 +96,11 @@ func (h *Handler) AdminLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	h.svc.SetSessionCookies(w, result)
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{
-		"user":                 result.User,
-		"must_rotate_password": result.MustRotate,
-		"pending_profile":      result.Pending,
-		"permissions":          PermissionsFor(result.User.Roles),
+		"user":                  result.User,
+		"has_local_credentials": result.HasLocalCredentials,
+		"must_rotate_password":  result.MustRotate,
+		"pending_profile":       result.Pending,
+		"permissions":           PermissionsFor(result.User.Roles),
 	})
 }
 

@@ -137,6 +137,18 @@ suite normal y requiere sesiones temporales y credenciales mediante variables de
 `REAL_E2E_SESSION_<ROL>`, `REAL_E2E_CSRF_<ROL>`, `REAL_E2E_CURRENT_PASSWORD` y
 `REAL_E2E_NEW_PASSWORD`, con roles `ADMIN`, `MODERATOR` y `READ_ONLY`.
 
+### Contrato de login
+
+`backend/tests/integration/auth_admin_test.go` ejecuta el handler real de login contra
+PostgreSQL y compara su respuesta con `/auth/me` para `admin`, `moderator` y `read_only`:
+mismos campos, mismos valores de `has_local_credentials`/`must_rotate_password` y mismos
+permisos. También cubre el estado posterior a la rotación de contraseña.
+
+`frontend/tests/e2e/login-security-flow.spec.js` recorre el login en el navegador para los
+tres roles y comprueba que el formulario se ve en el primer render de `/app/security`, sin
+`/auth/me` intermedio, sin recargar y sin reiniciar servicios. Turnstile se simula porque el
+Siteverify real exige un token de Cloudflare.
+
 ## Matriz de cobertura de integraciones
 
 | Integración | Módulo | Tipo | Unitarias | Integración | Estado |
