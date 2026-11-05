@@ -3,7 +3,7 @@
 # TERRA - verify-backup.sh
 # Versión: 2.0.0
 # Descripción: verifica checksums y estructura de una copia de seguridad sin restaurarla.
-# Uso: ./deploy/scripts/verify-backup.sh <backup-dir>
+# Uso: ./deploy/scripts/verify-backup.sh [backup-dir]
 # Requisitos: Docker para validar el dump con pg_restore.
 # Efectos: solo lectura; no modifica la copia de seguridad.
 # Códigos: 0 válido · 1 inválido · 2 uso incorrecto.
@@ -17,16 +17,23 @@ terra_enable_traps
 if (($# == 1)); then
   case "$1" in
     -h|--help)
-      printf 'Uso: %s <backup-dir>\nVerifica checksums, tar y dump sin restaurar.\n' "$(basename "$0")"
+      printf 'Uso: %s [backup-dir]\nVerifica checksums, tar y dump sin restaurar.\nSin ruta usa la copia más reciente de BACKUP_HOST_PATH.\n' "$(basename "$0")"
       exit 0
       ;;
   esac
 fi
-if (($# != 1)); then
-  printf 'Uso: %s <backup-dir>\n' "$(basename "$0")" >&2
+if (($# > 1)); then
+  printf 'Uso: %s [backup-dir]\n' "$(basename "$0")" >&2
   exit 2
 fi
-dir="$1"
+if (($# == 0)); then
+  backup_root="$(terra_backup_path)"
+  latest="$(terra_backups "$backup_root" | tail -n1)"
+  [[ -n "$latest" ]] || terra_die "No hay copias de seguridad en $backup_root."
+  dir="$backup_root/$latest"
+else
+  dir="$1"
+fi
 [[ -d "$dir" ]] || terra_die "No existe el directorio: $dir"
 dir="$(cd -- "$dir" && pwd)"
 [[ -f "$dir/SHA256SUMS" ]] || terra_die "Falta SHA256SUMS."

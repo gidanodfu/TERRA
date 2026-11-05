@@ -56,11 +56,21 @@ else
 fi
 
 storage_path="$(terra_storage_path)"
-printf '\n%s\n' "Almacenamiento documental"
+backup_path="$(terra_backup_path)"
+printf '\n%s\n' "Almacenamiento documental (externo)"
 printf '  Ruta host: %s\n' "$storage_path"
 if [[ -d "$storage_path" ]]; then
   printf '  Tamaño: %s\n' "$(terra_file_size "$storage_path")"
   printf '  Espacio libre: %s\n' "$(df -h --output=avail "$storage_path" 2>/dev/null | tail -1 | tr -d ' ')"
+else
+  printf '  AUSENTE\n'
+fi
+
+printf '\n%s\n' "Copias de seguridad (externas)"
+printf '  Ruta host: %s\n' "$backup_path"
+if [[ -d "$backup_path" ]]; then
+  printf '  Copias: %s\n' "$(terra_backups | wc -l)"
+  printf '  Espacio libre: %s\n' "$(df -h --output=avail "$backup_path" 2>/dev/null | tail -1 | tr -d ' ')"
 else
   printf '  AUSENTE\n'
 fi

@@ -44,7 +44,7 @@ services:
       - ../backend:/src
       - ../.cache/go-mod:/go/pkg/mod
       - ../.cache/go-build:/tmp/gocache
-      - ${STORAGE_HOST_PATH:-../data/dev}:/var/lib/terra:ro
+      - ${STORAGE_HOST_PATH:?Defina STORAGE_HOST_PATH en .env}:/var/lib/terra:ro
     depends_on:
       db:
         condition: service_healthy
@@ -79,7 +79,7 @@ services:
       - ../backend:/src
       - ../.cache/go-mod:/go/pkg/mod
       - ../.cache/go-build:/tmp/gocache
-      - ${STORAGE_HOST_PATH:-../data/dev}:/var/lib/terra:rw
+      - ${STORAGE_HOST_PATH:?Defina STORAGE_HOST_PATH en .env}:/var/lib/terra:rw
     depends_on:
       db:
         condition: service_healthy

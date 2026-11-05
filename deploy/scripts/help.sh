@@ -69,11 +69,17 @@ PRUEBAS
   ./terra test frontend integration
   ./terra test e2e
 
+ALMACENAMIENTO Y MIGRACIÓN
+  ./terra migrate-data --dry-run
+  ./terra migrate-data --apply
+  ./terra doctor
+
 COPIAS DE SEGURIDAD Y RESTAURACIÓN
   ./terra backup
   ./terra restore
-  ./terra restore backups/<timestamp>
-  ./terra restore backups/<timestamp> --db
+  ./terra restore <timestamp>
+  ./terra restore <timestamp> --db
+  ./terra restore /ruta/absoluta/del/backup
 
 REGLAS
   - Todo el stack se ejecuta en Docker.
@@ -81,6 +87,7 @@ REGLAS
   - Los cambios de .env requieren ./terra up --recreate=servicio.
   - No se requieren Go, Node, npm ni PostgreSQL en el host.
   - Los scripts nunca eliminan volúmenes automáticamente.
+  - Documentos y backups viven fuera del repositorio (STORAGE_HOST_PATH y BACKUP_HOST_PATH).
   - Los documentos y la base de datos se conservan al detener o eliminar contenedores.
 
 Documentación: docs/development/

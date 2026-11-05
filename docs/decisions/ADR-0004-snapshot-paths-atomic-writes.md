@@ -17,12 +17,14 @@ usuarios/user-<uuid>/drive-backups/job-<uuid>/Mi unidad/<estructura original>
 ```
 
 - Identidad física por UUID; slug legible y estable.
-- La ruta relativa se guarda en PostgreSQL; la absoluta solo existe en el backend.
+- La ruta relativa se guarda en PostgreSQL; la absoluta solo existe en el backend y se
+  resuelve contra `STORAGE_HOST_PATH` (externa al repositorio).
 - Cada segmento de nombre se sanitiza y los caracteres peligrosos se reemplazan.
 - Se rechazan `..`, rutas absolutas, separadores inválidos, NUL y symlinks.
 - Colisiones: sufijo determinista `~<prefijo del ID>`.
 - Escritura `.part` en el directorio destino, SHA-256, validación, `fsync` y `rename` atómico.
 - API monta el volumen en solo lectura; el worker es el único escritor.
+- Mover la raíz física del host no cambia las rutas relativas ni los snapshots existentes.
 
 ## Consecuencias
 

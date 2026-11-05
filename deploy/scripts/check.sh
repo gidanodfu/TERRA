@@ -77,6 +77,19 @@ else
   ok "Almacenamiento aún no existe; se creará en $storage_path"
 fi
 
+step "Validando copias de seguridad externas"
+backup_path="$(terra_backup_path)"
+if [[ -e "$backup_path" ]]; then
+  [[ -d "$backup_path" ]] || { terra_error "$backup_path no es un directorio."; exit 1; }
+  [[ -w "$backup_path" ]] || { terra_error "Sin permisos de escritura en $backup_path."; exit 1; }
+  ok "Copias de seguridad accesibles: $backup_path"
+else
+  parent="$backup_path"
+  while [[ ! -d "$parent" ]]; do parent="$(dirname "$parent")"; done
+  [[ -w "$parent" ]] || { terra_error "No se puede crear $backup_path (sin escritura en $parent)."; exit 1; }
+  ok "Copias de seguridad aún no existen; se crearán en $backup_path"
+fi
+
 step "Validando capacidad de disco"
 min_free="$(terra_env_get MIN_FREE_DISK_BYTES)"
 min_free="${min_free:-0}"

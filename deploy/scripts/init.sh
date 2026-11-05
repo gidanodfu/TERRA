@@ -47,6 +47,7 @@ done
 terra_step "TERRA INIT — desarrollo local"
 bash "$TERRA_SCRIPT_DIR/check.sh" --for-init -q
 terra_ensure_storage
+terra_ensure_backups
 terra_ensure_caches
 
 volume_present=0

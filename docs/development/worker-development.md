@@ -74,10 +74,11 @@ en sí; las pruebas externas de Drive requieren credenciales controladas y son m
 
 ## Almacenamiento
 
-El worker monta la ruta local de documentos en lectura/escritura:
+El worker monta `STORAGE_HOST_PATH` en lectura/escritura:
 
 ```text
-../data/dev → /var/lib/terra
+$STORAGE_HOST_PATH → /var/lib/terra
 ```
 
-La API la monta en solo lectura.
+La API la monta en solo lectura. La ruta externa se define en `.env` y debe quedar fuera
+del repositorio.

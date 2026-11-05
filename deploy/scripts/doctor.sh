@@ -124,14 +124,45 @@ terra_check_vite_assets "http://127.0.0.1:$port" || note_issue "Recursos de Vite
 
 terra_step "6. Almacenamiento y volúmenes"
 if terra_volume_exists; then terra_ok "Volumen PostgreSQL presente"; else note_issue "Volumen PostgreSQL ausente"; fi
-storage_path="$(terra_storage_path)"
-if [[ -d "$storage_path" && -w "$storage_path" ]]; then
-  terra_ok "Almacenamiento local accesible: $storage_path"
+if terra_validate_external_paths >/dev/null 2>&1; then
+  terra_ok "Rutas externas válidas y fuera del repositorio"
 else
-  note_issue "Almacenamiento local no accesible: $storage_path"
+  note_issue "Rutas externas inválidas o dentro del repositorio"
 fi
-free="$(df -h --output=avail "$storage_path" 2>/dev/null | tail -1 | tr -d ' ')"
-terra_info "Espacio libre: ${free:-?}"
+
+if storage_path="$(terra_storage_path 2>/dev/null)"; then
+  terra_info "Documentos (host): $storage_path"
+  if [[ -d "$storage_path/staging" && -d "$storage_path/areas" ]]; then
+    terra_ok "Estructura documental presente (staging/ y areas/)"
+  else
+    note_issue "Faltan staging/ o areas/ en $storage_path"
+  fi
+  mode="$(stat -c '%a' "$storage_path" 2>/dev/null || echo '?')"
+  if [[ -w "$storage_path" ]]; then
+    terra_ok "Permisos del almacenamiento: $mode · escritura disponible"
+  else
+    note_issue "Sin permisos de escritura en $storage_path (modo $mode)"
+  fi
+  free="$(df -h --output=avail "$storage_path" 2>/dev/null | tail -1 | tr -d ' ')"
+  terra_info "Espacio libre documental: ${free:-?}"
+else
+  note_issue "Ruta documental externa inválida"
+fi
+
+if backup_path="$(terra_backup_path 2>/dev/null)"; then
+  terra_info "Copias de seguridad (host): $backup_path"
+  if [[ -d "$backup_path" && -w "$backup_path" ]]; then
+    terra_ok "Backups accesibles (modo $(stat -c '%a' "$backup_path" 2>/dev/null || echo '?'))"
+  else
+    note_issue "Backups no accesibles en $backup_path"
+  fi
+  free="$(df -h --output=avail "$backup_path" 2>/dev/null | tail -1 | tr -d ' ')"
+  terra_info "Espacio libre para backups: ${free:-?}"
+  count="$(terra_backups | wc -l)"
+  terra_info "Copias locales disponibles: $count"
+else
+  note_issue "Ruta de backups externa inválida"
+fi
 
 terra_step "7. Errores recientes del worker"
 recent="$(terra_compose logs --no-color --tail 80 worker 2>/dev/null | grep -iE 'level=ERROR|panic' | tail -5 || true)"

@@ -46,7 +46,7 @@ web (Vite + React) ──/api──► api (Go REST + SSE) ──► db (Postgre
                                      │                    │
                              worker (Go) ─────────────────┘
                                      │
-                          data/dev (documentos locales)
+                STORAGE_HOST_PATH (documentos externos)
 ```
 
 - **web**: Vite dev server, HMR y proxy REST/SSE hacia `api:8080`.
@@ -96,6 +96,7 @@ chmod 600 .env
 Complete como mínimo:
 
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_PORT`
+- `STORAGE_HOST_PATH` y `BACKUP_HOST_PATH` (pueden quedar vacías para usar XDG/HOME)
 - `SESSION_SECRET` (`openssl rand -hex 32`)
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, redirect URIs locales
 - `TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`)
@@ -321,7 +322,7 @@ Referencia completa: [docs/development/testing.md](docs/development/testing.md).
 ```
 
 `doctor` verifica Docker, Compose, contenedores, PostgreSQL, migraciones, API, Vite,
-volúmenes, almacenamiento y errores recientes.
+volúmenes, almacenamiento externo, backups y errores recientes, sin mostrar secretos.
 
 ## 21. Volúmenes
 
@@ -329,22 +330,47 @@ volúmenes, almacenamiento y errores recientes.
 |---|---|
 | `terra_terra-db` | PostgreSQL |
 | `node_modules` de la imagen web | dependencias del frontend en el contenedor |
-| `data/dev` | documentos locales |
+| `STORAGE_HOST_PATH` | documentos, snapshots y staging **fuera del repositorio** |
+| `BACKUP_HOST_PATH` | copias de seguridad **fuera del repositorio** |
 | `.cache/go-*` | cachés de Go |
 
+Valores predeterminados si las rutas externas están vacías:
+
+```text
+$XDG_DATA_HOME/terra/storage
+$XDG_DATA_HOME/terra/backups
+# o, sin XDG_DATA_HOME:
+$HOME/.local/share/terra/storage
+$HOME/.local/share/terra/backups
+```
+
+Los documentos no se guardan dentro del proyecto. `./terra init` y `./terra up` crean
+las rutas con permisos `0750` (documentos) y `0700` (backups).
+
 `./terra down` detiene sin borrar datos. `./terra down --remove` elimina contenedores
-y red, **nunca** volúmenes ni documentos.
+y red, **nunca** volúmenes ni datos externos.
 
 ## 22. Copias de seguridad locales
 
 ```bash
 ./terra backup
 ./terra restore
-./terra restore backups/<timestamp>
+./terra restore <timestamp>
+./terra restore /ruta/absoluta/del/backup
 ```
 
-Genera dump de PostgreSQL, almacenamiento, metadatos y checksums. La clave
-`TOKEN_ENCRYPTION_KEY` se respalda por separado.
+Las copias se crean en `BACKUP_HOST_PATH/<timestamp>/` con dump de PostgreSQL,
+almacenamiento, metadatos y checksums. La clave `TOKEN_ENCRYPTION_KEY` se respalda
+por separado.
+
+Para mover datos antiguos de `data/dev` y `backups/` a las rutas externas:
+
+```bash
+./terra migrate-data            # simulación
+./terra migrate-data --apply    # copia, verifica y actualiza .env
+```
+
+El origen no se elimina automáticamente.
 
 Ver [docs/development/local-backups.md](docs/development/local-backups.md).
 

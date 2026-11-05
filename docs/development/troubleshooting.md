@@ -193,10 +193,46 @@ falta y existen documentos o copias de seguridad; en su lugar, restaure.
 **Corrección:** busque copias de seguridad locales y restaure:
 
 ```bash
-./terra restore backups/<timestamp>
+./terra restore <timestamp>
+./terra restore /ruta/absoluta/del/backup
 ```
 
 Los scripts nunca eliminan volúmenes automáticamente.
+
+## Ruta de documentos o backups inválida
+
+**Identificar:** `./terra check` o `./terra doctor` rechazan `STORAGE_HOST_PATH` o
+`BACKUP_HOST_PATH`.
+
+**Causas:** ruta relativa, dentro del repositorio, `/`, HOME completo, symlink hacia el
+proyecto o raíces anidadas.
+
+**Corrección:** use rutas absolutas externas en `.env`:
+
+```dotenv
+STORAGE_HOST_PATH=/srv/terra/storage
+BACKUP_HOST_PATH=/srv/terra/backups
+```
+
+Para mover datos antiguos de `data/dev` y `backups/` sin pérdida:
+
+```bash
+./terra migrate-data           # simulación
+./terra migrate-data --apply
+```
+
+Si el sistema de archivos no admite `0750`/`0700`, use un volumen con permisos compatibles;
+TERRA no continúa con permisos incorrectos.
+
+## Snapshots no encontrados tras mover el almacenamiento
+
+Las rutas de PostgreSQL son relativas a `STORAGE_ROOT`; no se actualizan al mover el host.
+Verifique que `STORAGE_HOST_PATH` apunta a la raíz que contiene `areas/` y `staging/` y
+ejecute:
+
+```bash
+./deploy/scripts/consistency-check.sh
+```
 
 ## Disco insuficiente
 

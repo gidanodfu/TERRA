@@ -44,9 +44,10 @@ while (($# > 0)); do
 done
 
 if [[ -z "$backup_dir" ]]; then
-  backup_dir="$(terra_backups | tail -n1)"
-  [[ -n "$backup_dir" ]] || terra_die "No hay backups locales en backups/." 1
-  backup_dir="$TERRA_ROOT_DIR/backups/$backup_dir"
+  backup_root="$(terra_backup_path)"
+  backup_dir="$(terra_backups "$backup_root" | tail -n1)"
+  [[ -n "$backup_dir" ]] || terra_die "No hay copias de seguridad en $backup_root." 1
+  backup_dir="$backup_root/$backup_dir"
   terra_info "Usando la copia de seguridad más reciente: $backup_dir"
 fi
 [[ -d "$backup_dir" ]] || terra_die "No existe el directorio de copia de seguridad: $backup_dir" 2
@@ -56,8 +57,14 @@ terra_check_commands
 terra_require_db_running
 
 [[ -f "$backup_dir/metadata.json" ]] || terra_die "Falta metadata.json; no se puede verificar la copia de seguridad." 3
-grep -q '"distribution": "local-development"' "$backup_dir/metadata.json" \
-  || terra_die "La copia de seguridad no corresponde a la distribución local." 3
+grep -q '"application": "TERRA"' "$backup_dir/metadata.json" \
+  || terra_die "La copia de seguridad no corresponde a TERRA." 3
+if grep -q '"distribution":' "$backup_dir/metadata.json"; then
+  grep -q '"distribution": "local-development"' "$backup_dir/metadata.json" \
+    || terra_die "La copia de seguridad no corresponde a la distribución local." 3
+else
+  terra_warn "Copia heredada sin marca de distribución; se validarán checksums y contenido."
+fi
 [[ -f "$backup_dir/SHA256SUMS" ]] || terra_die "Falta SHA256SUMS." 3
 (cd "$backup_dir" && sha256sum -c SHA256SUMS >/dev/null) || terra_die "Checksums inválidos." 3
 

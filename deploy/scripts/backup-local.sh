@@ -5,11 +5,12 @@
 # Descripción: copia de seguridad local coordinada de PostgreSQL y del volumen documental.
 # Uso: ./deploy/scripts/backup-local.sh [--no-verify]
 # Requisitos: PostgreSQL activo y almacenamiento local accesible.
-# Efectos: crea copias de seguridad en backups/<timestamp>/; nunca sobrescribe copias ni modifica datos.
+# Efectos: crea copias de seguridad en BACKUP_HOST_PATH/<timestamp>/; nunca sobrescribe copias ni modifica datos.
 #          No incluye .env ni TOKEN_ENCRYPTION_KEY.
 # Códigos: 0 correcto · 1 fallo · 2 uso incorrecto.
 # =============================================================================
 set -Eeuo pipefail
+umask 077
 # shellcheck source=_common.sh
 # shellcheck disable=SC1091
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
@@ -47,7 +48,7 @@ storage_path="$(terra_storage_path)"
 [[ -d "$storage_path" ]] || terra_die "No existe el almacenamiento local: $storage_path" 1
 
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-backup_root="$TERRA_ROOT_DIR/backups"
+backup_root="$(terra_backup_path)"
 backup_dir="$backup_root/$stamp"
 [[ ! -e "$backup_dir" ]] || terra_die "La copia de seguridad $backup_dir ya existe; no se sobrescribe." 1
 mkdir -p "$backup_root"

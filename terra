@@ -5,7 +5,7 @@
 # Descripción: interfaz única de control del entorno local. Delega en los
 #              scripts de deploy/scripts; no duplica lógica de operación.
 # Uso: ./terra <help|check|doctor|build|init|up|down|restart|status|logs|
-#               shell|db|migrate|bootstrap|test|backup|restore>
+#               shell|db|migrate|bootstrap|test|backup|restore|migrate-data>
 # Requisitos: Docker Engine, Docker Compose v2 y Bash.
 # Efectos: depende del subcomando. Nunca elimina volúmenes automáticamente.
 # Códigos: los del subcomando; 2 para uso incorrecto.
@@ -73,6 +73,9 @@ case "$command" in
     ;;
   restore)
     exec "$SCRIPTS/restore-local.sh" "$@"
+    ;;
+  migrate-data)
+    exec "$SCRIPTS/migrate-data.sh" "$@"
     ;;
   *)
     printf '[TERRA] Comando desconocido: %s\n\n' "$command" >&2

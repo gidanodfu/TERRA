@@ -44,9 +44,10 @@ Ningún comando requiere Go, Node ni PostgreSQL en el host.
 | `migrate.sh` | compose exec `go run ./cmd/migrate` | Solo el esquema |
 | `bootstrap.sh` | compose exec `go run ./cmd/bootstrap` | Crea el administrador si falta |
 | `test.sh` | compose exec Go/Vitest/Playwright | Usa la base de datos desechable `terra_test` |
-| `backup-local.sh` | pg_dump, tar | Crea un nuevo directorio de copia de seguridad |
-| `restore-local.sh` | pg_restore, tar, compose restart | **Destructivo**, con confirmación |
+| `backup-local.sh` | pg_dump, tar | Crea `BACKUP_HOST_PATH/<timestamp>/` |
+| `restore-local.sh` | pg_restore, tar, compose restart | **Destructivo**, con confirmación; busca en `BACKUP_HOST_PATH` |
 | `verify-backup.sh` | checksum/tar/pg_restore | No |
+| `migrate-data.sh` | copia de archivos + `.env` atómico | **Copia datos**, no borra el origen |
 | `consistency-check.sh` | psql + sistema de archivos | No |
 | `retention.sh` | psql + sistema de archivos | Solo con `--apply` |
 | `help.sh` | ninguno | No |
@@ -59,7 +60,9 @@ Ningún comando requiere Go, Node ni PostgreSQL en el host.
 ./terra shell worker
 ./terra db -c "SELECT status, count(*) FROM download_jobs GROUP BY status;"
 ./terra logs api -n 300
-CONFIRM=yes ./terra restore backups/20261103T210000Z
+CONFIRM=yes ./terra restore 20261103T210000Z
+./terra migrate-data --dry-run
+./terra migrate-data --apply
 ```
 
 ## Códigos de salida
@@ -75,5 +78,6 @@ CONFIRM=yes ./terra restore backups/20261103T210000Z
 - Ningún script elimina volúmenes.
 - El bootstrap nunca sobrescribe credenciales.
 - Las pruebas usan una base de datos desechable `terra_test` y nunca la base de datos de desarrollo.
-- Las copias de seguridad nunca se sobrescriben.
+- Las copias de seguridad nunca se sobrescriben ni se guardan dentro del repositorio.
+- `migrate-data.sh` copia y verifica; nunca elimina el origen.
 - Air recarga código Go en desarrollo; los cambios de `.env` requieren `./terra up --recreate=servicio`.

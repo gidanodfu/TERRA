@@ -60,6 +60,14 @@ terra_enable_traps() {
 }
 
 terra_compose() {
+  # Si las rutas externas están vacías, Compose debe recibir el valor resuelto por
+  # los scripts (el entorno del shell tiene prioridad sobre .env).
+  if [[ -z "${STORAGE_HOST_PATH:-}" ]]; then
+    local resolved
+    if resolved="$(terra_storage_path 2>/dev/null)"; then
+      export STORAGE_HOST_PATH="$resolved"
+    fi
+  fi
   "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
     -f "$TERRA_COMPOSE_FILE" "$@"
 }
@@ -232,15 +240,102 @@ terra_validate_storage_root() {
   return 0
 }
 
-terra_storage_path() {
-  local raw
-  raw="$(terra_env_get STORAGE_HOST_PATH)"
-  raw="${raw:-../data/dev}"
-  if [[ "$raw" != /* ]]; then
-    raw="$TERRA_DEPLOY_DIR/$raw"
+terra_default_data_home() {
+  local base
+  if [[ -n "${XDG_DATA_HOME:-}" ]]; then
+    base="$XDG_DATA_HOME"
+  elif [[ -n "${HOME:-}" ]]; then
+    base="$HOME/.local/share"
+  else
+    return 1
   fi
-  TERRA_STORAGE_PATH="$(realpath -m -- "$raw")"
-  printf '%s' "$TERRA_STORAGE_PATH"
+  printf '%s/terra' "$base"
+}
+
+# Canoniza y valida una ruta externa. Rechaza relativas, /, HOME exacto,
+# el repositorio y cualquier symlink que resuelva dentro de él.
+terra_canonical_external() {
+  local raw="$1" label="$2" canonical root home
+  if [[ "$raw" != /* ]]; then
+    terra_error "$label debe ser una ruta absoluta (valor relativo rechazado)."
+    return 1
+  fi
+  if ! canonical="$(realpath -m -- "$raw" 2>/dev/null)"; then
+    terra_error "No se pudo resolver $label."
+    return 1
+  fi
+  if [[ "$canonical" == "/" ]]; then
+    terra_error "$label no puede ser la raíz del sistema."
+    return 1
+  fi
+  if [[ -n "${HOME:-}" ]] && home="$(realpath -m -- "$HOME" 2>/dev/null)" && [[ "$canonical" == "$home" ]]; then
+    terra_error "$label no puede ser el HOME completo del usuario."
+    return 1
+  fi
+  root="$(realpath -m -- "$TERRA_ROOT_DIR")"
+  if [[ "$canonical" == "$root" || "$canonical" == "$root/"* ]]; then
+    terra_error "$label no puede estar dentro del repositorio: use una ruta externa."
+    return 1
+  fi
+  printf '%s' "$canonical"
+}
+
+# Resuelve una ruta externa: vacía -> predeterminado XDG/HOME.
+terra_resolve_external_path() {
+  local key="$1" default_dir="$2" label="$3" raw data_home
+  raw="$(terra_env_get "$key")"
+  if [[ -z "$raw" ]]; then
+    if ! data_home="$(terra_default_data_home)"; then
+      terra_error "Defina $key en .env: no se pudo determinar XDG_DATA_HOME ni HOME."
+      return 1
+    fi
+    raw="$data_home/$default_dir"
+  fi
+  terra_canonical_external "$raw" "$label"
+}
+
+terra_storage_path() {
+  local path
+  path="$(terra_resolve_external_path STORAGE_HOST_PATH storage "STORAGE_HOST_PATH")" || return 1
+  TERRA_STORAGE_PATH="$path"
+  printf '%s' "$path"
+}
+
+terra_backup_path() {
+  terra_resolve_external_path BACKUP_HOST_PATH backups "BACKUP_HOST_PATH"
+}
+
+terra_validate_external_paths() {
+  local storage backup
+  storage="$(terra_storage_path)" || return 1
+  backup="$(terra_backup_path)" || return 1
+  if [[ "$storage" == "$backup" ]]; then
+    terra_error "STORAGE_HOST_PATH y BACKUP_HOST_PATH no pueden ser la misma ruta."
+    return 1
+  fi
+  if [[ "$storage" == "$backup/"* || "$backup" == "$storage/"* ]]; then
+    terra_error "STORAGE_HOST_PATH y BACKUP_HOST_PATH no pueden estar anidadas."
+    return 1
+  fi
+  return 0
+}
+
+terra_make_dir() {
+  local dir="$1" mode="$2"
+  if [[ ! -d "$dir" ]]; then
+    mkdir -p -- "$dir" 2>/dev/null || {
+      terra_error "No se pudo crear el directorio externo: $dir"
+      return 1
+    }
+  fi
+  if ! chmod "$mode" -- "$dir" 2>/dev/null; then
+    terra_error "No se pudieron aplicar permisos $mode en $dir (sistema de archivos incompatible)."
+    return 1
+  fi
+  if [[ ! -w "$dir" ]]; then
+    terra_error "El usuario actual no puede escribir en $dir."
+    return 1
+  fi
 }
 
 terra_ensure_caches() {
@@ -254,16 +349,20 @@ terra_ensure_caches() {
 
 terra_ensure_storage() {
   local path
-  path="$(terra_storage_path)"
-  mkdir -p -- "$path/staging" "$path/areas"
-  chmod 750 -- "$path" "$path/staging" "$path/areas" 2>/dev/null || true
-  if [[ ! -w "$path" ]]; then
-    terra_error "El almacenamiento local no es escribible: $path"
-    return 1
-  fi
+  path="$(terra_storage_path)" || return 1
+  terra_make_dir "$path" 0750 || return 1
+  terra_make_dir "$path/staging" 0750 || return 1
+  terra_make_dir "$path/areas" 0750 || return 1
   TERRA_STORAGE_PATH="$path"
   export TERRA_STORAGE_PATH
-  terra_ok "Almacenamiento local disponible: $path"
+  terra_ok "Almacenamiento documental disponible: $path"
+}
+
+terra_ensure_backups() {
+  local path
+  path="$(terra_backup_path)" || return 1
+  terra_make_dir "$path" 0700 || return 1
+  terra_ok "Directorio de copias de seguridad disponible: $path"
 }
 
 terra_validate_files() {
@@ -307,7 +406,7 @@ terra_check_required_vars() {
     APP_ENV APP_PUBLIC_URL POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD DB_PORT
     SESSION_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URL
     GOOGLE_DRIVE_REDIRECT_URL TOKEN_ENCRYPTION_KEY TURNSTILE_SITE_KEY TURNSTILE_SECRET_KEY
-    STORAGE_ROOT STORAGE_HOST_PATH DOWNLOAD_MIN_INTERVAL_MS WORKER_CONCURRENCY
+    STORAGE_ROOT DOWNLOAD_MIN_INTERVAL_MS WORKER_CONCURRENCY
     WORKER_PER_ACCOUNT_CONCURRENCY MAX_DOWNLOAD_BYTES MIN_FREE_DISK_BYTES
   )
   for key in "${required[@]}"; do
@@ -347,6 +446,7 @@ terra_check_required_vars() {
   terra_validate_db_port || failed=1
   terra_validate_postgres_names || failed=1
   terra_validate_db_host || failed=1
+  terra_validate_external_paths || failed=1
   terra_validate_storage_root || failed=1
   return "$failed"
 }
@@ -365,11 +465,14 @@ terra_storage_has_data() {
 }
 
 terra_backups() {
-  local dir="$TERRA_ROOT_DIR/backups" entry
+  local dir="${1:-}" entry
+  if [[ -z "$dir" ]]; then
+    dir="$(terra_backup_path)" || return 0
+  fi
   [[ -d "$dir" ]] || return 0
   for entry in "$dir"/*; do
     [[ -d "$entry" && -f "$entry/metadata.json" ]] || continue
-    grep -q '"distribution": "local-development"' "$entry/metadata.json" 2>/dev/null || continue
+    grep -q '"application": "TERRA"' "$entry/metadata.json" 2>/dev/null || continue
     basename "$entry"
   done | sort
 }

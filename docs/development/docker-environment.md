@@ -45,10 +45,12 @@ Los parámetros de conexión externa y su uso desde DBeaver están en
 | Recurso | Tipo | Propósito |
 |---|---|---|
 | `terra_terra-db` | volumen nombrado | Datos de PostgreSQL |
+| `$STORAGE_HOST_PATH` | bind externo | Documentos y snapshots fuera del repositorio |
+| `$BACKUP_HOST_PATH` | solo host | Copias de seguridad; no se montan en contenedores |
 | `node_modules` | capa de imagen | dependencias del frontend instaladas durante el build |
 | `../backend:/src` | bind | código Go, edición en vivo |
 | `../frontend/{src,public,tests,...}` | binds individuales | código React, HMR y pruebas |
-| `../data/dev:/var/lib/terra` | bind | documentos, ro para la API y rw para el worker |
+| `${STORAGE_HOST_PATH}:/var/lib/terra` | bind externo | documentos, ro para la API y rw para el worker |
 | `../.cache/go-mod`, `../.cache/go-build` | bind | cachés de Go propiedad del usuario del host |
 
 El directorio `.git` del repositorio **no** se monta en los contenedores. Los contextos

@@ -2,8 +2,11 @@
 
 ## Estructura física
 
+La raíz del host es `STORAGE_HOST_PATH`, externa al repositorio y configurable. Los
+contenedores la ven siempre como `STORAGE_ROOT=/var/lib/terra`.
+
 ```
-/var/lib/terra/                      # STORAGE_ROOT
+$STORAGE_HOST_PATH/                  # montado en /var/lib/terra
 ├── staging/                         # directorio técnico
 └── areas/
     └── area-<uuid>--<slug>/
@@ -20,6 +23,7 @@
                                     └── Documentos/
 ```
 
+- La ruta física del host no se almacena en PostgreSQL; solo su equivalente relativa.
 - La identidad física son UUID, nunca nombres.
 - `slug` es legible pero estable; no cambia al renombrar el área/cargo.
 - Cada trabajo tiene un directorio `job-<uuid>` independiente: dos trabajos no comparten raíz.

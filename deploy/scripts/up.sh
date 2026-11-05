@@ -43,6 +43,7 @@ esac
 
 bash "$TERRA_SCRIPT_DIR/check.sh" -q
 terra_ensure_storage
+terra_ensure_backups
 terra_ensure_caches
 if ! terra_volume_exists; then
   if terra_storage_has_data; then

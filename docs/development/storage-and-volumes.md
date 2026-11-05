@@ -1,13 +1,22 @@
 # Almacenamiento y volúmenes
 
-## Ruta local de documentos
+## Ruta externa de documentos
 
-`STORAGE_HOST_PATH` toma por defecto `../data/dev` relativo a `deploy/`, lo que resuelve al
-directorio `data/dev` del repositorio. La ruta del contenedor es fija:
-`/var/lib/terra`.
+`STORAGE_HOST_PATH` es una ruta absoluta fuera del repositorio. Si queda vacía se resuelve:
+
+```text
+$XDG_DATA_HOME/terra/storage
+# o, sin XDG_DATA_HOME:
+$HOME/.local/share/terra/storage
+```
+
+`./terra init` y `./terra up` la crean automáticamente y la exportan a Compose. Si el valor
+queda vacío en `.env`, los scripts resuelven el predeterminado en cada ejecución; por eso
+los comandos de Compose deben lanzarse mediante `./terra`. La ruta interna de los contenedores
+es fija: `/var/lib/terra` (`STORAGE_ROOT`).
 
 ```
-data/dev/
+$STORAGE_HOST_PATH/
 ├── staging/
 └── areas/
     └── area-<uuid>--<slug>/
@@ -24,13 +33,37 @@ Cada job crea una instantánea independiente. Los documentos nunca se almacenan 
 
 ## Permisos
 
-La API y el worker se ejecutan con el UID/GID del host (`TERRA_UID`/`TERRA_GID`), de modo que los archivos locales
-siguen siendo legibles y editables por el desarrollador. Compose monta:
+La API y el worker se ejecutan con el UID/GID del host (`TERRA_UID`/`TERRA_GID`). Los scripts
+crean la raíz documental y sus subdirectorios con `0750`; los backups con `0700` y archivos
+`0600` (`umask 077`).
 
-- API: `/var/lib/terra` en solo lectura.
-- Worker: `/var/lib/terra` en lectura y escritura.
+Compose monta:
 
-La API y el worker no pueden escribir fuera de la raíz de documentos configurada.
+- API: `STORAGE_HOST_PATH` en `/var/lib/terra` en solo lectura.
+- Worker: `STORAGE_HOST_PATH` en `/var/lib/terra` en lectura y escritura.
+- Web: nunca accede al almacenamiento.
+- Backups: no se montan en ningún contenedor.
+
+Si el sistema de archivos no permite estos permisos, la inicialización falla con un mensaje
+explícito.
+
+## Rutas externas y validación
+
+`STORAGE_HOST_PATH` y `BACKUP_HOST_PATH`:
+
+- deben ser absolutas;
+- no pueden estar dentro del repositorio ni ser un symlink que resuelva dentro;
+- no pueden ser `/`, el HOME completo, ni estar anidadas entre sí;
+- no pueden compartir la misma raíz.
+
+Valores como `../data/dev`, `./storage` o `backups` se rechazan. Para mover datos existentes:
+
+```bash
+./terra migrate-data           # simulación con archivos, tamaño y espacio
+./terra migrate-data --apply   # copia, verifica SHA-256 y actualiza .env
+```
+
+La migración copia y verifica; nunca borra el origen.
 
 ## Volumen de PostgreSQL
 

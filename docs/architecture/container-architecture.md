@@ -64,7 +64,7 @@ Esto cubre REST y SSE. Los contenedores se comunican por nombre de servicio
 | `node_modules` | capa de imagen | dependencias del frontend (no se monta el host) |
 | `../backend:/src` | bind | source Go |
 | `../frontend/src`, `public`, `tests`, configs | binds individuales | source React + HMR |
-| `../data/dev:/var/lib/terra` | bind | documentos: api ro, worker rw |
+| `STORAGE_HOST_PATH:/var/lib/terra` | bind externo | documentos: api ro, worker rw; web sin acceso |
 | `../.cache/go-mod`, `../.cache/go-build` | bind | cachés Go |
 
 `web` y `db` no montan documentos. `.git` no se monta en ningún servicio.
@@ -88,6 +88,6 @@ las aplica desde api.
 
 ## Persistencia
 
-- Detener o eliminar contenedores no elimina el volumen PostgreSQL ni `data/dev`.
+- Detener o eliminar contenedores no elimina el volumen PostgreSQL ni `STORAGE_HOST_PATH`.
 - `./terra down --remove` no usa `-v`.
 - La recuperación tras eliminar contenedores está probada.

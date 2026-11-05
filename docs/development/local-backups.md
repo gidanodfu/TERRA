@@ -1,7 +1,8 @@
 # Copias de seguridad locales
 
-Las copias de seguridad son artefactos locales de desarrollo bajo `backups/<timestamp>/`. Git los
-ignora.
+Las copias de seguridad se guardan fuera del repositorio, en `BACKUP_HOST_PATH/<timestamp>/`.
+Si la variable está vacía se usa `$XDG_DATA_HOME/terra/backups` o
+`$HOME/.local/share/terra/backups`. Nunca se versionan.
 
 ## Creación
 
@@ -12,7 +13,7 @@ ignora.
 Contenido:
 
 ```
-backups/<timestamp>/
+$BACKUP_HOST_PATH/<timestamp>/
 ├── terra.dump          # formato personalizado de PostgreSQL (o .gpg)
 ├── storage.tar.gz      # volumen de documentos (o .gpg)
 ├── metadata.json
@@ -31,7 +32,9 @@ BACKUP_GPG_RECIPIENT=backup@example.test ./terra backup
 ## Verificación
 
 ```bash
-./deploy/scripts/verify-backup.sh backups/<timestamp>
+./deploy/scripts/verify-backup.sh                 # copia más reciente
+./deploy/scripts/verify-backup.sh <timestamp>
+./deploy/scripts/verify-backup.sh /ruta/absoluta/del/backup
 ```
 
 ## Restauración
@@ -45,10 +48,13 @@ BACKUP_GPG_RECIPIENT=backup@example.test ./terra backup
 Copia de seguridad específica:
 
 ```bash
-./terra restore backups/<timestamp>
-./terra restore backups/<timestamp> --db
-./terra restore backups/<timestamp> --storage
+./terra restore <timestamp>
+./terra restore <timestamp> --db
+./terra restore <timestamp> --storage
+./terra restore /ruta/absoluta/del/backup
 ```
+
+La búsqueda automática usa `BACKUP_HOST_PATH`; también se acepta una ruta absoluta.
 
 El script:
 1. valida metadatos y checksums;
@@ -62,6 +68,18 @@ El script:
 
 La copia de seguridad se conserva después de la restauración. Una restauración solo es destructiva para los
 componentes seleccionados.
+
+## Migración desde `backups/`
+
+Si existían copias dentro del repositorio:
+
+```bash
+./terra migrate-data           # simulación
+./terra migrate-data --apply   # copia verificada y actualiza .env
+```
+
+Las copias antiguas se copian sin modificarlas y el origen se conserva hasta que se autorice
+su eliminación manual.
 
 ## Clave de cifrado
 
