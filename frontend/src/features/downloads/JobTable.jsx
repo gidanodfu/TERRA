@@ -40,7 +40,11 @@ export default function JobTable({ jobs, basePath, showOwner = false }) {
               ) : null}
               <td className="text-sm text-slate-600">
                 <ScopeLabel scope={job.scope_type} />
-                {job.roots?.length ? <p className="mt-0.5 text-xs text-slate-500">{job.roots.length} carpeta(s) raíz</p> : null}
+                {job.roots?.length || job.file_roots?.length ? (
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {job.roots?.length || 0} carpeta(s) · {job.file_roots?.length || 0} archivo(s)
+                  </p>
+                ) : null}
               </td>
               <td>
                 <StatusBadge type="job" status={job.status} />

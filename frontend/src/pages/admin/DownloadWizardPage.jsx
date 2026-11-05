@@ -25,7 +25,7 @@ export default function DownloadWizardPage() {
   const [connection, setConnection] = useState(undefined)
   const [policy, setPolicy] = useState(null)
   const [scope, setScope] = useState('my_drive_full')
-  const [folders, setFolders] = useState([])
+  const [selection, setSelection] = useState({ folders: [], files: [] })
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
 
@@ -82,16 +82,19 @@ export default function DownloadWizardPage() {
   const create = async () => {
     setError('')
     if (!ready) return
-    if (scope === 'selected_folders' && folders.length === 0) {
-      setError('Seleccione al menos una carpeta para respaldar.')
+    if (scope === 'selected_items' && selection.folders.length === 0 && selection.files.length === 0) {
+      setError('Seleccione al menos una carpeta o archivo para respaldar.')
       return
     }
     setCreating(true)
     try {
-      const body = {
-        scope_type: scope,
-        root_folder_ids: scope === 'selected_folders' ? folders.map((folder) => folder.id) : [],
-      }
+      const body = scope === 'my_drive_full'
+        ? { scope_type: 'my_drive_full', root_folder_ids: [], root_file_ids: [] }
+        : {
+            scope_type: 'selected_items',
+            root_folder_ids: selection.folders.map((folder) => folder.id),
+            root_file_ids: selection.files.map((file) => file.id),
+          }
       const job = await api.post(`/admin/users/${workerId}/download-jobs`, body, {
         headers: { 'Idempotency-Key': crypto.randomUUID() },
       })
@@ -123,7 +126,7 @@ export default function DownloadWizardPage() {
             </div>
             <div>
               <Field label="Trabajador propietario del Drive" htmlFor="worker" error={!workerId ? 'Seleccione un trabajador.' : undefined}>
-                <Select id="worker" value={workerId} onChange={(e) => { setWorkerId(e.target.value); setFolders([]) }}>
+                <Select id="worker" value={workerId} onChange={(e) => { setWorkerId(e.target.value); setSelection({ folders: [], files: [] }) }}>
                   <option value="">Seleccione un trabajador</option>
                   {(users || []).map((user) => (
                     <option key={user.id} value={user.id}>
@@ -208,28 +211,28 @@ export default function DownloadWizardPage() {
                 Recorre toda la raíz de Mi unidad, conserva carpetas vacías y excluye la papelera.
               </p>
             </label>
-            <label className={`cursor-pointer rounded-xl border p-4 ${scope === 'selected_folders' ? 'border-brand-600 bg-brand-50' : 'border-slate-200 hover:border-slate-300'}`}>
+            <label className={`cursor-pointer rounded-xl border p-4 ${scope === 'selected_items' ? 'border-brand-600 bg-brand-50' : 'border-slate-200 hover:border-slate-300'}`}>
               <input
                 type="radio"
                 name="scope"
                 className="h-4 w-4 text-brand-700 accent-brand-700"
-                value="selected_folders"
-                checked={scope === 'selected_folders'}
-                onChange={() => setScope('selected_folders')}
+                value="selected_items"
+                checked={scope === 'selected_items'}
+                onChange={() => setScope('selected_items')}
               />
-              <span className="ml-2 text-sm font-medium text-slate-900">Carpetas seleccionadas</span>
+              <span className="ml-2 text-sm font-medium text-slate-900">Archivos y carpetas seleccionados</span>
               <p className="mt-2 text-xs text-slate-500">
-                Elija una o varias carpetas. La ruta original desde Mi unidad se conserva.
+                Seleccione carpetas completas o archivos individuales. Puede combinar ambos tipos y conservar la estructura original de Google Drive.
               </p>
             </label>
           </div>
-          {scope === 'selected_folders' ? (
+          {scope === 'selected_items' ? (
             <div className="mt-4">
-              <h3 className="mb-2 text-sm font-semibold text-slate-800">Selección de carpetas</h3>
+              <h3 className="mb-2 text-sm font-semibold text-slate-800">Selección de archivos y carpetas</h3>
               <FolderPicker
                 userId={workerId}
-                selected={folders}
-                onChange={setFolders}
+                selected={selection}
+                onChange={setSelection}
                 disabled={!ready || creating}
               />
             </div>
@@ -255,7 +258,7 @@ export default function DownloadWizardPage() {
             </div>
           )}
 
-          <div className="mt-4 grid gap-3 text-sm @xl:grid-cols-2 @6xl:grid-cols-4">
+          <div className="mt-4 grid gap-3 text-sm @xl:grid-cols-2 @5xl:grid-cols-3 @6xl:grid-cols-5">
             <div className="rounded-xl bg-muted p-3">
               <p className="text-xs text-slate-500">Trabajador</p>
               <p className="font-medium text-slate-800">{worker?.display_name || '—'}</p>
@@ -263,12 +266,22 @@ export default function DownloadWizardPage() {
             <div className="rounded-xl bg-muted p-3">
               <p className="text-xs text-slate-500">Alcance</p>
               <p className="font-medium text-slate-800">
-                {scope === 'my_drive_full' ? 'Mi unidad completa' : `${folders.length} carpeta(s) seleccionada(s)`}
+                {scope === 'my_drive_full'
+                  ? 'Mi unidad completa'
+                  : `${selection.folders.length} carpeta(s) y ${selection.files.length} archivo(s)`}
               </p>
             </div>
             <div className="rounded-xl bg-muted p-3">
               <p className="text-xs text-slate-500">Clasificación</p>
               <p className="font-medium text-slate-800">{worker?.area_name || '—'} / {worker?.position_name || '—'}</p>
+            </div>
+            <div className="rounded-xl bg-muted p-3">
+              <p className="text-xs text-slate-500">Elementos raíz</p>
+              <p className="font-medium text-slate-800">
+                {scope === 'my_drive_full'
+                  ? 'Mi unidad completa'
+                  : `${selection.folders.length + selection.files.length} seleccionado(s)`}
+              </p>
             </div>
             <div className="rounded-xl bg-muted p-3">
               <p className="text-xs text-slate-500">Destino</p>
@@ -277,7 +290,7 @@ export default function DownloadWizardPage() {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <Button onClick={create} disabled={!ready || creating || (scope === 'selected_folders' && folders.length === 0)}>
+            <Button onClick={create} disabled={!ready || creating || (scope === 'selected_items' && selection.folders.length === 0 && selection.files.length === 0)}>
               {creating ? <Spinner className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               {creating ? 'Registrando trabajo…' : 'Iniciar descarga'}
             </Button>

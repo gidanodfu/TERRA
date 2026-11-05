@@ -1,50 +1,20 @@
 import { useEffect, useState } from 'react'
-import {
-  Archive,
-  ChevronRight,
-  ExternalLink,
-  File,
-  FileSpreadsheet,
-  FileText,
-  Folder,
-  FolderOpen,
-  Image,
-  Link2,
-  Loader2,
-  Presentation,
-  Video,
-  X,
-} from 'lucide-react'
+import { ChevronRight, ExternalLink, Folder, Loader2, X } from 'lucide-react'
 import { api, queryString } from '../../services/api'
 import { Alert, Button, Spinner } from '../../components/ui'
 import { formatBytes, formatDate } from '../../utils/format'
+import FileTypeIcon from './FileTypeIcon'
+import { fileHasCheckbox, fileTypeLabel } from './fileTypes'
 
-function itemIcon(item) {
-  if (item.is_shortcut) return Link2
-  if (item.kind === 'folder') return Folder
-  const mime = item.mime_type || ''
-  if (mime === 'application/pdf') return FileText
-  if (mime === 'application/vnd.google-apps.document' || mime.includes('wordprocessingml') || mime === 'application/msword') return FileText
-  if (mime === 'application/vnd.google-apps.spreadsheet' || mime.includes('spreadsheetml') || mime === 'application/vnd.ms-excel' || mime === 'text/csv') return FileSpreadsheet
-  if (mime === 'application/vnd.google-apps.presentation' || mime.includes('presentationml') || mime === 'application/vnd.ms-powerpoint') return Presentation
-  if (mime.startsWith('image/')) return Image
-  if (mime.startsWith('video/')) return Video
-  if (/zip|rar|7z|gzip|tar/.test(mime)) return Archive
-  return File
-}
+const EMPTY_SELECTION = { folders: [], files: [] }
 
-function typeLabel(item) {
-  if (item.is_shortcut) return 'Atajo'
-  if (item.kind === 'folder') return 'Carpeta'
-  const mime = item.mime_type || ''
-  if (mime === 'application/pdf') return 'PDF'
-  if (mime === 'application/vnd.google-apps.document' || mime.includes('wordprocessingml') || mime === 'application/msword') return 'Documento'
-  if (mime === 'application/vnd.google-apps.spreadsheet' || mime.includes('spreadsheetml') || mime === 'application/vnd.ms-excel' || mime === 'text/csv') return 'Hoja de cálculo'
-  if (mime === 'application/vnd.google-apps.presentation' || mime.includes('presentationml') || mime === 'application/vnd.ms-powerpoint') return 'Presentación'
-  if (mime.startsWith('image/')) return 'Imagen'
-  if (mime.startsWith('video/')) return 'Vídeo'
-  if (/zip|rar|7z|gzip|tar/.test(mime)) return 'Archivo comprimido'
-  return 'Archivo'
+function normalizeSelection(selected) {
+  if (!selected) return EMPTY_SELECTION
+  if (Array.isArray(selected)) return { folders: selected, files: [] }
+  return {
+    folders: Array.isArray(selected.folders) ? selected.folders : [],
+    files: Array.isArray(selected.files) ? selected.files : [],
+  }
 }
 
 export default function FolderPicker({ userId, selected, onChange, disabled = false }) {
@@ -88,9 +58,14 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
     }
   }, [userId, stack])
 
+  const selection = normalizeSelection(selected)
+  const { folders, files } = selection
   const current = stack[stack.length - 1]
   const isRoot = current.id === 'root' || Boolean(data?.is_root)
-  const isSelected = selected.some((folder) => folder.id === current.id)
+  const currentPath = stack.slice(1).map((crumb) => crumb.name).join(' / ')
+  const isCurrentSelected = folders.some((folder) => folder.id === current.id)
+
+  const emit = (nextFolders, nextFiles) => onChange({ folders: nextFolders, files: nextFiles })
 
   const open = (item) => {
     if (item.kind !== 'folder' || item.is_shortcut) return
@@ -101,26 +76,43 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
     setStack((prev) => prev.slice(0, index + 1))
   }
 
-  const toggle = (item) => {
+  const addFolder = (id, name, path) => {
+    const covered = (entry) => entry.path === path || entry.path.startsWith(`${path} / `)
+    emit(
+      [
+        ...folders.filter((folder) => folder.id !== id && !covered(folder)),
+        { id, name, path },
+      ],
+      files.filter((file) => !covered(file)),
+    )
+  }
+
+  const removeFolder = (id) => emit(folders.filter((folder) => folder.id !== id), files)
+
+  const toggleFolder = (item) => {
     if (item.kind !== 'folder' || item.is_shortcut) return
-    if (selected.some((entry) => entry.id === item.id)) {
-      onChange(selected.filter((entry) => entry.id !== item.id))
+    if (folders.some((folder) => folder.id === item.id)) {
+      removeFolder(item.id)
       return
     }
-    onChange([...selected, {
-      id: item.id,
-      name: item.name,
-      path: [...stack.slice(1).map((crumb) => crumb.name), item.name].join(' / '),
-    }])
+    addFolder(item.id, item.name, [...stack.slice(1).map((crumb) => crumb.name), item.name].join(' / '))
   }
 
   const selectCurrent = () => {
-    if (isRoot || isSelected) return
-    onChange([...selected, {
-      id: current.id,
-      name: current.name,
-      path: stack.slice(1).map((crumb) => crumb.name).join(' / '),
-    }])
+    if (isRoot || isCurrentSelected) return
+    addFolder(current.id, current.name, currentPath)
+  }
+
+  const toggleFile = (item) => {
+    if (!fileHasCheckbox(item)) return
+    if (files.some((file) => file.id === item.id)) {
+      emit(folders, files.filter((file) => file.id !== item.id))
+      return
+    }
+    const path = [...stack.slice(1).map((crumb) => crumb.name), item.name].join(' / ')
+    const covered = folders.some((folder) => path === folder.path || path.startsWith(`${folder.path} / `))
+    if (covered) return
+    emit(folders, [...files, { id: item.id, name: item.name, path, mime_type: item.mime_type, kind: item.kind }])
   }
 
   const loadMore = async () => {
@@ -170,8 +162,8 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {!isRoot ? (
-          <Button type="button" variant="secondary" onClick={selectCurrent} disabled={disabled || isSelected}>
-            <FolderOpen className="h-4 w-4" /> {isSelected ? 'Carpeta ya seleccionada' : 'Seleccionar esta carpeta'}
+          <Button type="button" variant="secondary" onClick={selectCurrent} disabled={disabled || isCurrentSelected}>
+            <Folder className="h-4 w-4" /> {isCurrentSelected ? 'Carpeta ya seleccionada' : 'Seleccionar esta carpeta'}
           </Button>
         ) : (
           <p className="text-xs text-slate-500">Para respaldar todo Mi unidad use la modalidad correspondiente.</p>
@@ -197,15 +189,20 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
               </thead>
               <tbody>
                 {items.map((item) => {
-                  const Icon = itemIcon(item)
                   const isFolder = item.kind === 'folder' && !item.is_shortcut
-                  const checked = selected.some((entry) => entry.id === item.id)
-                  const unavailable = item.kind === 'file' && !item.is_shortcut && !item.can_download
+                  const selectable = isFolder || fileHasCheckbox(item)
+                  const checked = isFolder
+                    ? folders.some((folder) => folder.id === item.id)
+                    : files.some((file) => file.id === item.id)
+                  const unavailable = !isFolder && !item.is_shortcut && !fileHasCheckbox(item)
                   return (
                     <tr key={item.id} className="hover:bg-muted">
                       <td>
                         <div className="flex min-w-0 items-center gap-2">
-                          <Icon className={`h-4 w-4 shrink-0 ${isFolder ? 'text-brand-700' : 'text-slate-400'}`} aria-hidden="true" />
+                          <FileTypeIcon
+                            item={item}
+                            className={`h-4 w-4 shrink-0 ${isFolder ? 'text-brand-700' : 'text-slate-400'}`}
+                          />
                           {isFolder ? (
                             <button
                               type="button"
@@ -234,11 +231,12 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
                           {item.is_shortcut ? <span>Atajo de referencia</span> : null}
                           {item.starred ? <span>· Destacado</span> : null}
                           {item.shared ? <span>· Compartido</span> : null}
+                          {item.mime_type === 'application/vnd.google-apps.vid' ? <span>· Formato no soportado</span> : null}
                           {unavailable ? <span>· No descargable</span> : null}
                           {item.description ? <span className="truncate">· {item.description}</span> : null}
                         </div>
                         <div className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-slate-500 @xl:hidden">
-                          <span className="font-medium text-slate-600">{typeLabel(item)}</span>
+                          <span className="font-medium text-slate-600">{fileTypeLabel(item)}</span>
                           <span>{item.size_bytes != null ? formatBytes(item.size_bytes) : 'No informado'}</span>
                           {item.mime_type ? (
                             <span className="min-w-0 truncate" title={item.mime_type}>{item.mime_type}</span>
@@ -250,7 +248,7 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
                         </div>
                       </td>
                       <td className="hidden @xl:table-cell">
-                        <p className="text-sm text-slate-700">{typeLabel(item)}</p>
+                        <p className="text-sm text-slate-700">{fileTypeLabel(item)}</p>
                         {item.mime_type ? (
                           <p className="min-w-0 truncate text-[11px] text-slate-400" title={item.mime_type}>{item.mime_type}</p>
                         ) : null}
@@ -263,17 +261,22 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
                         <p title={formatDate(item.created_time)}>Creado: {formatDate(item.created_time)}</p>
                       </td>
                       <td className="px-2 text-right">
-                        {isFolder ? (
+                        {selectable ? (
                           <input
                             type="checkbox"
                             className="h-4 w-4 rounded border-slate-300 text-brand-700 accent-brand-700"
                             checked={checked}
                             disabled={disabled}
-                            onChange={() => toggle(item)}
-                            aria-label={`Seleccionar carpeta ${item.name}`}
+                            onChange={() => (isFolder ? toggleFolder(item) : toggleFile(item))}
+                            aria-label={`${isFolder ? 'Seleccionar carpeta' : 'Seleccionar archivo'} ${item.name}`}
                           />
                         ) : (
-                          <span className="text-xs text-slate-400" title={item.is_shortcut ? 'Atajo no seleccionable' : 'Los archivos no se seleccionan como raíz'}>—</span>
+                          <span
+                            className="text-xs text-slate-400"
+                            title={item.is_shortcut ? 'Atajo no seleccionable' : 'Elemento sin estrategia de descarga'}
+                          >
+                            —
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -298,33 +301,66 @@ export default function FolderPicker({ userId, selected, onChange, disabled = fa
         </div>
       ) : null}
 
-      {selected.length > 0 ? (
-        <div className="mt-3">
-          <p className="text-xs font-medium text-slate-500">Carpetas seleccionadas ({selected.length})</p>
-          <ul className="mt-2 space-y-1.5">
-            {selected.map((folder) => (
-              <li key={folder.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-50 px-3 py-2 text-sm">
-                <span className="min-w-0 truncate text-brand-900">
-                  Mi unidad / {folder.path || folder.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onChange(selected.filter((entry) => entry.id !== folder.id))}
-                  className="rounded p-1 text-brand-700 hover:bg-brand-100"
-                  aria-label={`Quitar ${folder.name}`}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-slate-500">
-            Si selecciona una carpeta padre y una descendiente, el servidor conservará solo la raíz padre.
+      {folders.length || files.length ? (
+        <div className="mt-3 space-y-3">
+          {folders.length ? (
+            <section>
+              <p className="text-xs font-medium text-slate-500">Carpetas seleccionadas ({folders.length})</p>
+              <ul className="mt-2 space-y-1.5">
+                {folders.map((folder) => (
+                  <li key={folder.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-50 px-3 py-2 text-sm">
+                    <span className="flex min-w-0 items-center gap-2 text-brand-900">
+                      <Folder className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="truncate" title={folder.path || folder.name}>Mi unidad / {folder.path || folder.name}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFolder(folder.id)}
+                      className="rounded p-1 text-brand-700 hover:bg-brand-100"
+                      aria-label={`Quitar ${folder.name}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {files.length ? (
+            <section>
+              <p className="text-xs font-medium text-slate-500">Archivos seleccionados ({files.length})</p>
+              <ul className="mt-2 space-y-1.5">
+                {files.map((file) => (
+                  <li key={file.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm">
+                    <span className="flex min-w-0 items-center gap-2 text-slate-800">
+                      <FileTypeIcon item={file} className="h-4 w-4 shrink-0" />
+                      <span className="min-w-0">
+                        <span className="block truncate" title={file.name}>{file.name}</span>
+                        <span className="block truncate text-[11px] text-slate-500" title={file.path}>
+                          {fileTypeLabel(file)} · Mi unidad / {file.path}
+                        </span>
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => emit(folders, files.filter((entry) => entry.id !== file.id))}
+                      className="rounded p-1 text-slate-600 hover:bg-slate-200"
+                      aria-label={`Quitar ${file.name}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          <p className="text-xs text-slate-500">
+            El servidor conserva solo la carpeta padre cuando una selección está cubierta por otra.
           </p>
         </div>
       ) : (
         <p className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-          <FolderOpen className="h-3 w-3" /> No hay carpetas seleccionadas.
+          <Folder className="h-3 w-3" /> No hay carpetas ni archivos seleccionados.
         </p>
       )}
     </div>

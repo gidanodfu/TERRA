@@ -39,26 +39,26 @@ const policy = { version: '2026-11', published_at: '2026-11-01T10:00:00Z' }
 const folder = (id, name) => ({
   id, name, mime_type: 'application/vnd.google-apps.folder', kind: 'folder',
   size_bytes: null, created_time: '2026-11-01T10:00:00Z', modified_time: '2026-11-04T10:30:00Z',
-  can_download: false, is_shortcut: false, starred: false, shared: false,
+  can_download: false, selectable: true, is_shortcut: false, starred: false, shared: false,
 })
 
 const pdf = {
   id: 'file-pdf', name: 'Informe.pdf', mime_type: 'application/pdf', kind: 'file',
   size_bytes: 2457600, created_time: '2026-11-01T10:00:00Z', modified_time: '2026-11-04T10:30:00Z',
-  can_download: true, is_shortcut: false, starred: false, shared: false,
+  can_download: true, selectable: true, is_shortcut: false, starred: false, shared: false,
 }
 
 const xlsx = {
   id: 'file-xlsx', name: 'Resumen.xlsx',
   mime_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', kind: 'file',
   size_bytes: 51200, created_time: '2026-11-01T10:00:00Z', modified_time: '2026-11-04T10:30:00Z',
-  can_download: true, is_shortcut: false, starred: false, shared: false,
+  can_download: true, selectable: true, is_shortcut: false, starred: false, shared: false,
 }
 
 const png = {
   id: 'file-png', name: 'Imagen.png', mime_type: 'image/png', kind: 'file',
   size_bytes: 102400, created_time: '2026-11-01T10:00:00Z', modified_time: '2026-11-04T10:30:00Z',
-  can_download: true, is_shortcut: false, starred: false, shared: false,
+  can_download: true, selectable: true, is_shortcut: false, starred: false, shared: false,
 }
 
 const roots = {
@@ -89,10 +89,8 @@ const roots = {
   },
 }
 
-test('explorador de Drive muestra archivos y carpetas y crea el snapshot', async ({ page }) => {
-  let snapshotBody = null
-  const itemRequests = []
-
+async function openWizard(page) {
+  const state = { snapshotBody: null, itemRequests: [] }
   await page.route('**/api/v1/**', (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
@@ -125,7 +123,7 @@ test('explorador de Drive muestra archivos y carpetas y crea el snapshot', async
     }
     if (path.endsWith(`/admin/users/${worker.id}/drive/items`)) {
       const parent = new URL(request.url()).searchParams.get('parentId') || 'root'
-      itemRequests.push(parent)
+      state.itemRequests.push(parent)
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -133,7 +131,7 @@ test('explorador de Drive muestra archivos y carpetas y crea el snapshot', async
       })
     }
     if (path.endsWith(`/admin/users/${worker.id}/download-jobs`) && request.method() === 'POST') {
-      snapshotBody = request.postDataJSON()
+      state.snapshotBody = request.postDataJSON()
       return route.fulfill({
         status: 202,
         contentType: 'application/json',
@@ -147,7 +145,8 @@ test('explorador de Drive muestra archivos y carpetas y crea el snapshot', async
         body: JSON.stringify({
           id: 'job-1', status: 'queued', area_name: 'Sistemas', position_name: 'Analista',
           drive_owner_name: worker.display_name, requested_by_name: admin.display_name,
-          scope_type: 'selected_folders', roots: [{ google_folder_id: 'folder-docs', source_path: 'Documentos' }],
+          scope_type: 'selected_items', roots: [{ google_folder_id: 'folder-docs', source_path: 'Documentos' }],
+          file_roots: [{ google_file_id: 'file-png', source_path: 'Imagen.png' }],
           total_items: 0, completed_items: 0, skipped_items: 0, failed_items: 0,
           downloaded_bytes: 0, total_bytes: 0, created_at: '2026-11-05T12:00:00Z',
         }),
@@ -155,37 +154,66 @@ test('explorador de Drive muestra archivos y carpetas y crea el snapshot', async
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], pagination: { total: 0 } }) })
   })
-
   await page.goto(`/app/admin/downloads?worker=${worker.id}`)
-  await page.getByRole('radio', { name: /Carpetas seleccionadas/ }).check()
+  await page.getByRole('radio', { name: /Archivos y carpetas seleccionados/ }).check()
+  return state
+}
+
+test('selecciona carpetas y archivos individuales en el mismo snapshot', async ({ page }) => {
+  const state = await openWizard(page)
   await expect(page.getByText('Documentos')).toBeVisible()
   await expect(page.getByText('Imagen.png')).toBeVisible()
-  await expect(page.getByRole('checkbox', { name: 'Seleccionar carpeta Documentos' })).toBeVisible()
-  await expect(page.getByRole('checkbox', { name: /Imagen\.png/ })).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Documentos' }).click()
-  await expect(page.getByText('Informes')).toBeVisible()
-  await expect(page.getByText('Contratos')).toBeVisible()
-  await expect(page.getByText('Imagen.png')).toBeVisible()
-
-  await page.getByRole('button', { name: 'Informes' }).click()
-  await expect(page.getByText('Informe.pdf')).toBeVisible()
-  await expect(page.getByText('Resumen.xlsx')).toBeVisible()
-  await expect(page.getByRole('cell', { name: '2.3 MB' })).toBeVisible()
-
-  await page.getByRole('button', { name: 'Volver a Documentos' }).click()
-  await expect(page.getByText('Contratos')).toBeVisible()
-  await page.getByRole('button', { name: 'Volver a Mi unidad' }).click()
   await page.getByRole('checkbox', { name: 'Seleccionar carpeta Documentos' }).check()
+  await page.getByRole('checkbox', { name: 'Seleccionar archivo Imagen.png' }).check()
   await expect(page.getByText('Carpetas seleccionadas (1)')).toBeVisible()
+  await expect(page.getByText('Archivos seleccionados (1)')).toBeVisible()
 
   await page.getByRole('button', { name: 'Iniciar descarga' }).click()
   await expect(page).toHaveURL(/\/app\/admin\/jobs\/job-1$/)
-  expect(snapshotBody).toEqual({
-    scope_type: 'selected_folders',
+  expect(state.snapshotBody).toEqual({
+    scope_type: 'selected_items',
     root_folder_ids: ['folder-docs'],
+    root_file_ids: ['file-png'],
   })
-  expect(itemRequests).toContain('root')
-  expect(itemRequests).toContain('folder-docs')
-  expect(itemRequests).toContain('folder-reports')
+})
+
+test('descarga un archivo individual dentro de una subcarpeta', async ({ page }) => {
+  const state = await openWizard(page)
+  await page.getByRole('button', { name: 'Documentos' }).click()
+  await page.getByRole('button', { name: 'Informes' }).click()
+  await expect(page.getByText('Resumen.xlsx')).toBeVisible()
+  await page.getByRole('checkbox', { name: 'Seleccionar archivo Resumen.xlsx' }).check()
+  await expect(page.getByText('Archivos seleccionados (1)')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Iniciar descarga' }).click()
+  await expect(page).toHaveURL(/\/app\/admin\/jobs\/job-1$/)
+  expect(state.snapshotBody).toEqual({
+    scope_type: 'selected_items',
+    root_folder_ids: [],
+    root_file_ids: ['file-xlsx'],
+  })
+  expect(state.itemRequests).toContain('folder-docs')
+  expect(state.itemRequests).toContain('folder-reports')
+})
+
+test('la carpeta padre absorbe el archivo seleccionado y evita duplicados', async ({ page }) => {
+  const state = await openWizard(page)
+  await page.getByRole('button', { name: 'Documentos' }).click()
+  await page.getByRole('button', { name: 'Informes' }).click()
+  await page.getByRole('checkbox', { name: 'Seleccionar archivo Resumen.xlsx' }).check()
+  await page.getByRole('button', { name: 'Volver a Documentos' }).click()
+  await expect(page.getByRole('checkbox', { name: 'Seleccionar carpeta Informes' })).toBeVisible()
+  await page.getByRole('checkbox', { name: 'Seleccionar carpeta Informes' }).check()
+
+  await expect(page.getByText('Carpetas seleccionadas (1)')).toBeVisible()
+  await expect(page.getByText('Archivos seleccionados', { exact: false })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Iniciar descarga' }).click()
+  await expect(page).toHaveURL(/\/app\/admin\/jobs\/job-1$/)
+  expect(state.snapshotBody).toEqual({
+    scope_type: 'selected_items',
+    root_folder_ids: ['folder-reports'],
+    root_file_ids: [],
+  })
 })

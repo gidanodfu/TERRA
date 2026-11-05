@@ -144,7 +144,7 @@ async function openWizard(page) {
   await mockApi(page)
   await page.goto('/app/admin/downloads?worker=' + worker.id)
   await expect(page.getByRole('heading', { name: 'Nueva descarga institucional' })).toBeVisible()
-  await page.locator('input[value="selected_folders"]').check()
+  await page.locator('input[value="selected_items"]').check()
   await expect(page.getByText(items[0].name)).toBeVisible()
 }
 
@@ -245,7 +245,7 @@ test.describe('Descargas aprovecha el ancho del workspace', () => {
     await page.evaluate(() => localStorage.setItem('terra-theme', 'dark'))
     await page.reload()
     await expect(page.getByRole('heading', { name: 'Nueva descarga institucional' })).toBeVisible()
-    await page.locator('input[value="selected_folders"]').check()
+    await page.locator('input[value="selected_items"]').check()
     await expect(page.locator('table')).toBeVisible()
     await scrollTop(1440, 1300)
     await page.locator('table').evaluate((table) => table.closest('.card').setAttribute('data-shot', 'explorer-dark'))

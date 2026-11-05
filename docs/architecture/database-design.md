@@ -111,3 +111,14 @@ físicas de snapshots existentes.
 `RETENTION_DAYS` se aplica con `deploy/scripts/retention.sh` (dry-run por defecto). No hay
 borrado automático silencioso. Para eliminar un snapshot se borran primero los archivos y luego
 las filas dependientes, respetando las FKs.
+
+## Raíces de archivo individuales
+
+`download_job_file_roots` guarda las raíces de archivo de `selected_items`:
+
+- `job_id` con borrado en cascada;
+- `google_file_id`, nombre y ruta original congelados;
+- índice único `(job_id, google_file_id)`.
+
+Las carpetas siguen en `download_job_roots`. `download_jobs.scope_type` admite
+`my_drive_full`, `selected_folders` (histórico) y `selected_items`.

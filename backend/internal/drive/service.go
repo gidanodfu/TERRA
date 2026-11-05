@@ -322,7 +322,8 @@ func (s *Service) Browse(ctx context.Context, ownerID uuid.UUID, parentID, pageT
 			SizeBytes: nullableSize(f.Size), CreatedTime: nullableTime(f.CreatedTime),
 			ModifiedTime: nullableTime(f.ModifiedTime), WebViewLink: f.WebViewLink,
 			Description: f.Description, Starred: f.Starred, Shared: f.Shared,
-			CanDownload: f.CanDownload, IsShortcut: f.IsShortcut,
+			CanDownload: f.CanDownload, Selectable: f.MimeType == MimeFolder || FileSelectable(f),
+			IsShortcut:       f.IsShortcut,
 			ShortcutTargetID: f.ShortcutTarget, ShortcutTargetMime: f.ShortcutTargetMime,
 		})
 	}
@@ -347,87 +348,6 @@ func (s *Service) BrowseFolders(ctx context.Context, ownerID uuid.UUID, parentID
 	}
 	return &FolderBrowseResult{ParentID: bc.parentID, ParentName: bc.parent.Name, Path: names,
 		IsRoot: bc.isRoot, Folders: folders}, nil
-}
-
-// NormalizeRoots valida los IDs de Drive y elimina los descendientes de raíces ya seleccionadas.
-func (s *Service) NormalizeRoots(ctx context.Context, ownerID uuid.UUID, ids []string) ([]Root, error) {
-	conn, err := s.EnsureReadyForUser(ctx, ownerID)
-	if err != nil {
-		return nil, err
-	}
-	ids = dedupe(ids)
-	if len(ids) == 0 {
-		return nil, apperr.Invalid("Seleccione al menos una carpeta.",
-			map[string]string{"root_folder_ids": "Seleccione al menos una carpeta."})
-	}
-	if len(ids) > 100 {
-		return nil, apperr.Invalid("Seleccione como máximo 100 carpetas.", nil)
-	}
-	api, err := s.newAPI(ctx, conn)
-	if err != nil {
-		return nil, apperr.Conflict("drive_reauthorization_required", "El trabajador debe reconectar su cuenta de Google Drive.")
-	}
-	rootID, err := api.RootID(ctx)
-	if err != nil {
-		return nil, translateAPI(err)
-	}
-	type candidate struct {
-		Root
-		ancestors map[string]bool
-	}
-	var candidates []candidate
-	for _, id := range ids {
-		if id == "root" || id == rootID {
-			return nil, apperr.BadRequest("Para respaldar Mi unidad completa use scope_type=my_drive_full.")
-		}
-		chain, err := api.PathToRoot(ctx, id)
-		if err != nil {
-			return nil, translateAPI(err)
-		}
-		if len(chain) == 0 {
-			return nil, apperr.BadRequest("Carpeta inválida.")
-		}
-		leaf := chain[len(chain)-1]
-		if leaf.MimeType != MimeFolder {
-			return nil, apperr.BadRequest("El elemento seleccionado no es una carpeta.")
-		}
-		if leaf.IsShortcut {
-			return nil, apperr.BadRequest("No se pueden seleccionar atajos como carpeta raíz.")
-		}
-		names := make([]string, 0, len(chain))
-		anc := map[string]bool{}
-		for i, f := range chain {
-			names = append(names, f.Name)
-			if i < len(chain)-1 {
-				anc[f.ID] = true
-			}
-		}
-		candidates = append(candidates, candidate{
-			Root:      Root{GoogleID: id, Name: leaf.Name, SourcePath: strings.Join(names, "/")},
-			ancestors: anc,
-		})
-	}
-	selected := map[string]bool{}
-	for _, c := range candidates {
-		selected[c.GoogleID] = true
-	}
-	var out []Root
-	for _, c := range candidates {
-		nested := false
-		for other := range selected {
-			if other != c.GoogleID && c.ancestors[other] {
-				nested = true
-				break
-			}
-		}
-		if !nested {
-			out = append(out, c.Root)
-		}
-	}
-	if len(out) == 0 {
-		return nil, apperr.BadRequest("La selección de carpetas quedó vacía después de normalizar.")
-	}
-	return out, nil
 }
 
 func (s *Service) AdminConnection(ctx context.Context, ownerID uuid.UUID) (*Connection, error) {

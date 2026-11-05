@@ -72,7 +72,7 @@ func Pool(t *testing.T) *pgxpool.Pool {
 func Reset(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	_, err := pool.Exec(context.Background(), `TRUNCATE TABLE
-		job_events, download_items, stored_files, download_job_roots, download_jobs,
+		job_events, download_items, stored_files, download_job_file_roots, download_job_roots, download_jobs,
 		drive_node_parents, drive_nodes, drive_connections, sessions, oauth_states,
 		local_credentials, user_roles, auth_identities, organization_history,
 		audit_events, policy_versions, bootstrap_state, users, positions, areas

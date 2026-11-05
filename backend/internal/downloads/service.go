@@ -33,22 +33,35 @@ func NewService(cfg config.Config, repo *Repository, driveSvc *drive.Service, us
 type CreateInput struct {
 	ScopeType     string   `json:"scope_type"`
 	RootFolderIDs []string `json:"root_folder_ids"`
+	RootFileIDs   []string `json:"root_file_ids"`
 }
 
 // Create valida autorización, alcance, capacidad, conexión y política, y luego
 // encola el trabajo. Nunca descarga nada dentro de la petición HTTP.
 func (s *Service) Create(ctx context.Context, actorID, ownerID uuid.UUID, in CreateInput,
 	idempotencyKey, ipHash string) (*Job, bool, error) {
-	if in.ScopeType != ScopeMyDriveFull && in.ScopeType != ScopeSelectedFolders {
+	switch in.ScopeType {
+	case ScopeMyDriveFull:
+		if len(in.RootFolderIDs) > 0 || len(in.RootFileIDs) > 0 {
+			return nil, false, apperr.Invalid("Mi unidad completa no acepta selecciones individuales.", nil)
+		}
+	case ScopeSelectedFolders:
+		if len(in.RootFolderIDs) == 0 {
+			return nil, false, apperr.Invalid("Seleccione al menos una carpeta.",
+				map[string]string{"root_folder_ids": "Seleccione al menos una carpeta."})
+		}
+		if len(in.RootFileIDs) > 0 {
+			return nil, false, apperr.Invalid("La modalidad de carpetas no acepta archivos individuales.",
+				map[string]string{"root_file_ids": "Use selected_items para combinar archivos y carpetas."})
+		}
+	case ScopeSelectedItems:
+		if len(in.RootFolderIDs) == 0 && len(in.RootFileIDs) == 0 {
+			return nil, false, apperr.Invalid("Seleccione al menos una carpeta o archivo.",
+				map[string]string{"root_file_ids": "Seleccione al menos una carpeta o archivo."})
+		}
+	default:
 		return nil, false, apperr.Invalid("Modalidad de descarga inválida.",
-			map[string]string{"scope_type": "Use my_drive_full o selected_folders."})
-	}
-	if in.ScopeType == ScopeMyDriveFull && len(in.RootFolderIDs) > 0 {
-		return nil, false, apperr.Invalid("Mi unidad completa no acepta carpetas seleccionadas.", nil)
-	}
-	if in.ScopeType == ScopeSelectedFolders && len(in.RootFolderIDs) == 0 {
-		return nil, false, apperr.Invalid("Seleccione al menos una carpeta.",
-			map[string]string{"root_folder_ids": "Seleccione al menos una carpeta."})
+			map[string]string{"scope_type": "Use my_drive_full, selected_folders o selected_items."})
 	}
 	// Una petición repetida devuelve el trabajo original aunque la conexión haya cambiado
 	// desde el primer intento.
@@ -74,9 +87,9 @@ func (s *Service) Create(ctx context.Context, actorID, ownerID uuid.UUID, in Cre
 		return nil, false, err
 	}
 
-	var roots []drive.Root
-	if in.ScopeType == ScopeSelectedFolders {
-		roots, err = s.drive.NormalizeRoots(ctx, ownerID, in.RootFolderIDs)
+	var selection *drive.Selection
+	if in.ScopeType != ScopeMyDriveFull {
+		selection, err = s.drive.NormalizeSelections(ctx, ownerID, in.RootFolderIDs, in.RootFileIDs)
 		if err != nil {
 			return nil, false, err
 		}
@@ -126,10 +139,18 @@ func (s *Service) Create(ctx context.Context, actorID, ownerID uuid.UUID, in Cre
 		ScopeType: in.ScopeType, IdempotencyKey: strings.TrimSpace(idempotencyKey),
 	}
 	var jobRoots []Root
-	for _, r := range roots {
-		jobRoots = append(jobRoots, Root{GoogleFolderID: r.GoogleID, FolderName: r.Name, SourcePath: r.SourcePath})
+	var jobFileRoots []FileRoot
+	if selection != nil {
+		for _, r := range selection.Folders {
+			jobRoots = append(jobRoots, Root{GoogleFolderID: r.GoogleID, FolderName: r.Name, SourcePath: r.SourcePath})
+		}
+		for _, f := range selection.Files {
+			jobFileRoots = append(jobFileRoots, FileRoot{
+				GoogleFileID: f.GoogleID, FileName: f.Name, SourcePath: f.SourcePath,
+			})
+		}
 	}
-	created, isNew, err := s.repo.Create(ctx, job, jobRoots)
+	created, isNew, err := s.repo.Create(ctx, job, jobRoots, jobFileRoots)
 	if err != nil {
 		return nil, false, err
 	}
@@ -137,7 +158,9 @@ func (s *Service) Create(ctx context.Context, actorID, ownerID uuid.UUID, in Cre
 		s.audit.Record(ctx, audit.Event{ActorUserID: &actorID, Action: "download_job.created",
 			TargetType: "download_job", TargetID: created.ID.String(),
 			Metadata: map[string]any{"owner_user_id": ownerID, "scope_type": in.ScopeType,
-				"roots": len(jobRoots), "idempotency_key": job.IdempotencyKey}, IPHash: ipHash})
+				"roots": len(jobRoots), "file_roots": len(jobFileRoots),
+				"selected_total":  len(jobRoots) + len(jobFileRoots),
+				"idempotency_key": job.IdempotencyKey}, IPHash: ipHash})
 		s.repo.AddEvent(ctx, created.ID, "job.queued", s.Payload(created))
 	}
 	return created, isNew, nil

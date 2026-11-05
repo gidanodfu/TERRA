@@ -57,6 +57,10 @@ func (r *Repository) Get(ctx context.Context, id uuid.UUID) (*Job, error) {
 		return nil, err
 	}
 	j.Roots, err = r.roots(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	j.FileRoots, err = r.fileRoots(ctx, id)
 	return j, err
 }
 
@@ -71,6 +75,24 @@ func (r *Repository) roots(ctx context.Context, jobID uuid.UUID) ([]Root, error)
 	for rows.Next() {
 		var root Root
 		if err := rows.Scan(&root.GoogleFolderID, &root.FolderName, &root.SourcePath, &root.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, root)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) fileRoots(ctx context.Context, jobID uuid.UUID) ([]FileRoot, error) {
+	rows, err := r.pool.Query(ctx, `SELECT google_file_id, file_name_snapshot, source_path_snapshot, created_at
+		FROM download_job_file_roots WHERE job_id=$1 ORDER BY source_path_snapshot`, jobID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []FileRoot{}
+	for rows.Next() {
+		var root FileRoot
+		if err := rows.Scan(&root.GoogleFileID, &root.FileName, &root.SourcePath, &root.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, root)
@@ -96,7 +118,7 @@ func (r *Repository) GetByIdempotency(ctx context.Context, requester uuid.UUID, 
 
 // Create inserta un trabajo y sus raíces de forma atómica. Cuando la Idempotency-Key
 // ya fue usada por este administrador, devuelve el trabajo existente sin modificarlo.
-func (r *Repository) Create(ctx context.Context, j *Job, roots []Root) (*Job, bool, error) {
+func (r *Repository) Create(ctx context.Context, j *Job, roots []Root, fileRoots []FileRoot) (*Job, bool, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, false, err
@@ -136,6 +158,13 @@ func (r *Repository) Create(ctx context.Context, j *Job, roots []Root) (*Job, bo
 		if _, err := tx.Exec(ctx, `INSERT INTO download_job_roots
 			(id, job_id, google_folder_id, folder_name_snapshot, source_path_snapshot)
 			VALUES ($1,$2,$3,$4,$5)`, uuid.New(), id, root.GoogleFolderID, root.FolderName, root.SourcePath); err != nil {
+			return nil, false, err
+		}
+	}
+	for _, root := range fileRoots {
+		if _, err := tx.Exec(ctx, `INSERT INTO download_job_file_roots
+			(id, job_id, google_file_id, file_name_snapshot, source_path_snapshot)
+			VALUES ($1,$2,$3,$4,$5)`, uuid.New(), id, root.GoogleFileID, root.FileName, root.SourcePath); err != nil {
 			return nil, false, err
 		}
 	}

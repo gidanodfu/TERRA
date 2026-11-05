@@ -23,6 +23,12 @@ y que un administrador inicie copias controladas de su Google Drive. Los documen
 guardan en un volumen local privado y se clasifican por **área → cargo → trabajador →
 snapshot**, conservando la estructura original **Mi unidad → carpetas → archivos**.
 
+El administrador puede respaldar **Mi unidad completa**, **carpetas completas** o
+**archivos individuales combinados con carpetas**. Los archivos binarios se conservan
+byte a byte y los documentos nativos de Google se exportan a formatos abiertos u
+ofimáticos; Google Forms se serializa como JSON. Ver
+[docs/development/file-formats.md](docs/development/file-formats.md).
+
 ## 2. Alcance de la distribución
 
 Incluye un entorno local completo:

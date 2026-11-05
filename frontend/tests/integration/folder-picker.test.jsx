@@ -111,7 +111,7 @@ describe('FolderPicker', () => {
     mockPages({
       'root:': response({ id: 'root-id', name: 'Mi unidad' }, [folder, pdf, sheet, shortcut, locked]),
     })
-    render(<FolderPicker userId="worker-1" selected={[]} onChange={vi.fn()} />)
+    render(<FolderPicker userId="worker-1" selected={{ folders: [], files: [] }} onChange={vi.fn()} />)
 
     expect(await screen.findByText('Documentos')).toBeInTheDocument()
     expect(screen.getByText('Reporte.pdf')).toBeInTheDocument()
@@ -123,7 +123,9 @@ describe('FolderPicker', () => {
     expect(screen.getByText(/No descargable/)).toBeInTheDocument()
     expect(screen.getByText('Privado.bin')).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: 'Seleccionar carpeta Documentos' })).toBeInTheDocument()
-    expect(screen.queryByRole('checkbox', { name: /Reporte/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Seleccionar archivo Reporte.pdf' })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Seleccionar archivo Resumen' })).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /Privado/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: /Acceso/ })).not.toBeInTheDocument()
   })
 
@@ -136,7 +138,7 @@ describe('FolderPicker', () => {
       },
     })
     const onChange = vi.fn()
-    const { rerender } = render(<FolderPicker userId="worker-1" selected={[]} onChange={onChange} />)
+    const { rerender } = render(<FolderPicker userId="worker-1" selected={{ folders: [], files: [] }} onChange={onChange} />)
     await screen.findByText('Documentos')
 
     fireEvent.click(screen.getByText('Documentos'))
@@ -146,19 +148,48 @@ describe('FolderPicker', () => {
 
     fireEvent.click(screen.getByLabelText('Volver a Mi unidad'))
     expect(await screen.findByText('Reporte.pdf')).toBeInTheDocument()
-    rerender(<FolderPicker userId="worker-1" selected={[{ id: 'folder-1', name: 'Documentos', path: 'Documentos' }]} onChange={onChange} />)
+    rerender(<FolderPicker userId="worker-1" selected={{ folders: [{ id: 'folder-1', name: 'Documentos', path: 'Documentos' }], files: [] }} onChange={onChange} />)
     expect(screen.getByText('Carpetas seleccionadas (1)')).toBeInTheDocument()
   })
 
-  it('solo permite seleccionar carpetas', async () => {
+  it('permite seleccionar carpetas y archivos descargables', async () => {
     mockPages({ 'root:': response({ id: 'root-id', name: 'Mi unidad' }, [folder, pdf]) })
     const onChange = vi.fn()
-    render(<FolderPicker userId="worker-1" selected={[]} onChange={onChange} />)
+    render(<FolderPicker userId="worker-1" selected={{ folders: [], files: [] }} onChange={onChange} />)
     await screen.findByText('Documentos')
 
     fireEvent.click(screen.getByLabelText('Seleccionar carpeta Documentos'))
-    expect(onChange).toHaveBeenCalledWith([{ id: 'folder-1', name: 'Documentos', path: 'Documentos' }])
+    expect(onChange).toHaveBeenLastCalledWith({
+      folders: [{ id: 'folder-1', name: 'Documentos', path: 'Documentos' }],
+      files: [],
+    })
+    fireEvent.click(screen.getByLabelText('Seleccionar archivo Reporte.pdf'))
+    expect(onChange).toHaveBeenLastCalledWith({
+      folders: [],
+      files: [{ id: 'pdf-1', name: 'Reporte.pdf', path: 'Reporte.pdf', mime_type: 'application/pdf', kind: 'file' }],
+    })
     expect(screen.queryByText('Reporte.pdf', { selector: 'button' })).not.toBeInTheDocument()
+  })
+
+  it('no permite añadir un archivo cubierto por una carpeta seleccionada', async () => {
+    mockPages({
+      'root:': response({ id: 'root-id', name: 'Mi unidad' }, [folder]),
+      'folder-1:': {
+        ...response({ id: 'folder-1', name: 'Documentos' }, [pdf]),
+        path: [{ id: 'root-id', name: 'Mi unidad' }, { id: 'folder-1', name: 'Documentos' }],
+      },
+    })
+    const onChange = vi.fn()
+    render(
+      <FolderPicker
+        userId="worker-1"
+        selected={{ folders: [{ id: 'folder-1', name: 'Documentos', path: 'Documentos' }], files: [] }}
+        onChange={onChange}
+      />,
+    )
+    fireEvent.click(await screen.findByText('Documentos'))
+    fireEvent.click(await screen.findByLabelText('Seleccionar archivo Reporte.pdf'))
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('carga la siguiente página sin perder los elementos actuales', async () => {
@@ -170,7 +201,7 @@ describe('FolderPicker', () => {
       if (token === 'next-1') return Promise.resolve(response({ id: 'folder-1', name: 'Documentos' }, [sheet], ''))
       return Promise.resolve(response({ id: 'folder-1', name: 'Documentos' }, [pdf], 'next-1'))
     })
-    render(<FolderPicker userId="worker-1" selected={[]} onChange={vi.fn()} />)
+    render(<FolderPicker userId="worker-1" selected={{ folders: [], files: [] }} onChange={vi.fn()} />)
     fireEvent.click(await screen.findByText('Documentos'))
     expect(await screen.findByText('Reporte.pdf')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Cargar más elementos' }))
@@ -180,7 +211,7 @@ describe('FolderPicker', () => {
 
   it('muestra el error de Google Drive sin datos ficticios', async () => {
     api.get.mockRejectedValue(new Error('El trabajador debe reconectar su cuenta de Google Drive.'))
-    render(<FolderPicker userId="worker-1" selected={[]} onChange={vi.fn()} />)
+    render(<FolderPicker userId="worker-1" selected={{ folders: [], files: [] }} onChange={vi.fn()} />)
     expect(await screen.findByText('El trabajador debe reconectar su cuenta de Google Drive.')).toBeInTheDocument()
     expect(screen.queryByText('Documentos')).not.toBeInTheDocument()
   })

@@ -11,6 +11,7 @@ import (
 const (
 	ScopeMyDriveFull     = "my_drive_full"
 	ScopeSelectedFolders = "selected_folders"
+	ScopeSelectedItems   = "selected_items"
 )
 
 const (
@@ -76,6 +77,7 @@ type Job struct {
 	HeartbeatAt       *time.Time `json:"-"`
 	IdempotencyKey    string     `json:"-"`
 	Roots             []Root     `json:"roots,omitempty"`
+	FileRoots         []FileRoot `json:"file_roots,omitempty"`
 }
 
 type Root struct {
@@ -83,6 +85,13 @@ type Root struct {
 	FolderName     string    `json:"folder_name"`
 	SourcePath     string    `json:"source_path"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type FileRoot struct {
+	GoogleFileID string    `json:"google_file_id"`
+	FileName     string    `json:"file_name"`
+	SourcePath   string    `json:"source_path"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type Item struct {

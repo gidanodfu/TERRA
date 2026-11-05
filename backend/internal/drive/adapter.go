@@ -1,7 +1,9 @@
 package drive
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +13,7 @@ import (
 	"time"
 
 	gdrive "google.golang.org/api/drive/v3"
+	"google.golang.org/api/forms/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 
@@ -47,7 +50,8 @@ func NewProvider(google *googleoauth.Client, box *crypto.Box) *Provider {
 }
 
 type API struct {
-	svc *gdrive.Service
+	svc   *gdrive.Service
+	forms *forms.Service
 }
 
 func (p *Provider) NewAPI(ctx context.Context, conn *Connection) (*API, error) {
@@ -63,7 +67,11 @@ func (p *Provider) NewAPI(ctx context.Context, conn *Connection) (*API, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &API{svc: svc}, nil
+	formsSvc, err := forms.NewService(ctx, option.WithTokenSource(ts))
+	if err != nil {
+		return nil, err
+	}
+	return &API{svc: svc, forms: formsSvc}, nil
 }
 
 func (a *API) RootID(ctx context.Context) (string, error) {
@@ -213,6 +221,9 @@ func (a *API) OpenDownload(ctx context.Context, f RemoteFile) (io.ReadCloser, in
 	if f.MimeType == MimeFolder {
 		return nil, 0, "", &APIError{Code: "is_folder", Err: errors.New("folders cannot be downloaded")}
 	}
+	if f.MimeType == MimeForm {
+		return a.openForm(ctx, f)
+	}
 	if f.IsNative() {
 		exportMime, ok := ExportMime(f.MimeType)
 		if !ok {
@@ -232,6 +243,23 @@ func (a *API) OpenDownload(ctx context.Context, f RemoteFile) (io.ReadCloser, in
 		return nil, 0, "", classify(err)
 	}
 	return resp.Body, resp.ContentLength, f.MimeType, nil
+}
+
+// openForm serializa la definición del formulario. No incluye respuestas de
+// participantes: requieren alcances y una política de privacidad independientes.
+func (a *API) openForm(ctx context.Context, f RemoteFile) (io.ReadCloser, int64, string, error) {
+	if a.forms == nil {
+		return nil, 0, "", &APIError{Code: "unsupported_google_type", Err: errors.New("forms service unavailable")}
+	}
+	form, err := a.forms.Forms.Get(f.ID).Context(ctx).Do()
+	if err != nil {
+		return nil, 0, "", classify(err)
+	}
+	data, err := json.MarshalIndent(form, "", "  ")
+	if err != nil {
+		return nil, 0, "", &APIError{Code: "drive_transient", Transient: true, Err: err}
+	}
+	return io.NopCloser(bytes.NewReader(data)), int64(len(data)), "application/json", nil
 }
 
 func (f RemoteFile) IsNative() bool { return IsNative(f.MimeType) }

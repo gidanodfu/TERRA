@@ -310,7 +310,7 @@ paths:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
         - $ref: "#/components/parameters/Status"
-        - { name: scope_type, in: query, schema: { type: string, enum: [my_drive_full, selected_folders] } }
+        - { name: scope_type, in: query, schema: { type: string, enum: [my_drive_full, selected_folders, selected_items] } }
         - { name: area_id, in: query, schema: { type: string, format: uuid } }
         - { name: position_id, in: query, schema: { type: string, format: uuid } }
         - { name: user_id, in: query, schema: { type: string, format: uuid } }
@@ -781,11 +781,20 @@ paths:
               type: object
               required: [scope_type]
               properties:
-                scope_type: { type: string, enum: [my_drive_full, selected_folders] }
+                scope_type: { type: string, enum: [my_drive_full, selected_folders, selected_items] }
                 root_folder_ids:
                   type: array
                   items: { type: string }
-                  description: Requerido para selected_folders; vacío para my_drive_full.
+                  description: Carpetas raíz. Requerido en selected_folders; opcional en selected_items.
+                root_file_ids:
+                  type: array
+                  items: { type: string }
+                  description: Archivos individuales para selected_items. No se permiten en my_drive_full.
+              description: |
+                `selected_items` acepta carpetas, archivos o ambos. Si un archivo está
+                dentro de una carpeta seleccionada, el servidor conserva solo la carpeta.
+                Los archivos se validan contra Google Drive y deben ser descargables o
+                exportables.
       responses:
         "202":
           description: Trabajo aceptado
@@ -1141,6 +1150,7 @@ components:
         starred: { type: boolean }
         shared: { type: boolean }
         can_download: { type: boolean }
+        selectable: { type: boolean, description: Carpeta o archivo seleccionable como raíz. }
         is_shortcut: { type: boolean }
         shortcut_target_id: { type: string }
         shortcut_target_mime_type: { type: string }
@@ -1163,7 +1173,7 @@ components:
         position_id: { type: string, format: uuid }
         area_name: { type: string }
         position_name: { type: string }
-        scope_type: { type: string, enum: [my_drive_full, selected_folders] }
+        scope_type: { type: string, enum: [my_drive_full, selected_folders, selected_items] }
         status:
           type: string
           enum: [queued, scanning, downloading, completed, partially_completed, failed, waiting_authorization, cancel_requested, cancelled]
@@ -1183,6 +1193,16 @@ components:
         roots:
           type: array
           items: { $ref: "#/components/schemas/JobRoot" }
+        file_roots:
+          type: array
+          items: { $ref: "#/components/schemas/JobFileRoot" }
+    JobFileRoot:
+      type: object
+      properties:
+        google_file_id: { type: string }
+        file_name: { type: string }
+        source_path: { type: string }
+        created_at: { type: string, format: date-time }
     Item:
       type: object
       properties:

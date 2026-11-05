@@ -37,6 +37,7 @@ func (h *Handler) ip(r *http.Request) string {
 type createBody struct {
 	ScopeType     string   `json:"scope_type"`
 	RootFolderIDs []string `json:"root_folder_ids"`
+	RootFileIDs   []string `json:"root_file_ids"`
 }
 
 func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +58,7 @@ func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	job, created, err := h.svc.Create(r.Context(), actor.ID, ownerID, CreateInput{
-		ScopeType: body.ScopeType, RootFolderIDs: body.RootFolderIDs,
+		ScopeType: body.ScopeType, RootFolderIDs: body.RootFolderIDs, RootFileIDs: body.RootFileIDs,
 	}, key, h.ip(r))
 	if err != nil {
 		httpx.WriteError(w, r, err)

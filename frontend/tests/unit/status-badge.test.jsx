@@ -13,8 +13,13 @@ describe('StatusBadge', () => {
     expect(screen.getByText('invented')).toBeInTheDocument()
   })
 
-  it('traduce el alcance', () => {
+  it('traduce el alcance histórico', () => {
     render(<ScopeLabel scope="selected_folders" />)
     expect(screen.getByText('Carpetas seleccionadas')).toBeInTheDocument()
+  })
+
+  it('traduce la selección mixta', () => {
+    render(<ScopeLabel scope="selected_items" />)
+    expect(screen.getByText('Archivos y carpetas seleccionadas')).toBeInTheDocument()
   })
 })

@@ -31,7 +31,7 @@ func TestQueueClaimIdempotencyAndCancel(t *testing.T) {
 		PositionSlug: "cargo-cola", ScopeType: downloads.ScopeMyDriveFull,
 		IdempotencyKey: "idem-integration",
 	}
-	created, isNew, err := repo.Create(ctx, job, nil)
+	created, isNew, err := repo.Create(ctx, job, nil, nil)
 	if err != nil || !isNew || created.ID != jobID {
 		t.Fatalf("crear job: %v new=%v id=%v", err, isNew, created)
 	}
@@ -41,7 +41,7 @@ func TestQueueClaimIdempotencyAndCancel(t *testing.T) {
 		AreaName: "Área Cola", PositionName: "Cargo Cola", AreaSlug: "area-cola",
 		PositionSlug: "cargo-cola", ScopeType: downloads.ScopeMyDriveFull,
 		IdempotencyKey: "idem-integration",
-	}, nil)
+	}, nil, nil)
 	if err != nil || isNew || replayed.ID != jobID {
 		t.Fatalf("idempotencia: %v new=%v id=%v", err, isNew, replayed.ID)
 	}

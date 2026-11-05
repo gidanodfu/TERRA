@@ -168,6 +168,8 @@ Siteverify real exige un token de Cloudflare.
 | Tema True Black / claro, superficies, dropdowns, persistencia | frontend | Navegador + localStorage | — | Playwright | Cubierto |
 | Explorador de archivos y carpetas de Drive | drive + frontend | HTTP + DB + navegador | adapter/API simulada | Go integration + Vitest + Playwright | Cubierto |
 | Cambio de contraseña local por rol y `has_local_credentials` | auth + frontend | HTTP + DB + navegador | AuthContext controlado | Go integration + Vitest + Playwright | Cubierto |
+| Selección mixta de archivos y carpetas | downloads + drive + frontend | HTTP + DB + navegador | API de Drive controlada | Go integration + Vitest + Playwright | Cubierto |
+| Exportación de Docs/Sheets/Slides/Drawings y Forms JSON | drive | API externa | Sin llamadas reales en CI | Unitarias de formatos | Parcial: descarga real manual |
 | RBAC, cuentas administrativas y navegación por permisos | auth + admin + frontend | HTTP + DB + navegador | Siteverify/widget y API controlados | Go integration + Vitest + Playwright | Cubierto |
 | Alineación del footer legal y rutas legales | frontend | Navegador | — | Playwright (2/1 columnas, 320–1920 px) | Cubierto |
 | Ancho/foco/resize del textarea de contenido de políticas | frontend | Navegador | — | Playwright | Cubierto |

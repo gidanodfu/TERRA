@@ -407,25 +407,181 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 			}
 		}
 	}
+	rootFolders := map[string]bool{}
+	for _, root := range job.Roots {
+		rootFolders[root.GoogleFolderID] = true
+	}
+	for _, root := range job.FileRoots {
+		created, err := w.scanFileRoot(ctx, job, api, jobRoot, root, used, rootFolders)
+		if err != nil {
+			return err
+		}
+		inserted += created
+	}
+
 	if _, err := w.repo.RecomputeCounters(ctx, job.ID); err != nil {
 		return err
 	}
-	w.log.Info("scan_completed", "job_id", job.ID, "items", inserted, "folders", len(visited))
+	w.log.Info("scan_completed", "job_id", job.ID, "items", inserted, "folders", len(visited),
+		"file_roots", len(job.FileRoots))
 	return nil
 }
 
+// scanFileRoot registra un archivo seleccionado individualmente conservando su
+// ruta original y sin recorrer su carpeta contenedora.
+func (w *Worker) scanFileRoot(ctx context.Context, job *Job, api *drive.API, jobRoot string,
+	root FileRoot, used map[string]map[string]string, rootFolders map[string]bool) (int, error) {
+	file, err := api.GetFile(ctx, root.GoogleFileID)
+	if err != nil {
+		return w.skipFileRoot(ctx, job, root, "source_missing", "El archivo ya no existe en Google Drive.")
+	}
+	if file.Trashed {
+		return w.skipFileRoot(ctx, job, root, "source_missing", "El archivo está en la papelera de Google Drive.")
+	}
+	if file.MimeType == drive.MimeFolder || file.IsShortcut {
+		return w.skipFileRoot(ctx, job, root, "invalid_root", "La raíz seleccionada ya no es un archivo descargable.")
+	}
+
+	chain, err := api.PathToRoot(ctx, root.GoogleFileID)
+	if err != nil {
+		return w.skipFileRoot(ctx, job, root, "source_missing", "No se pudo resolver la ruta del archivo.")
+	}
+	if len(chain) == 0 || chain[len(chain)-1].ID != root.GoogleFileID {
+		return w.skipFileRoot(ctx, job, root, "source_missing", "Google Drive no devolvió el archivo esperado.")
+	}
+	for i := 0; i < len(chain)-1; i++ {
+		if rootFolders[chain[i].ID] {
+			// Cubierto por una carpeta seleccionada; la carpeta ya lo procesará.
+			return 0, nil
+		}
+	}
+
+	segments := make([]string, 0, len(chain)-1)
+	for i := 0; i < len(chain)-1; i++ {
+		segments = append(segments, storage.Sanitize(chain[i].Name))
+	}
+	parents := file.Parents
+	if len(parents) == 0 && len(chain) > 1 {
+		parents = []string{chain[len(chain)-2].ID}
+	}
+	dirRel := storage.Child(jobRoot, segments...)
+	if _, err := w.store.EnsureDir(dirRel); err != nil {
+		return 0, err
+	}
+	dirKey := strings.Join(segments, "/")
+	if used[dirKey] == nil {
+		used[dirKey] = map[string]string{}
+	}
+
+	if drive.IsNative(file.MimeType) {
+		exportMime, ok := drive.ExportMime(file.MimeType)
+		if !ok {
+			code := "unsupported_google_type"
+			message := "Formato nativo de Google no soportado en esta versión."
+			if file.MimeType == drive.MimeVids {
+				code = "google_vids_out_of_scope"
+				message = "Google Vids requiere un flujo asíncrono no incluido en esta versión."
+			}
+			return w.skipFileRoot(ctx, job, root, code, message)
+		}
+		if file.MimeType != drive.MimeForm && !file.CanDownload {
+			return w.skipFileRoot(ctx, job, root, "not_downloadable", "Google Drive no permite exportar este archivo.")
+		}
+		display := withExtension(file.Name, exportMime)
+		nodeID, err := w.driveRepo.UpsertNode(ctx, job.DriveConnectionID, *file)
+		if err != nil {
+			return 0, err
+		}
+		if err := w.driveRepo.SyncNodeParents(ctx, nodeID, parents); err != nil {
+			return 0, err
+		}
+		name := storage.UniqueName(used[dirKey], display, file.ID)
+		created, err := w.repo.CreateItem(ctx, job.ID, nodeID, storage.Child(dirRel, name), ItemPending, nil, "", "")
+		if err != nil {
+			return 0, err
+		}
+		if created {
+			return 1, nil
+		}
+		return 0, nil
+	}
+
+	if !file.CanDownload {
+		return w.skipFileRoot(ctx, job, root, "not_downloadable", "Google Drive no permite descargar este archivo.")
+	}
+	nodeID, err := w.driveRepo.UpsertNode(ctx, job.DriveConnectionID, *file)
+	if err != nil {
+		return 0, err
+	}
+	if err := w.driveRepo.SyncNodeParents(ctx, nodeID, parents); err != nil {
+		return 0, err
+	}
+	name := storage.UniqueName(used[dirKey], file.Name, file.ID)
+	size := file.Size
+	created, err := w.repo.CreateItem(ctx, job.ID, nodeID, storage.Child(dirRel, name), ItemPending, &size, "", "")
+	if err != nil {
+		return 0, err
+	}
+	if created {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+func (w *Worker) skipFileRoot(ctx context.Context, job *Job, root FileRoot, code, message string) (int, error) {
+	nodeID := uuid.Nil
+	if existing, err := w.driveRepo.GetNode(ctx, job.DriveConnectionID, root.GoogleFileID); err == nil {
+		nodeID = existing.ID
+	} else {
+		var err error
+		nodeID, err = w.driveRepo.UpsertNode(ctx, job.DriveConnectionID, drive.RemoteFile{
+			ID: root.GoogleFileID, Name: root.FileName, MimeType: "application/octet-stream",
+		})
+		if err != nil {
+			return 0, err
+		}
+	}
+	segments := strings.Split(root.SourcePath, "/")
+	if len(segments) > 0 {
+		segments = segments[:len(segments)-1]
+	}
+	jobRoot, err := w.store.JobRoot(job.AreaID, job.AreaSlug, job.PositionID, job.PositionSlug,
+		job.DriveOwnerUserID, job.ID)
+	if err != nil {
+		return 0, err
+	}
+	dirRel := storage.Child(jobRoot, sanitizeSegments(segments)...)
+	if _, err := w.store.EnsureDir(dirRel); err != nil {
+		return 0, err
+	}
+	created, err := w.repo.CreateItem(ctx, job.ID, nodeID, storage.Child(dirRel,
+		storage.Sanitize(root.FileName)), ItemSkipped, nil, code, message)
+	if err != nil {
+		return 0, err
+	}
+	if created {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+func sanitizeSegments(segments []string) []string {
+	out := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		if segment != "" {
+			out = append(out, storage.Sanitize(segment))
+		}
+	}
+	return out
+}
+
 func withExtension(name, exportMime string) string {
-	ext := ".bin"
-	switch exportMime {
-	case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-		ext = ".docx"
-	case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-		ext = ".xlsx"
-	case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-		ext = ".pptx"
+	ext := drive.ExportExtension(exportMime)
+	if ext == "" {
+		ext = ".bin"
 	}
 	lower := strings.ToLower(name)
-	if strings.HasSuffix(lower, ext) {
+	if strings.HasSuffix(lower, strings.ToLower(ext)) {
 		return name
 	}
 	return name + ext

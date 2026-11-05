@@ -19,5 +19,7 @@ export function StatusBadge({ type = 'job', status, className = '' }) {
 }
 
 export function ScopeLabel({ scope }) {
-  return scope === 'my_drive_full' ? 'Mi unidad completa' : 'Carpetas seleccionadas'
+  if (scope === 'my_drive_full') return 'Mi unidad completa'
+  if (scope === 'selected_items') return 'Archivos y carpetas seleccionadas'
+  return 'Carpetas seleccionadas'
 }
