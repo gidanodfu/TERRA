@@ -16,8 +16,10 @@ const sections = [
           pendientes de confirmación por la institución.
         </LegalP>
         <LegalP>
-          Este documento describe el tratamiento realizado por TERRA para cuentas de trabajadores
-          y cuentas administrativas. No regula otros sistemas institucionales.
+          Este documento describe el tratamiento que TERRA realiza para cuentas de trabajadores y
+          cuentas administrativas: identificación y clasificación de perfiles, autenticación,
+          conexión autorizada con Google Drive, generación de snapshots, auditoría y protección de
+          sesiones y credenciales.
         </LegalP>
       </>
     ),
@@ -121,9 +123,9 @@ const sections = [
     body: (
       <>
         <LegalP>
-          Los plazos institucionales de conservación están pendientes de definición. TERRA permite
-          aplicar una retención configurable de snapshots; si no se configura, la retención
-          automática permanece desactivada.
+          Los plazos de conservación y eliminación definitiva de snapshots deben ser definidos y
+          aprobados institucionalmente. En esta versión no se identifica un proceso automático de
+          retención que aplique dichos plazos.
         </LegalP>
         <LegalP>
           Las copias de seguridad y los documentos se conservan en ubicaciones externas al

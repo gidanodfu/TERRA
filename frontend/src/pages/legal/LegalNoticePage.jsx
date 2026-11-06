@@ -31,8 +31,9 @@ const sections = [
           conservar snapshots y auditar las operaciones administrativas relacionadas.
         </LegalP>
         <LegalP>
-          El sistema no es un portal de empleo, no gestiona postulaciones y no presta servicios
-          distintos a los descritos en su documentación funcional.
+          TERRA integra autenticación con Google, conexiones individuales de Google Drive,
+          exploración autorizada de carpetas y archivos, respaldos institucionales, snapshots,
+          almacenamiento documental, auditoría y gestión de cuentas y permisos.
         </LegalP>
       </>
     ),

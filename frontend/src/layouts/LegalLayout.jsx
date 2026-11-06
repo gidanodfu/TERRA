@@ -3,8 +3,6 @@ import { ArrowLeft, Info } from 'lucide-react'
 import { LEGAL_LINKS } from '../features/legal/links'
 
 export default function LegalLayout({ title, intro, sections, currentPath }) {
-  const otherLinks = LEGAL_LINKS.filter((link) => link.to !== currentPath)
-
   return (
     <div className="min-h-screen bg-shell px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-[880px]">
@@ -66,31 +64,6 @@ export default function LegalLayout({ title, intro, sections, currentPath }) {
             ))}
           </div>
 
-          <footer className="mt-10 border-t border-border pt-6">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-brand-800 hover:text-brand-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              Volver al inicio
-            </Link>
-
-            <nav aria-label="También puede consultar" className="mt-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">También puede consultar</p>
-              <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                {otherLinks.map((link) => (
-                  <li key={link.to}>
-                    <Link
-                      to={link.to}
-                      className="rounded text-slate-500 hover:text-brand-800 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-                    >
-                      {link.title}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </footer>
         </article>
 
         <footer

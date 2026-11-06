@@ -1,6 +1,8 @@
 import LegalLayout, {
+  LegalList,
   LegalNote,
   LegalP,
+  LegalSubheading,
   LegalTable,
 } from '../../layouts/LegalLayout'
 
@@ -10,9 +12,10 @@ const sections = [
     body: (
       <>
         <LegalP>
-          Una cookie es un dato que el navegador envía al servidor en cada solicitud al mismo sitio.
-          El almacenamiento local del navegador —como <code>localStorage</code>— no es una cookie:
-          permanece en el dispositivo y JavaScript puede leerlo.
+          Una cookie es un dato que el navegador envía al servidor en las solicitudes al mismo
+          sitio. El almacenamiento local del navegador —como <code>localStorage</code>— no es una
+          cookie: permanece en el dispositivo, JavaScript puede leerlo y no se envía
+          automáticamente al servidor.
         </LegalP>
         <LegalP>
           TERRA no implementa cookies publicitarias ni herramientas de analítica propias.
@@ -25,17 +28,28 @@ const sections = [
     body: (
       <>
         <LegalTable
-          head={['Nombre', 'Tipo', 'Finalidad', 'Duración']}
+          head={['Nombre', 'Categoría', 'HttpOnly', 'Finalidad', 'Duración']}
           rows={[
-            ['terra_session (o SESSION_COOKIE_NAME)', 'Cookie HttpOnly', 'Mantener la sesión autenticada del lado del servidor.', 'SESSION_TTL_HOURS; expiración absoluta.'],
-            ['terra_csrf', 'Cookie legible por JavaScript', 'Permitir que el SPA envíe el token CSRF que el servidor compara con la sesión.', 'La misma que la sesión.'],
-            ['terra_oauth_state', 'Cookie HttpOnly', 'Proteger el estado del flujo OAuth de Google.', '10 minutos.'],
+            ['terra_session (valor predeterminado)', 'Sesión', 'Sí', 'Mantener la sesión autenticada del lado del servidor.', '12 horas por defecto, configurable.'],
+            ['terra_csrf', 'Seguridad CSRF', 'No', 'Permitir que el frontend envíe el token CSRF que el backend compara con la sesión.', 'La misma que la sesión.'],
+            ['terra_oauth_state', 'Estado OAuth', 'Sí', 'Comprobar que la respuesta de Google corresponde al flujo iniciado por TERRA.', '10 minutos (600 segundos).'],
           ]}
         />
         <LegalP>
+          El nombre de la cookie de sesión puede configurarse mediante{' '}
+          <code>SESSION_COOKIE_NAME</code>. Su duración se configura con{' '}
+          <code>SESSION_TTL_HOURS</code>. La cookie CSRF acompaña a la sesión y se utiliza en el
+          encabezado <code>X-CSRF-Token</code>.
+        </LegalP>
+        <LegalP>
+          Las tres cookies usan <code>Path=/</code> y <code>SameSite=Lax</code>. En producción se
+          marcan como <code>Secure</code>, por lo que el navegador solo las envía por HTTPS.
+        </LegalP>
+        <LegalP>
           La cookie de sesión no es accesible desde JavaScript. La cookie CSRF sí es legible para
-          que el cliente pueda enviar el encabezado <code>X-CSRF-Token</code>; no contiene
-          credenciales ni tokens de Google.
+          que el cliente pueda enviar el token; no contiene contraseñas ni tokens de Google. La
+          cookie de estado OAuth es independiente de la sesión autenticada y se utiliza tanto en el
+          acceso de trabajadores como en la autorización de Google Drive.
         </LegalP>
       </>
     ),
@@ -46,47 +60,54 @@ const sections = [
       <>
         <LegalP>
           TERRA utiliza la clave <code>terra-theme</code> en <code>localStorage</code> para recordar
-          la preferencia de tema claro u oscuro. No es una cookie, no se envía al servidor y no
-          identifica al usuario.
+          la preferencia de tema claro u oscuro. No es una cookie, no se envía en las solicitudes
+          HTTP y no identifica al usuario.
         </LegalP>
         <LegalP>
-          Borrar el almacenamiento local restablece la preferencia de tema, sin afectar la sesión
-          mientras las cookies correspondientes sigan vigentes.
+          Si se elimina esta clave, se pierde la preferencia persistida del tema. La sesión
+          autenticada depende de sus cookies, no de este almacenamiento.
         </LegalP>
       </>
     ),
   },
   {
-    title: 'Integraciones de terceros',
+    title: 'Integraciones externas',
     body: (
       <>
+        <LegalSubheading>Google OAuth y Google Drive</LegalSubheading>
         <LegalP>
-          El flujo de Google OAuth se ejecuta en dominios de Google. Cloudflare Turnstile protege el
-          acceso administrativo. Estos proveedores pueden utilizar sus propias cookies o
-          almacenamiento técnico en sus dominios, conforme a sus políticas.
+          TERRA inicia flujos de autorización hacia Google para el acceso de trabajadores y para la
+          conexión de Google Drive. La interacción ocurre en dominios de Google y está sujeta a sus
+          propias políticas de privacidad y cookies.
+        </LegalP>
+        <LegalSubheading>Cloudflare Turnstile</LegalSubheading>
+        <LegalP>
+          El acceso administrativo utiliza Cloudflare Turnstile como verificación de seguridad. El
+          widget y la validación se ejecutan con servicios de Cloudflare, sujetos a sus propias
+          políticas.
         </LegalP>
         <LegalP>
-          TERRA no controla esas cookies de terceros ni las enumera como propias. La institución debe
-          revisar la configuración y documentación de cada proveedor antes de publicar esta política.
+          TERRA no atribuye nombres de cookies a estos proveedores ni afirma que utilicen una cookie
+          concreta. Cualquier inventario detallado de cookies de terceros requiere una revisión de
+          red y de la documentación oficial de cada proveedor.
         </LegalP>
       </>
     ),
   },
   {
-    title: 'Finalidad y gestión',
+    title: 'Finalidad y efectos de bloquearlas',
     body: (
       <>
-        <LegalP>
-          Las cookies propias se utilizan para autenticación, seguridad CSRF y finalización del flujo
-          OAuth. El almacenamiento local se utiliza para la preferencia visual.
-        </LegalP>
-        <LegalP>
-          Bloquear las cookies de sesión o CSRF impide iniciar sesión o realizar operaciones
-          protegidas. Bloquear el almacenamiento local solo afecta la persistencia del tema.
-        </LegalP>
+        <LegalList items={[
+          'Sin la cookie de sesión no puede mantenerse el acceso autenticado.',
+          'La ausencia o alteración de la cookie CSRF provoca el rechazo de solicitudes protegidas que requieran validación CSRF.',
+          'La ausencia de la cookie de estado OAuth puede impedir completar el inicio de sesión con Google o la conexión de Drive.',
+          'Bloquear localStorage afecta únicamente la persistencia del tema; no equivale a bloquear cookies ni cierra la sesión.',
+        ]} />
         <LegalNote title="Marco aplicable pendiente">
-          La institución debe validar si corresponde un mecanismo de consentimiento y qué base
-          jurídica aplica a cada cookie antes de la publicación definitiva.
+          La institución debe validar las bases jurídicas, exenciones y requisitos de consentimiento
+          aplicables antes de aprobar esta política. TERRA no implementa un banner de consentimiento
+          en esta versión.
         </LegalNote>
       </>
     ),

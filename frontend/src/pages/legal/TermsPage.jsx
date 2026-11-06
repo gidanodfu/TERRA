@@ -16,7 +16,9 @@ const sections = [
           sistema por trabajadores y cuentas administrativas.
         </LegalP>
         <LegalP>
-          No regulan otros servicios institucionales ni sustituyen la normativa interna aplicable.
+          Estas condiciones cubren la autenticación, la conexión autorizada con Google Drive, la
+          selección de carpetas y archivos, la generación de snapshots, la consulta de documentos y
+          las responsabilidades de cada rol administrativo y del trabajador.
         </LegalP>
       </>
     ),
