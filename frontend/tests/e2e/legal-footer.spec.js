@@ -1,92 +1,124 @@
 import { expect, test } from '@playwright/test'
 import { mockPublicSession } from './helpers/mock-public-session'
 
-test.use({ colorScheme: 'light' })
-
-const LEGAL_LINKS = [
-  { title: 'Política de privacidad', href: '/politica-de-privacidad' },
-  { title: 'Términos y condiciones', href: '/terminos-y-condiciones' },
-  { title: 'Aviso legal', href: '/aviso-legal' },
-  { title: 'Política de cookies', href: '/politica-de-cookies' },
+const DOCUMENTS = [
+  { title: 'Política de privacidad', path: '/politica-de-privacidad' },
+  { title: 'Términos y condiciones', path: '/terminos-y-condiciones' },
+  { title: 'Aviso legal', path: '/aviso-legal' },
+  { title: 'Política de cookies', path: '/politica-de-cookies' },
 ]
 
-test('el footer legal distribuye y centra sus elementos', async ({ page, context }) => {
+const widths = [1920, 1648, 1440, 1366, 1024, 768, 390, 360, 320]
+
+test.use({ colorScheme: 'light' })
+
+test('las cuatro páginas comparten navbar, documento, aviso y footer Rounded', async ({ page, context }) => {
   await mockPublicSession(context)
 
-  const cases = [
-    [1920, 1080, 2],
-    [1536, 864, 2],
-    [1440, 900, 2],
-    [1280, 800, 2],
-    [390, 844, 2],
-    [360, 640, 2],
-    [320, 700, 1],
-  ]
+  for (const document of DOCUMENTS) {
+    await page.goto(document.path)
 
-  for (const [width, height, columns] of cases) {
-    await page.setViewportSize({ width, height })
-    await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
+    const navbar = page.getByTestId('legal-navbar')
+    await expect(navbar.getByText('TERRA', { exact: true })).toBeVisible()
+    await expect(navbar.getByText('Gestión documental', { exact: true })).toBeVisible()
+    await expect(navbar.getByRole('link', { name: 'Ir al inicio' })).toBeVisible()
 
-    const footer = page.locator('section').last()
-    const metrics = await footer.evaluate((element) => {
-      const list = element.querySelector('ul')
-      const rect = element.getBoundingClientRect()
-      const items = [...list.querySelectorAll('li')].map((item) => {
-        const link = item.querySelector('a')
-        const itemBox = item.getBoundingClientRect()
-        const linkBox = link.getBoundingClientRect()
-        return {
-          text: link.textContent.trim(),
-          href: link.getAttribute('href'),
-          itemCenter: itemBox.x + itemBox.width / 2,
-          linkCenter: linkBox.x + linkBox.width / 2,
-        }
-      })
-      return {
-        columns: getComputedStyle(list).gridTemplateColumns.split(' ').filter(Boolean),
-        listAlign: getComputedStyle(list).textAlign,
-        footerCenter: rect.x + rect.width / 2,
-        items,
-      }
-    })
+    const article = page.getByTestId('legal-document')
+    await expect(article.getByRole('heading', { name: document.title, level: 1 })).toBeVisible()
+    await expect(article.getByText('Documento pendiente de aprobación institucional')).toBeVisible()
+    await expect(article.getByText(/borrador informativo adaptado a TERRA/i)).toBeVisible()
+    expect(await article.locator('section').count()).toBeGreaterThanOrEqual(5)
+    expect(await article.locator('h2').count()).toBeGreaterThanOrEqual(5)
 
-    expect(metrics.columns.length, `columnas en ${width}`).toBe(columns)
-    if (columns === 2) {
-      expect(Math.abs(parseFloat(metrics.columns[0]) - parseFloat(metrics.columns[1])), `columnas desiguales en ${width}`).toBeLessThanOrEqual(1)
-    }
-    expect(metrics.listAlign).toBe('center')
-    expect(await footer.locator('h2, p').count(), `textos extra en ${width}`).toBe(0)
-    expect(metrics.items.map((item) => item.text)).toEqual(LEGAL_LINKS.map((link) => link.title))
-    expect(metrics.items.map((item) => item.href)).toEqual(LEGAL_LINKS.map((link) => link.href))
+    const intro = await article.locator('header p').last().textContent()
+    expect(intro?.trim().length).toBeGreaterThan(20)
+    expect(intro).not.toBe('Información sobre el tratamiento de datos personales en TERRA.')
 
-    for (const item of metrics.items) {
-      expect(Math.abs(item.linkCenter - item.itemCenter), `${item.text} descentrado en ${width}`).toBeLessThanOrEqual(1)
+    const text = await article.textContent()
+    for (const forbidden of [/postulante/i, /\bRUC\b/, /curr[ií]culum/i, /Unidad Funcional del Empleo/i]) {
+      expect(text, `${document.title} no debe contener ${forbidden}`).not.toMatch(forbidden)
     }
 
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    const internalNav = article.getByRole('navigation', { name: 'También puede consultar' })
+    await expect(internalNav).toBeVisible()
+    await expect(internalNav.getByRole('link')).toHaveCount(3)
+    await expect(internalNav.getByRole('link', { name: document.title })).toHaveCount(0)
+
+    const footer = page.getByTestId('legal-footer')
+    await expect(footer.getByRole('link')).toHaveCount(4)
+    await expect(footer.getByRole('link', { name: document.title })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByText('TERRA · Gestión documental municipal')).toHaveCount(0)
+
+    const boxes = await Promise.all([navbar.boundingBox(), article.boundingBox(), footer.boundingBox()])
+    expect(Math.abs(boxes[0].width - boxes[1].width)).toBeLessThanOrEqual(1)
+    expect(Math.abs(boxes[1].width - boxes[2].width)).toBeLessThanOrEqual(1)
   }
 })
 
-test('los enlaces del footer son accesibles y navegan a sus rutas', async ({ page, context }) => {
+test('la navegación interna vuelve al inicio y enlaza los otros documentos', async ({ page, context }) => {
   await mockPublicSession(context)
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/')
+  await page.goto('/politica-de-privacidad')
 
-  const footer = page.locator('section').last()
-  const firstLink = footer.getByRole('link', { name: LEGAL_LINKS[0].title })
-  await firstLink.hover()
-  await expect(firstLink).toHaveCSS('color', 'rgb(6, 95, 70)')
+  const article = page.getByTestId('legal-document')
+  await article.getByRole('link', { name: 'Volver al inicio' }).click()
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/')
+  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
 
-  await firstLink.focus()
-  await expect(firstLink).toBeFocused()
-
-  for (const link of LEGAL_LINKS) {
-    await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
-    await page.locator('section').last().getByRole('link', { name: link.title }).click()
-    await expect(page).toHaveURL(new RegExp(`${link.href}$`))
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440)
+  await page.goto('/politica-de-privacidad')
+  const internalNav = page.getByTestId('legal-document').getByRole('navigation', { name: 'También puede consultar' })
+  for (const target of DOCUMENTS.filter((document) => document.title !== 'Política de privacidad')) {
+    await page.goto('/politica-de-privacidad')
+    await internalNav.getByRole('link', { name: target.title }).click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe(target.path)
+    await expect(page.getByRole('heading', { name: target.title, level: 1 })).toBeVisible()
   }
+})
+
+test('el footer navega, identifica la página actual y conserva hover/focus', async ({ page, context }) => {
+  await mockPublicSession(context)
+  await page.goto('/aviso-legal')
+
+  const footer = page.getByTestId('legal-footer')
+  const privacy = footer.getByRole('link', { name: 'Política de privacidad' })
+  await privacy.hover()
+  await expect(privacy).toHaveCSS('color', 'rgb(6, 95, 70)')
+  await privacy.focus()
+  await expect(privacy).toBeFocused()
+
+  for (const target of DOCUMENTS) {
+    await page.goto('/aviso-legal')
+    await page.getByTestId('legal-footer').getByRole('link', { name: target.title }).click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe(target.path)
+    await expect(page.getByTestId('legal-footer').getByRole('link', { name: target.title })).toHaveAttribute('aria-current', 'page')
+  }
+})
+
+test('las páginas legales no desbordan y respetan el tema oscuro', async ({ page, context }) => {
+  await mockPublicSession(context)
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 })
+    await page.goto('/politica-de-privacidad')
+    const { client, scroll, columns } = await page.evaluate(() => {
+      const footer = document.querySelector('[data-testid="legal-footer"] ul')
+      return {
+        client: document.documentElement.clientWidth,
+        scroll: document.documentElement.scrollWidth,
+        columns: getComputedStyle(footer).gridTemplateColumns.split(' ').filter(Boolean).length,
+      }
+    })
+    expect(scroll, `desbordamiento a ${width}px`).toBeLessThanOrEqual(client + 1)
+    expect(columns, `columnas del footer a ${width}px`).toBeGreaterThanOrEqual(1)
+    expect(columns, `columnas del footer a ${width}px`).toBeLessThanOrEqual(2)
+  }
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/politica-de-cookies')
+  const light = await page.getByTestId('legal-document').evaluate((element) => getComputedStyle(element).backgroundColor)
+  await page.evaluate(() => localStorage.setItem('terra-theme', 'dark'))
+  await page.reload()
+  await expect(page.getByTestId('legal-document')).toBeVisible()
+  const dark = await page.getByTestId('legal-document').evaluate((element) => getComputedStyle(element).backgroundColor)
+  expect(dark).not.toBe(light)
+  expect(dark).not.toBe('rgb(255, 255, 255)')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440)
 })

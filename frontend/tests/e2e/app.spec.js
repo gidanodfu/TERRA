@@ -38,7 +38,7 @@ test('las rutas legales son públicas, independientes, recargan y navegan', asyn
     await expect(page.getByRole('heading', { name: document.title, level: 1 })).toBeVisible()
     await expect(page.getByText('Documento pendiente de aprobación institucional')).toBeVisible()
 
-    await page.getByRole('link', { name: /Volver al inicio de sesión/i }).click()
+    await page.getByRole('link', { name: 'Volver al inicio', exact: true }).click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/')
 
     await page.goto(document.path)
@@ -48,7 +48,8 @@ test('las rutas legales son públicas, independientes, recargan y navegan', asyn
   }
 
   await page.goto('/politica-de-privacidad')
-  await page.getByRole('link', { name: 'Términos y condiciones', exact: true }).click()
+  await page.getByTestId('legal-document').getByRole('navigation', { name: 'También puede consultar' })
+    .getByRole('link', { name: 'Términos y condiciones', exact: true }).click()
   await expect.poll(() => new URL(page.url()).pathname).toBe('/terminos-y-condiciones')
 
   for (const [alias, canonical] of [
