@@ -11,8 +11,12 @@ import {
   Pagination,
 } from '../../components/ui'
 import { formatDate } from '../../utils/format'
+import { useAuth } from '../../app/AuthContext'
+import { PERMISSIONS } from '../../features/auth/permissions'
 
 export default function AuditPage() {
+  const { can } = useAuth()
+  const fullAudit = can(PERMISSIONS.AUDIT_READ)
   const [events, setEvents] = useState(null)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -57,7 +61,9 @@ export default function AuditPage() {
     <div>
       <PageHeader
         title="Auditoría"
-        description="Registro de operaciones sensibles. No contiene contraseñas, tokens ni contenido documental."
+        description={fullAudit
+          ? 'Auditoría institucional completa. No contiene contraseñas, tokens ni contenido documental.'
+          : 'Auditoría operacional: trabajadores, conexiones, trabajos y aceptación de políticas. No incluye seguridad, cuentas administrativas ni configuración institucional.'}
       />
       {error ? <Alert tone="error">{error}</Alert> : null}
 

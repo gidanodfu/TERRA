@@ -166,6 +166,9 @@ test('un trabajador no accede al módulo administrativo de trabajadores', async 
 
   await page.goto('/app/admin/workers')
   await expect(page.getByText('Acceso no autorizado')).toBeVisible()
+
+  await page.goto('/app/admin/audit')
+  await expect(page.getByText('Acceso no autorizado')).toBeVisible()
 })
 
 test('el administrador crea una cuenta administrativa y la lista se actualiza', async ({ page }) => {
@@ -204,10 +207,14 @@ test('el moderador solo ve los módulos y acciones permitidos', async ({ page })
   await expect(moderatorNav.getByRole('link', { name: 'Trabajos' })).toBeVisible()
   await expect(moderatorNav.getByRole('link', { name: 'Descargas' })).toHaveCount(0)
   await expect(moderatorNav.getByRole('link', { name: 'Almacenamiento' })).toHaveCount(0)
-  await expect(moderatorNav.getByRole('link', { name: 'Auditoría' })).toHaveCount(0)
+  await expect(moderatorNav.getByRole('link', { name: 'Auditoría' })).toBeVisible()
   await expect(moderatorNav.getByRole('link', { name: 'Política' })).toHaveCount(0)
-  await expect(page.getByRole('link', { name: 'Ver auditoría' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Ver auditoría' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Política institucional' })).toHaveCount(0)
+
+  await page.goto('/app/admin/audit')
+  await expect(page.getByRole('heading', { name: 'Auditoría', level: 1 })).toBeVisible()
+  await expect(page.getByText(/Auditoría operacional/)).toBeVisible()
 
   await page.goto('/app/admin/workers')
   await expect(page.getByRole('tab', { name: 'Trabajadores' })).toBeVisible()
@@ -230,6 +237,9 @@ test('solo lectura consulta trabajadores sin formularios ni módulos de escritur
   await expect(readOnlyNav.getByRole('link', { name: 'Política' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Ver auditoría' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Política institucional' })).toHaveCount(0)
+
+  await page.goto('/app/admin/audit')
+  await expect(page.getByText(/Auditoría institucional completa/)).toBeVisible()
 
   await page.goto('/app/admin/workers')
   await page.getByRole('link', { name: 'Tra Bajador' }).click()

@@ -40,7 +40,7 @@ const adminNav = [
   { to: '/app/admin/downloads', label: 'Descargas', icon: ArrowLeftRight, permission: PERMISSIONS.JOBS_CREATE },
   { to: '/app/admin/jobs', label: 'Trabajos', icon: FileClock, permission: PERMISSIONS.JOBS_READ },
   { to: '/app/admin/storage', label: 'Almacenamiento', icon: HardDrive, permission: PERMISSIONS.STORAGE_READ },
-  { to: '/app/admin/audit', label: 'Auditoría', icon: ScrollText, permission: PERMISSIONS.AUDIT_READ },
+  { to: '/app/admin/audit', label: 'Auditoría', icon: ScrollText, permission: [PERMISSIONS.AUDIT_READ, PERMISSIONS.AUDIT_OPERATIONAL_READ] },
   { to: '/app/admin/policy', label: 'Política', icon: KeyRound, permission: PERMISSIONS.POLICY_WRITE },
 ]
 
@@ -120,7 +120,7 @@ export default function AppLayout() {
   const [open, setOpen] = useState(false)
   const nav = isWorker
     ? workerNav
-    : [...adminNav.filter((item) => !item.permission || can(item.permission)), securityNav]
+    : [...adminNav.filter((item) => !item.permission || (Array.isArray(item.permission) ? item.permission.some(can) : can(item.permission))), securityNav]
 
   const handleLogout = async () => {
     await logout()

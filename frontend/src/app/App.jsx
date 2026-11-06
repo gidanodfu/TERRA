@@ -56,6 +56,12 @@ function PermissionOnly({ permission, children }) {
   return children
 }
 
+function PermissionAny({ permissions, children }) {
+  const { can } = useAuth()
+  if (!permissions.some((permission) => can(permission))) return <AccessDenied />
+  return children
+}
+
 function AccessDenied() {
   return (
     <div className="mx-auto max-w-lg">
@@ -125,7 +131,11 @@ export default function App() {
         <Route path="admin/jobs" element={<PermissionOnly permission={PERMISSIONS.JOBS_READ}><AdminJobsPage /></PermissionOnly>} />
         <Route path="admin/jobs/:id" element={<PermissionOnly permission={PERMISSIONS.JOBS_READ}><JobDetailPage basePath="/app/admin/jobs" /></PermissionOnly>} />
         <Route path="admin/storage" element={<PermissionOnly permission={PERMISSIONS.STORAGE_READ}><StoragePage /></PermissionOnly>} />
-        <Route path="admin/audit" element={<PermissionOnly permission={PERMISSIONS.AUDIT_READ}><AuditPage /></PermissionOnly>} />
+        <Route path="admin/audit" element={
+          <PermissionAny permissions={[PERMISSIONS.AUDIT_READ, PERMISSIONS.AUDIT_OPERATIONAL_READ]}>
+            <AuditPage />
+          </PermissionAny>
+        } />
         <Route path="admin/policy" element={<PermissionOnly permission={PERMISSIONS.POLICY_WRITE}><PolicyPage /></PermissionOnly>} />
       </Route>
 

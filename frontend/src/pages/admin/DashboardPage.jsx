@@ -72,7 +72,7 @@ export default function AdminDashboard() {
           <CardBody>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold text-slate-900">Actividad reciente</h2>
-              {can(PERMISSIONS.AUDIT_READ) ? (
+              {can(PERMISSIONS.AUDIT_READ) || can(PERMISSIONS.AUDIT_OPERATIONAL_READ) ? (
                 <Link to="/app/admin/audit" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline">
                   Ver auditoría <ArrowRight className="h-4 w-4" />
                 </Link>

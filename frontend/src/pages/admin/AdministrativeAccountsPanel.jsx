@@ -277,7 +277,23 @@ export default function AdministrativeAccountsPanel({ createOpen, onCloseCreate 
           </Field>
           {selectedRole ? (
             <Alert tone="info" title={`Permisos de ${selectedRole.label}`}>
-              {selectedRole.description}
+              <p>{selectedRole.description}</p>
+              {selectedRole.can?.length ? (
+                <div className="mt-2">
+                  <p className="font-medium text-slate-800">Puede</p>
+                  <ul className="mt-1 list-inside list-disc space-y-0.5">
+                    {selectedRole.can.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              ) : null}
+              {selectedRole.cannot?.length ? (
+                <div className="mt-2">
+                  <p className="font-medium text-slate-800">No puede</p>
+                  <ul className="mt-1 list-inside list-disc space-y-0.5">
+                    {selectedRole.cannot.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              ) : null}
             </Alert>
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">

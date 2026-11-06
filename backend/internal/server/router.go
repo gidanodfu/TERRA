@@ -88,6 +88,11 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 			return h.Auth.RequirePermission(permission)(limited(adminOpsLimiter, "admin:"+permission)(next))
 		}
 	}
+	requireAnyPermission := func(scope string, permissions ...string) func(http.Handler) http.Handler {
+		return func(next http.Handler) http.Handler {
+			return h.Auth.RequireAnyPermission(permissions...)(limited(adminOpsLimiter, "admin:"+scope)(next))
+		}
+	}
 
 	// --- sesión y perfil propio ---
 	mux.Handle("POST /api/v1/auth/logout", requireAuth(http.HandlerFunc(h.Auth.Logout)))
@@ -170,7 +175,8 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 	mux.Handle("GET /api/v1/admin/storage",
 		requireAuth(requirePermission(rbac.PermStorageRead)(http.HandlerFunc(h.Download.AdminStorage))))
 	mux.Handle("GET /api/v1/admin/audit-events",
-		requireAuth(requirePermission(rbac.PermAuditRead)(http.HandlerFunc(h.Admin.AuditEvents))))
+		requireAuth(requireAnyPermission("audit", rbac.PermAuditRead, rbac.PermAuditOperationalRead)(
+			http.HandlerFunc(h.Admin.AuditEvents))))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusNotFound, map[string]any{

@@ -750,7 +750,7 @@ func TestPermissionMiddlewareByRole(t *testing.T) {
 
 	allowed := map[uuid.UUID][]string{
 		f.adminID:     {rbac.PermAccountsCreate, rbac.PermPolicyWrite, rbac.PermFilesRead},
-		f.moderatorID: {rbac.PermUsersWrite, rbac.PermJobsRead},
+		f.moderatorID: {rbac.PermUsersWrite, rbac.PermJobsRead, rbac.PermAuditOperationalRead},
 		f.readOnlyID:  {rbac.PermUsersRead, rbac.PermStorageRead, rbac.PermAuditRead},
 	}
 	for actor, permissions := range allowed {
@@ -763,8 +763,8 @@ func TestPermissionMiddlewareByRole(t *testing.T) {
 
 	denied := map[uuid.UUID][]string{
 		f.moderatorID: {rbac.PermAccountsCreate, rbac.PermAccountsRead, rbac.PermPolicyWrite, rbac.PermAuditRead, rbac.PermFilesRead},
-		f.readOnlyID:  {rbac.PermUsersWrite, rbac.PermAccountsRead, rbac.PermPolicyWrite, rbac.PermFilesRead},
-		f.workerID:    {rbac.PermDashboardRead, rbac.PermUsersWrite, rbac.PermAccountsCreate},
+		f.readOnlyID:  {rbac.PermUsersWrite, rbac.PermAccountsRead, rbac.PermPolicyWrite, rbac.PermFilesRead, rbac.PermAuditOperationalRead},
+		f.workerID:    {rbac.PermDashboardRead, rbac.PermUsersWrite, rbac.PermAccountsCreate, rbac.PermAuditRead, rbac.PermAuditOperationalRead},
 	}
 	for actor, permissions := range denied {
 		for _, permission := range permissions {
@@ -775,10 +775,15 @@ func TestPermissionMiddlewareByRole(t *testing.T) {
 	}
 }
 
-func TestDashboardHidesAuditFromModerator(t *testing.T) {
+func TestDashboardAuditScopeMatchesRole(t *testing.T) {
 	f := newAccountFixture(t)
-	audit.NewRepository(f.pool).Record(context.Background(), audit.Event{
+	repo := audit.NewRepository(f.pool)
+	repo.Record(context.Background(), audit.Event{
 		ActorUserID: &f.adminID, Action: "test.dashboard_audit", TargetType: "test", TargetID: "x",
+	})
+	repo.Record(context.Background(), audit.Event{
+		ActorUserID: &f.adminID, Action: "download_job.created", TargetType: "download_job", TargetID: "job-1",
+		Metadata: map[string]any{"scope_type": "my_drive_full", "roots": 0, "file_roots": 0, "selected_total": 0},
 	})
 
 	moderatorRec := f.serve(t, http.HandlerFunc(f.adminHandler.Dashboard), f.moderatorID,
@@ -790,17 +795,19 @@ func TestDashboardHidesAuditFromModerator(t *testing.T) {
 	if err := json.Unmarshal(moderatorRec.Body.Bytes(), &moderatorDashboard); err != nil {
 		t.Fatal(err)
 	}
-	if len(moderatorDashboard.RecentAudit) != 0 {
-		t.Fatalf("el moderador recibió auditoría en el dashboard: %+v", moderatorDashboard.RecentAudit)
+	if len(moderatorDashboard.RecentAudit) != 1 || moderatorDashboard.RecentAudit[0].Action != "download_job.created" {
+		t.Fatalf("el moderador debe recibir solo auditoría operacional: %+v", moderatorDashboard.RecentAudit)
 	}
 
-	adminRec := f.serve(t, http.HandlerFunc(f.adminHandler.Dashboard), f.adminID,
-		http.MethodGet, "/api/v1/admin/dashboard", "", nil)
-	var adminDashboard admin.Dashboard
-	if err := json.Unmarshal(adminRec.Body.Bytes(), &adminDashboard); err != nil {
-		t.Fatal(err)
-	}
-	if len(adminDashboard.RecentAudit) == 0 {
-		t.Fatal("el administrador no recibió la actividad de auditoría")
+	for name, actor := range map[string]uuid.UUID{"admin": f.adminID, "read_only": f.readOnlyID} {
+		rec := f.serve(t, http.HandlerFunc(f.adminHandler.Dashboard), actor,
+			http.MethodGet, "/api/v1/admin/dashboard", "", nil)
+		var dashboard admin.Dashboard
+		if err := json.Unmarshal(rec.Body.Bytes(), &dashboard); err != nil {
+			t.Fatal(err)
+		}
+		if len(dashboard.RecentAudit) < 2 {
+			t.Fatalf("%s no recibió auditoría completa: %+v", name, dashboard.RecentAudit)
+		}
 	}
 }

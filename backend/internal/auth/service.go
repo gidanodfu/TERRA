@@ -371,6 +371,12 @@ func (s *Service) RequireAdmin(next http.Handler) http.Handler {
 
 // RequirePermission aplica la matriz RBAC sobre el principal ya autenticado.
 func (s *Service) RequirePermission(permission string) func(http.Handler) http.Handler {
+	return s.RequireAnyPermission(permission)
+}
+
+// RequireAnyPermission permite el acceso cuando el principal tiene al menos uno
+// de los permisos indicados. No amplía ni modifica la identidad autenticada.
+func (s *Service) RequireAnyPermission(permissions ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := principal.Current(r.Context())
@@ -378,13 +384,22 @@ func (s *Service) RequirePermission(permission string) func(http.Handler) http.H
 				httpx.WriteError(w, r, apperr.Unauthorized("Debe iniciar sesión."))
 				return
 			}
-			if user.Status != string(users.StatusActive) || !user.Can(permission) {
+			if user.Status != string(users.StatusActive) || !hasAnyPermission(user, permissions) {
 				httpx.WriteError(w, r, apperr.Forbidden("No tiene permisos para esta operación."))
 				return
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func hasAnyPermission(user principal.Identity, permissions []string) bool {
+	for _, permission := range permissions {
+		if user.Can(permission) {
+			return true
+		}
+	}
+	return false
 }
 
 func isNotFound(err error) bool {

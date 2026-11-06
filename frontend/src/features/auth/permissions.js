@@ -15,6 +15,7 @@ export const PERMISSIONS = {
   JOBS_RETRY: 'admin.jobs.retry',
   STORAGE_READ: 'admin.storage.read',
   AUDIT_READ: 'admin.audit.read',
+  AUDIT_OPERATIONAL_READ: 'admin.audit.operational.read',
   POLICY_WRITE: 'admin.policy.write',
   FILES_READ: 'admin.files.read',
 }
@@ -23,17 +24,43 @@ export const ADMIN_ROLE_OPTIONS = [
   {
     value: 'admin',
     label: 'Administrador',
-    description: 'Acceso completo a trabajadores, cuentas, organización, Drive, trabajos, almacenamiento, auditoría y políticas.',
+    description: 'Administración integral de TERRA. Puede gestionar trabajadores, cuentas administrativas, organización, conexiones Drive, trabajos, almacenamiento, políticas y auditoría completa.',
+    can: [
+      'Trabajadores y cuentas administrativas',
+      'Organización, conexiones y trabajos',
+      'Almacenamiento, políticas y auditoría completa',
+    ],
+    cannot: [],
   },
   {
     value: 'moderator',
     label: 'Moderador',
-    description: 'Puede consultar el panel y gestionar trabajadores y sus asignaciones. No administra cuentas ni publica políticas.',
+    description: 'Gestión operativa de trabajadores. Puede modificar asignaciones y estados, consultar conexiones y trabajos, y revisar auditoría operacional. No administra cuentas administrativas ni configuraciones institucionales.',
+    can: [
+      'Modificar asignaciones y estados de trabajadores',
+      'Consultar organización, conexiones y trabajos',
+      'Revisar auditoría operacional',
+    ],
+    cannot: [
+      'Administrar cuentas administrativas',
+      'Organización, Drive, almacenamiento o políticas',
+      'Auditoría de seguridad y administración',
+    ],
   },
   {
     value: 'read_only',
     label: 'Solo lectura',
-    description: 'Puede consultar trabajadores, organización, conexiones, trabajos, almacenamiento y auditoría sin modificar nada.',
+    description: 'Consulta y supervisión institucional. Puede visualizar trabajadores, organización, conexiones, trabajos, metadatos de almacenamiento y auditoría completa. No puede modificar datos ni ejecutar operaciones.',
+    can: [
+      'Visualizar trabajadores, organización y conexiones',
+      'Consultar trabajos y metadatos de almacenamiento',
+      'Revisar auditoría institucional completa',
+    ],
+    cannot: [
+      'Modificar trabajadores, perfiles o estados',
+      'Gestionar cuentas, organización o políticas',
+      'Ejecutar o cancelar trabajos',
+    ],
   },
 ]
 

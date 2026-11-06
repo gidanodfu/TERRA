@@ -26,6 +26,7 @@ export const MODERATOR_PERMISSIONS = [
   'admin.organization.read',
   'admin.drive.read',
   'admin.jobs.read',
+  'admin.audit.operational.read',
 ]
 
 export const READ_ONLY_PERMISSIONS = [

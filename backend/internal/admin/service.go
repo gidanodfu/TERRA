@@ -59,15 +59,15 @@ type Dashboard struct {
 	RecentAudit       []audit.Event `json:"recent_activity"`
 }
 
-func (s *Service) Dashboard(ctx context.Context, includeAudit bool) (*Dashboard, error) {
+func (s *Service) Dashboard(ctx context.Context, scope audit.Scope) (*Dashboard, error) {
 	d := &Dashboard{RecentAudit: []audit.Event{}}
 	if err := s.downloadPoolQuery(ctx, d); err != nil {
 		return nil, err
 	}
-	if !includeAudit {
+	if scope == "" {
 		return d, nil
 	}
-	events, _, err := s.audit.List(ctx, audit.ListFilter{Page: 1, Size: 10})
+	events, _, err := s.audit.List(ctx, audit.ListFilter{Page: 1, Size: 10, Scope: scope})
 	if err != nil {
 		return nil, err
 	}

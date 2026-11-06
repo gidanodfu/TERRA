@@ -31,7 +31,8 @@ func (h *Handler) ip(r *http.Request) string {
 
 func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	actor, _ := principal.Current(r.Context())
-	d, err := h.svc.Dashboard(r.Context(), actor.Can(rbac.PermAuditRead))
+	scope, _ := auditScope(actor)
+	d, err := h.svc.Dashboard(r.Context(), scope)
 	if err != nil {
 		httpx.WriteError(w, r, err)
 		return
@@ -149,10 +150,28 @@ func (h *Handler) UpdateAdministrativeAccount(w http.ResponseWriter, r *http.Req
 	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
+// auditScope resuelve el alcance desde los permisos reales del principal. La
+// auditoría completa tiene prioridad; el cliente no puede elegir el alcance.
+func auditScope(actor principal.Identity) (audit.Scope, bool) {
+	if actor.Can(rbac.PermAuditRead) {
+		return audit.ScopeFull, true
+	}
+	if actor.Can(rbac.PermAuditOperationalRead) {
+		return audit.ScopeOperational, true
+	}
+	return "", false
+}
+
 func (h *Handler) AuditEvents(w http.ResponseWriter, r *http.Request) {
+	actor, _ := principal.Current(r.Context())
+	scope, ok := auditScope(actor)
+	if !ok {
+		httpx.WriteError(w, r, apperr.Forbidden("No tiene permisos para consultar la auditoría."))
+		return
+	}
 	page, size, _ := httpx.Pagination(r)
 	q := r.URL.Query()
-	f := audit.ListFilter{Action: q.Get("action"), Page: page, Size: size}
+	f := audit.ListFilter{Action: q.Get("action"), Page: page, Size: size, Scope: scope}
 	if raw := q.Get("actor_id"); raw != "" {
 		id, err := uuid.Parse(raw)
 		if err != nil {

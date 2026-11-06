@@ -879,7 +879,12 @@ paths:
   /admin/audit-events:
     get:
       tags: [Auditoría]
-      summary: Registro de auditoría
+      summary: Registro de auditoría según el rol
+      description: |
+        `admin.audit.read` devuelve la auditoría institucional completa. Si no está
+        presente, `admin.audit.operational.read` devuelve únicamente los eventos
+        operacionales permitidos (trabajadores, conexiones, trabajos y políticas).
+        El alcance lo determina el backend; no existe un parámetro para ampliarlo.
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
@@ -900,6 +905,7 @@ paths:
                       data:
                         type: array
                         items: { $ref: "#/components/schemas/AuditEvent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
 components:
   securitySchemes:

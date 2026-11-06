@@ -10,24 +10,25 @@ const (
 )
 
 const (
-	PermDashboardRead     = "admin.dashboard.read"
-	PermUsersRead         = "admin.users.read"
-	PermUsersWrite        = "admin.users.write"
-	PermAccountsRead      = "admin.accounts.read"
-	PermAccountsCreate    = "admin.accounts.create"
-	PermAccountsWrite     = "admin.accounts.write"
-	PermOrganizationRead  = "admin.organization.read"
-	PermOrganizationWrite = "admin.organization.write"
-	PermDriveRead         = "admin.drive.read"
-	PermDriveBrowse       = "admin.drive.browse"
-	PermJobsRead          = "admin.jobs.read"
-	PermJobsCreate        = "admin.jobs.create"
-	PermJobsCancel        = "admin.jobs.cancel"
-	PermJobsRetry         = "admin.jobs.retry"
-	PermStorageRead       = "admin.storage.read"
-	PermAuditRead         = "admin.audit.read"
-	PermPolicyWrite       = "admin.policy.write"
-	PermFilesRead         = "admin.files.read"
+	PermDashboardRead        = "admin.dashboard.read"
+	PermUsersRead            = "admin.users.read"
+	PermUsersWrite           = "admin.users.write"
+	PermAccountsRead         = "admin.accounts.read"
+	PermAccountsCreate       = "admin.accounts.create"
+	PermAccountsWrite        = "admin.accounts.write"
+	PermOrganizationRead     = "admin.organization.read"
+	PermOrganizationWrite    = "admin.organization.write"
+	PermDriveRead            = "admin.drive.read"
+	PermDriveBrowse          = "admin.drive.browse"
+	PermJobsRead             = "admin.jobs.read"
+	PermJobsCreate           = "admin.jobs.create"
+	PermJobsCancel           = "admin.jobs.cancel"
+	PermJobsRetry            = "admin.jobs.retry"
+	PermStorageRead          = "admin.storage.read"
+	PermAuditRead            = "admin.audit.read"
+	PermAuditOperationalRead = "admin.audit.operational.read"
+	PermPolicyWrite          = "admin.policy.write"
+	PermFilesRead            = "admin.files.read"
 )
 
 var adminPermissions = []string{
@@ -51,6 +52,8 @@ var adminPermissions = []string{
 	PermFilesRead,
 }
 
+// Los permisos admin.users.* solo se aplican a cuentas clasificadas como
+// trabajadores. Las cuentas administrativas usan admin.accounts.*.
 var moderatorPermissions = []string{
 	PermDashboardRead,
 	PermUsersRead,
@@ -58,6 +61,7 @@ var moderatorPermissions = []string{
 	PermOrganizationRead,
 	PermDriveRead,
 	PermJobsRead,
+	PermAuditOperationalRead,
 }
 
 var readOnlyPermissions = []string{

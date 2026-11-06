@@ -163,3 +163,7 @@ func (h *Handler) RequireAdmin(next http.Handler) http.Handler  { return h.svc.R
 func (h *Handler) RequirePermission(permission string) func(http.Handler) http.Handler {
 	return h.svc.RequirePermission(permission)
 }
+
+func (h *Handler) RequireAnyPermission(permissions ...string) func(http.Handler) http.Handler {
+	return h.svc.RequireAnyPermission(permissions...)
+}

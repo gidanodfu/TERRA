@@ -5,6 +5,7 @@ package audit
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ type Event struct {
 	Action      string         `json:"action"`
 	TargetType  string         `json:"target_type"`
 	TargetID    string         `json:"target_id,omitempty"`
-	Metadata    map[string]any `json:"metadata,omitempty"`
+	Metadata    map[string]any `json:"metadata"`
 	IPHash      string         `json:"-"`
 	CreatedAt   time.Time      `json:"created_at"`
 }
@@ -58,6 +59,45 @@ func (r *Repository) record(ctx context.Context, ex execer, ev Event) error {
 	return err
 }
 
+// Scope determina qué eventos puede recuperar la consulta.
+type Scope string
+
+const (
+	ScopeFull        Scope = "full"
+	ScopeOperational Scope = "operational"
+)
+
+// operationalActions es la allowlist explícita de la auditoría operacional.
+// No se usan comodines: cualquier acción nueva debe añadirse aquí de forma deliberada.
+var operationalActions = []string{
+	"admin.user.updated",
+	"user.profile.updated",
+	"drive.connected",
+	"drive.disconnected",
+	"download_job.created",
+	"download_job.cancel_requested",
+	"download_job.retried",
+	"policy.accepted",
+}
+
+var operationalMetadataFields = map[string][]string{
+	"admin.user.updated":            {"kind", "previous_status", "status", "area_id", "position_id", "result"},
+	"user.profile.updated":          {"area_id", "position_id"},
+	"download_job.created":          {"scope_type", "roots", "file_roots", "selected_total"},
+	"download_job.cancel_requested": {},
+	"download_job.retried":          {},
+	"drive.connected":               {},
+	"drive.disconnected":            {},
+	"policy.accepted":               {},
+}
+
+// OperationalActions devuelve una copia de la allowlist para pruebas y documentación.
+func OperationalActions() []string {
+	out := make([]string, len(operationalActions))
+	copy(out, operationalActions)
+	return out
+}
+
 type ListFilter struct {
 	Action  string
 	ActorID *uuid.UUID
@@ -65,14 +105,24 @@ type ListFilter struct {
 	To      *time.Time
 	Page    int
 	Size    int
+	Scope   Scope
 }
 
 func (r *Repository) List(ctx context.Context, f ListFilter) ([]Event, int, error) {
 	where := " WHERE 1=1"
 	args := []any{}
+	if f.Scope == ScopeOperational {
+		placeholders := make([]string, 0, len(operationalActions))
+		for _, action := range operationalActions {
+			args = append(args, action)
+			placeholders = append(placeholders, "$"+itoa(len(args)))
+		}
+		where += " AND a.action IN (" + strings.Join(placeholders, ",") + ")"
+		where += " AND (a.action <> 'admin.user.updated' OR a.metadata_json->>'kind' = 'worker')"
+	}
 	if f.Action != "" {
 		args = append(args, f.Action)
-		where += " AND a.action = $1"
+		where += " AND a.action = $" + itoa(len(args))
 	}
 	if f.ActorID != nil {
 		args = append(args, *f.ActorID)
@@ -109,9 +159,26 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]Event, int, erro
 			return nil, 0, err
 		}
 		_ = json.Unmarshal(raw, &ev.Metadata)
+		if f.Scope == ScopeOperational {
+			ev.Metadata = sanitizeOperational(ev.Action, ev.Metadata)
+		}
+		if ev.Metadata == nil {
+			ev.Metadata = map[string]any{}
+		}
 		out = append(out, ev)
 	}
 	return out, total, rows.Err()
+}
+
+func sanitizeOperational(action string, metadata map[string]any) map[string]any {
+	allowed := operationalMetadataFields[action]
+	out := map[string]any{}
+	for _, field := range allowed {
+		if value, ok := metadata[field]; ok {
+			out[field] = value
+		}
+	}
+	return out
 }
 
 func nullString(s string) *string {

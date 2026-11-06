@@ -5,8 +5,8 @@
 | Rol | Uso |
 |---|---|
 | `admin` | Administración completa de TERRA |
-| `moderator` | Gestión de trabajadores y consulta operativa |
-| `read_only` | Consulta de módulos autorizados |
+| `moderator` | Gestión operativa de trabajadores y auditoría operacional |
+| `read_only` | Consulta institucional y auditoría completa |
 | `user` | Trabajador |
 
 Los **cargos organizativos** (`Secretaría`, `Administración`, `Asistente`, etc.) nunca otorgan
@@ -43,7 +43,8 @@ Moderador:
 
 ```
 admin.dashboard.read, admin.users.read, admin.users.write,
-admin.organization.read, admin.drive.read, admin.jobs.read
+admin.organization.read, admin.drive.read, admin.jobs.read,
+admin.audit.operational.read
 ```
 
 Solo lectura:
@@ -52,6 +53,25 @@ Solo lectura:
 admin.dashboard.read, admin.users.read, admin.organization.read,
 admin.drive.read, admin.jobs.read, admin.storage.read, admin.audit.read
 ```
+
+Los permisos `admin.users.write` solo permiten modificar cuentas clasificadas como
+trabajadores. Nunca autorizan crear, consultar ni cambiar cuentas administrativas; esas
+operaciones dependen exclusivamente de `admin.accounts.*`.
+
+## Auditoría completa y operacional
+
+- `admin.audit.read`: auditoría institucional completa. Lo tienen `admin` y `read_only`.
+- `admin.audit.operational.read`: auditoría operacional limitada. Solo lo tiene `moderator`.
+- El alcance se resuelve en el backend desde los permisos del principal; el cliente no
+  puede elegirlo con parámetros como `scope=full`.
+- La auditoría operacional usa una allowlist explícita:
+  `admin.user.updated` (solo `metadata.kind=worker`), `user.profile.updated`,
+  `drive.connected`, `drive.disconnected`, `download_job.created`,
+  `download_job.cancel_requested`, `download_job.retried` y `policy.accepted`.
+- Los metadatos operacionales se sanean por acción. Nunca se exponen IPHash, correos,
+  claves de idempotencia, secretos ni contenido documental.
+- El COUNT, los filtros y la paginación se calculan con las mismas restricciones de alcance.
+- Dashboard y Auditoría usan exactamente el mismo alcance.
 
 ## Reglas por recurso
 
@@ -65,7 +85,8 @@ admin.drive.read, admin.jobs.read, admin.storage.read, admin.audit.read
 | Trabajos | Solo los propios | Consulta todos | Consulta todos | Todos; crea, cancela y reintenta |
 | Documentos | Solo los de sus trabajos | No descarga ajenos | No descarga ajenos | Todos, con auditoría |
 | Almacenamiento | No | No | Consulta metadatos | Consulta y descarga autorizada |
-| Auditoría | No | No | Consulta | Consulta |
+| Auditoría | No | No | Completa | Completa |
+| Auditoría operacional | No | No | No | Sí (limitada) |
 | Política | Acepta la vigente | No publica | No publica | Publica |
 
 ## Comprobaciones obligatorias
@@ -115,7 +136,8 @@ admin.drive.read, admin.jobs.read, admin.storage.read, admin.audit.read
 | Crear/cancelar/reintentar trabajos | Solo propios | ❌ | ❌ | ✅ |
 | Consultar almacenamiento | ❌ | ✅ | ❌ | ✅ |
 | Descargar documento ajeno | ❌ | ❌ | ❌ | ✅ |
-| Consultar auditoría | ❌ | ✅ | ❌ | ✅ |
+| Consultar auditoría completa | ❌ | ✅ | ❌ | ✅ |
+| Consultar auditoría operacional | ❌ | ❌ | ✅ | ❌ |
 | Publicar política | ❌ | ❌ | ❌ | ✅ |
 
 \* Salvo el administrador principal y la propia cuenta.
