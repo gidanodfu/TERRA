@@ -131,6 +131,11 @@ en el host.
 
 ### E2E real opt-in
 
+Las pruebas de rutas públicas usan `frontend/tests/e2e/helpers/mock-public-session.js`:
+simula la respuesta 401 de `/auth/me` y el widget de Turnstile para no depender de
+servicios externos. Las pruebas de autenticación real, contratos API y RBAC no usan
+este helper.
+
 `frontend/tests/e2e/password-change-real.spec.js` valida el cambio de contraseña contra el
 backend, PostgreSQL y `/auth/me` reales, sin simular `has_local_credentials`. Se omite en la
 suite normal y requiere sesiones temporales y credenciales mediante variables de entorno:

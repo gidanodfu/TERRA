@@ -86,10 +86,10 @@ export default function App() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
 
-      <Route path="/politica-de-privacidad" element={<PrivacyPage />} />
-      <Route path="/terminos-y-condiciones" element={<TermsPage />} />
-      <Route path="/aviso-legal" element={<LegalNoticePage />} />
-      <Route path="/politica-de-cookies" element={<CookiesPage />} />
+      <Route caseSensitive path="/politica-de-privacidad" element={<PrivacyPage />} />
+      <Route caseSensitive path="/terminos-y-condiciones" element={<TermsPage />} />
+      <Route caseSensitive path="/aviso-legal" element={<LegalNoticePage />} />
+      <Route caseSensitive path="/politica-de-cookies" element={<CookiesPage />} />
 
       <Route path="/Política-de-privacidad" element={<Navigate to="/politica-de-privacidad" replace />} />
       <Route path="/Politica-de-privacidad" element={<Navigate to="/politica-de-privacidad" replace />} />

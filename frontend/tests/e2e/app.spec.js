@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
+import { mockPublicSession } from './helpers/mock-public-session'
 
-test('la página de acceso se renderiza sin sesión', async ({ page }) => {
+test('la página de acceso se renderiza sin sesión', async ({ page, context }) => {
+  await mockPublicSession(context)
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Continuar con Google/i })).toBeVisible()
@@ -19,7 +21,8 @@ test('la página de acceso se renderiza sin sesión', async ({ page }) => {
   }
 })
 
-test('las rutas legales son públicas, independientes, recargan y navegan', async ({ page }) => {
+test('las rutas legales son públicas, independientes, recargan y navegan', async ({ page, context }) => {
+  await mockPublicSession(context)
   const documents = [
     { title: 'Política de privacidad', path: '/politica-de-privacidad' },
     { title: 'Términos y condiciones', path: '/terminos-y-condiciones' },
@@ -28,31 +31,47 @@ test('las rutas legales son públicas, independientes, recargan y navegan', asyn
   ]
   for (const document of documents) {
     await page.goto('/')
-    await page.getByRole('link', { name: document.title, exact: true }).click()
-    await expect(page).toHaveURL(new RegExp(`${document.path}$`))
+    const link = page.getByRole('link', { name: document.title, exact: true })
+    await expect(link).toBeVisible()
+    await link.click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe(document.path)
     await expect(page.getByRole('heading', { name: document.title, level: 1 })).toBeVisible()
     await expect(page.getByText('Documento pendiente de aprobación institucional')).toBeVisible()
-    await expect(page.getByRole('link', { name: /Volver al inicio de sesión/i })).toBeVisible()
+
+    await page.getByRole('link', { name: /Volver al inicio de sesión/i }).click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/')
+
+    await page.goto(document.path)
     await page.reload()
     await expect(page.getByRole('heading', { name: document.title, level: 1 })).toBeVisible()
+    await expect(page.getByText('Documento pendiente de aprobación institucional')).toBeVisible()
   }
 
   await page.goto('/politica-de-privacidad')
   await page.getByRole('link', { name: 'Términos y condiciones', exact: true }).click()
-  await expect(page).toHaveURL(/\/terminos-y-condiciones$/)
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/terminos-y-condiciones')
 
-  await page.goto('/Política-de-privacidad')
-  await expect(page).toHaveURL(/\/politica-de-privacidad$/)
-  await expect(page.getByRole('heading', { name: 'Política de privacidad', level: 1 })).toBeVisible()
+  for (const [alias, canonical] of [
+    ['/Política-de-privacidad', '/politica-de-privacidad'],
+    ['/Términos-y-condiciones', '/terminos-y-condiciones'],
+    ['/Aviso-legal', '/aviso-legal'],
+    ['/Política-de-cookies', '/politica-de-cookies'],
+  ]) {
+    await page.goto(alias)
+    await expect.poll(() => new URL(page.url()).pathname).toBe(canonical)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  }
 })
 
-test('una ruta inexistente muestra la página 404', async ({ page }) => {
+test('una ruta inexistente muestra la página 404', async ({ page, context }) => {
+  await mockPublicSession(context)
   await page.goto('/ruta-frontend-inexistente')
   await expect(page.getByRole('heading', { name: 'Página no encontrada' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Volver al inicio/i })).toBeVisible()
 })
 
-test('las páginas legales usan Inter y no desbordan en móvil', async ({ page }) => {
+test('las páginas legales usan Inter y no desbordan en móvil', async ({ page, context }) => {
+  await mockPublicSession(context)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/politica-de-cookies')
   const family = await page.locator('h1').evaluate((element) => getComputedStyle(element).fontFamily)
@@ -62,7 +81,8 @@ test('las páginas legales usan Inter y no desbordan en móvil', async ({ page }
   await expect(page.getByRole('heading', { name: 'Política de cookies', level: 1 })).toBeVisible()
 })
 
-test('Inter se carga localmente y se aplica a toda la interfaz', async ({ page }) => {
+test('Inter se carga localmente y se aplica a toda la interfaz', async ({ page, context }) => {
+  await mockPublicSession(context)
   await page.goto('/')
   const loaded = await page.evaluate(async () => {
     await document.fonts.ready
@@ -75,7 +95,8 @@ test('Inter se carga localmente y se aplica a toda la interfaz', async ({ page }
   }
 })
 
-test('el login no desborda horizontalmente en móvil', async ({ page }) => {
+test('el login no desborda horizontalmente en móvil', async ({ page, context }) => {
+  await mockPublicSession(context)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
@@ -84,7 +105,8 @@ test('el login no desborda horizontalmente en móvil', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible()
 })
 
-test('el login mantiene la jerarquía vertical en todos los anchos', async ({ page }) => {
+test('el login mantiene la jerarquía vertical en todos los anchos', async ({ page, context }) => {
+  await mockPublicSession(context)
   for (const width of [1920, 1440, 1366, 1024, 768, 390, 360]) {
     await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 })
     await page.goto('/')
@@ -118,7 +140,8 @@ test('el proxy de Vite entrega la API y protege rutas', async ({ request }) => {
   expect(me.status()).toBe(401)
 })
 
-test('una ruta protegida redirige al acceso', async ({ page }) => {
+test('una ruta protegida redirige al acceso', async ({ page, context }) => {
+  await mockPublicSession(context)
   await page.goto('/app')
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()

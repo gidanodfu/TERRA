@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { mockPublicSession } from './helpers/mock-public-session'
 
 test.use({ colorScheme: 'light' })
 
@@ -9,31 +10,8 @@ const LEGAL_LINKS = [
   { title: 'Política de cookies', href: '/politica-de-cookies' },
 ]
 
-async function mockAnonymous(context) {
-  await context.route('**/api/v1/**', (route) => {
-    const path = new URL(route.request().url()).pathname
-    if (path.endsWith('/auth/me')) {
-      return route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: { code: 'unauthorized', message: 'No autenticado' } }),
-      })
-    }
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-  })
-  // Aísla el footer legal del widget externo: no debe depender de la red de
-  // Cloudflare ni del momento en que Turnstile inserta su iframe.
-  await context.route('https://challenges.cloudflare.com/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'text/javascript',
-      body: 'window.turnstile = { render() { return 0 }, remove() {} }',
-    }),
-  )
-}
-
-test('el footer legal distribuye y centra sus elementos', async ({ page }) => {
-  await mockAnonymous(page)
+test('el footer legal distribuye y centra sus elementos', async ({ page, context }) => {
+  await mockPublicSession(context)
 
   const cases = [
     [1920, 1080, 2],
@@ -90,8 +68,8 @@ test('el footer legal distribuye y centra sus elementos', async ({ page }) => {
   }
 })
 
-test('los enlaces del footer son accesibles y navegan a sus rutas', async ({ page }) => {
-  await mockAnonymous(page)
+test('los enlaces del footer son accesibles y navegan a sus rutas', async ({ page, context }) => {
+  await mockPublicSession(context)
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
 
