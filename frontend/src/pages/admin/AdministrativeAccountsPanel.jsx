@@ -256,6 +256,7 @@ export default function AdministrativeAccountsPanel({ createOpen, onCloseCreate 
         open={createOpen}
         title="Nuevo usuario administrativo"
         onClose={onCloseCreate}
+        bodyClassName="admin-scroll-container"
         footer={
           <>
             <Button variant="secondary" onClick={onCloseCreate} disabled={saving}>Cancelar</Button>

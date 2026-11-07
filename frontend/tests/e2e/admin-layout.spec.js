@@ -416,6 +416,7 @@ test('el modal se limita a la altura y desplaza su contenido', async ({ page }) 
   await expect(dialog).toBeVisible()
 
   const body = page.getByTestId('modal-body')
+  expect(await body.evaluate((element) => element.classList.contains('admin-scroll-container'))).toBeFalsy()
   await body.evaluate((element) => {
     element.innerHTML = '<div style="height: 900px">Contenido extenso</div>'
   })
@@ -446,6 +447,70 @@ test('el modal se limita a la altura y desplaza su contenido', async ({ page }) 
   })
   expect(scrolled).toBeGreaterThan(0)
   await expect(page.getByRole('button', { name: 'Guardar' })).toBeVisible()
+})
+
+test('el modal de cuenta administrativa oculta la barra y conserva el scroll con rueda', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 500 })
+  await mockApi(page)
+  await page.goto('/app/admin/workers')
+  await expect(page.getByRole('heading', { name: 'Trabajadores', level: 1 })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Nuevo usuario administrativo' }).click()
+  const dialog = page.getByRole('dialog')
+  const body = page.getByTestId('modal-body')
+  await expect(dialog).toBeVisible()
+  await expect(body).toHaveClass(/admin-scroll-container/)
+
+  const metrics = await dialog.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    const content = element.querySelector('[data-testid="modal-body"]')
+    const header = element.firstElementChild
+    const footer = element.lastElementChild
+    return {
+      top: rect.top,
+      bottom: rect.bottom,
+      maxHeight: getComputedStyle(element).maxHeight,
+      bodyOverflow: getComputedStyle(content).overflowY,
+      scrollbarWidth: getComputedStyle(content).scrollbarWidth,
+      webkitScrollbar: getComputedStyle(content, '::-webkit-scrollbar').display,
+      bodyScrollable: content.scrollHeight > content.clientHeight,
+      horizontalOverflow: content.scrollWidth > content.clientWidth,
+      headerVisible: header.getBoundingClientRect().top >= rect.top &&
+        header.getBoundingClientRect().bottom <= rect.bottom,
+      footerVisible: footer.getBoundingClientRect().bottom <= rect.bottom + 1 &&
+        footer.getBoundingClientRect().top >= rect.top,
+    }
+  })
+
+  expect(metrics.top).toBeGreaterThanOrEqual(0)
+  expect(metrics.bottom).toBeLessThanOrEqual(500)
+  expect(metrics.maxHeight).not.toBe('none')
+  expect(metrics.bodyOverflow).toBe('auto')
+  expect(metrics.scrollbarWidth).toBe('none')
+  expect(metrics.webkitScrollbar).toBe('none')
+  expect(metrics.bodyScrollable).toBeTruthy()
+  expect(metrics.horizontalOverflow).toBeFalsy()
+  expect(metrics.headerVisible).toBeTruthy()
+  expect(metrics.footerVisible).toBeTruthy()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+
+  expect(await body.evaluate((element) => element.scrollTop)).toBe(0)
+  await body.hover()
+  await page.mouse.wheel(0, 500)
+  await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  await expect(page.getByRole('heading', { name: 'Nuevo usuario administrativo' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Cancelar' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Crear cuenta' })).toBeVisible()
+
+  await page.mouse.wheel(0, -1000)
+  await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBe(0)
+
+  await body.hover()
+  await page.mouse.wheel(0, 2000)
+  await expect(page.getByLabel('Confirmar contraseña')).toBeInViewport()
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.getByText('Ingrese los nombres.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Nuevo usuario administrativo' })).toBeVisible()
 })
 
 test('la navegación administrativa conserva todos los módulos y el drawer móvil', async ({ page }) => {

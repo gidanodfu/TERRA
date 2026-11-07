@@ -153,7 +153,7 @@ export function Pagination({ page, pageSize, total, onPage }) {
   )
 }
 
-export function Modal({ open, title, children, onClose, footer }) {
+export function Modal({ open, title, children, onClose, footer, bodyClassName = '' }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 dark:bg-black/70 p-0 sm:items-center sm:p-4">
@@ -164,7 +164,7 @@ export function Modal({ open, title, children, onClose, footer }) {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4" data-testid="modal-body">{children}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto px-5 py-4 ${bodyClassName}`} data-testid="modal-body">{children}</div>
         {footer ? <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-200 px-5 py-4">{footer}</div> : null}
       </div>
     </div>
