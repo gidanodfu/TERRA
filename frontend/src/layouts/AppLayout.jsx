@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowLeftRight,
@@ -23,28 +23,86 @@ import { useAuth } from '../app/AuthContext'
 import ThemeToggle from '../components/ThemeToggle'
 import { PERMISSIONS } from '../features/auth/permissions'
 
-const workerNav = [
-  { to: '/app', label: 'Inicio', icon: Home, end: true },
-  { to: '/app/profile', label: 'Mi perfil', icon: UserRound },
-  { to: '/app/drive', label: 'Google Drive', icon: HardDrive },
-  { to: '/app/jobs', label: 'Mis descargas', icon: ListChecks },
-  { to: '/app/documents', label: 'Mis documentos', icon: FolderTree },
-  { to: '/app/security', label: 'Seguridad', icon: ShieldCheck },
+const workerNavGroups = [
+  {
+    id: 'general',
+    label: 'GENERAL',
+    items: [
+      { to: '/app', label: 'Inicio', icon: Home, end: true },
+      { to: '/app/profile', label: 'Mi perfil', icon: UserRound },
+    ],
+  },
+  {
+    id: 'documents',
+    label: 'GESTIÓN DOCUMENTAL',
+    items: [
+      { to: '/app/drive', label: 'Google Drive', icon: HardDrive },
+      { to: '/app/jobs', label: 'Mis descargas', icon: ListChecks },
+      { to: '/app/documents', label: 'Mis documentos', icon: FolderTree },
+    ],
+  },
+  {
+    id: 'account-security',
+    label: 'CUENTA Y SEGURIDAD',
+    items: [
+      { to: '/app/security', label: 'Seguridad', icon: ShieldCheck },
+    ],
+  },
 ]
 
-const adminNav = [
-  { to: '/app/admin', label: 'Dashboard', icon: LayoutDashboard, end: true, permission: PERMISSIONS.DASHBOARD_READ },
-  { to: '/app/admin/workers', label: 'Trabajadores', icon: Users, permission: PERMISSIONS.USERS_READ },
-  { to: '/app/admin/organization', label: 'Áreas y cargos', icon: Building2, permission: PERMISSIONS.ORGANIZATION_READ },
-  { to: '/app/admin/connections', label: 'Conexiones Drive', icon: Database, permission: PERMISSIONS.DRIVE_READ },
-  { to: '/app/admin/downloads', label: 'Descargas', icon: ArrowLeftRight, permission: PERMISSIONS.JOBS_CREATE },
-  { to: '/app/admin/jobs', label: 'Trabajos', icon: FileClock, permission: PERMISSIONS.JOBS_READ },
-  { to: '/app/admin/storage', label: 'Almacenamiento', icon: HardDrive, permission: PERMISSIONS.STORAGE_READ },
-  { to: '/app/admin/audit', label: 'Auditoría', icon: ScrollText, permission: [PERMISSIONS.AUDIT_READ, PERMISSIONS.AUDIT_OPERATIONAL_READ] },
-  { to: '/app/admin/policy', label: 'Política', icon: KeyRound, permission: PERMISSIONS.POLICY_WRITE },
+const adminNavGroups = [
+  {
+    id: 'general',
+    label: 'GENERAL',
+    items: [
+      { to: '/app/admin', label: 'Dashboard', icon: LayoutDashboard, end: true, permission: PERMISSIONS.DASHBOARD_READ },
+    ],
+  },
+  {
+    id: 'organization',
+    label: 'ORGANIZACIÓN',
+    items: [
+      { to: '/app/admin/workers', label: 'Trabajadores', icon: Users, permission: PERMISSIONS.USERS_READ },
+      { to: '/app/admin/organization', label: 'Áreas y cargos', icon: Building2, permission: PERMISSIONS.ORGANIZATION_READ },
+    ],
+  },
+  {
+    id: 'documents',
+    label: 'GESTIÓN DOCUMENTAL',
+    items: [
+      { to: '/app/admin/connections', label: 'Conexiones Drive', icon: Database, permission: PERMISSIONS.DRIVE_READ },
+      { to: '/app/admin/downloads', label: 'Descargas', icon: ArrowLeftRight, permission: PERMISSIONS.JOBS_CREATE },
+      { to: '/app/admin/jobs', label: 'Trabajos', icon: FileClock, permission: PERMISSIONS.JOBS_READ },
+      { to: '/app/admin/storage', label: 'Almacenamiento', icon: HardDrive, permission: PERMISSIONS.STORAGE_READ },
+    ],
+  },
+  {
+    id: 'institutional-control',
+    label: 'CONTROL INSTITUCIONAL',
+    items: [
+      { to: '/app/admin/audit', label: 'Auditoría', icon: ScrollText, permission: [PERMISSIONS.AUDIT_READ, PERMISSIONS.AUDIT_OPERATIONAL_READ] },
+      { to: '/app/admin/policy', label: 'Política', icon: KeyRound, permission: PERMISSIONS.POLICY_WRITE },
+    ],
+  },
+  {
+    id: 'account-security',
+    label: 'CUENTA Y SEGURIDAD',
+    items: [
+      { to: '/app/security', label: 'Seguridad', icon: ShieldCheck },
+    ],
+  },
 ]
 
-const securityNav = { to: '/app/security', label: 'Seguridad', icon: ShieldCheck }
+function itemAllowed(item, can) {
+  if (!item.permission) return true
+  return Array.isArray(item.permission) ? item.permission.some(can) : can(item.permission)
+}
+
+function filterNavGroups(groups, can) {
+  return groups
+    .map((group) => ({ ...group, items: group.items.filter((item) => itemAllowed(item, can)) }))
+    .filter((group) => group.items.length > 0)
+}
 
 const roleLabels = {
   admin: 'Administrador',
@@ -53,12 +111,14 @@ const roleLabels = {
   user: 'Trabajador',
 }
 
-function currentSection(nav, pathname, fallback) {
-  const match = nav.find((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)))
+function currentSection(groups, pathname, fallback) {
+  const match = groups.flatMap((group) => group.items)
+    .find((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)))
   return match?.label || fallback
 }
 
-function Sidebar({ nav, user, onLogout, onNavigate }) {
+function Sidebar({ groups, user, onLogout, onNavigate }) {
+  const idPrefix = useId()
   return (
     <div className="flex h-full w-full min-w-0 flex-col">
       <div className="flex items-center gap-3 px-4 py-5">
@@ -69,24 +129,40 @@ function Sidebar({ nav, user, onLogout, onNavigate }) {
         </div>
       </div>
 
-      <nav className="admin-scroll-container min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
-        {nav.map((item) => {
-          const Icon = item.icon
+      <nav aria-label="Navegación principal" className="admin-scroll-container min-h-0 flex-1 space-y-4 overflow-y-auto px-3 pb-4">
+        {groups.map((group) => {
+          const headingId = `${idPrefix}-${group.id}`
           return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                  isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`
-              }
-            >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="truncate">{item.label}</span>
-            </NavLink>
+            <div key={group.id}>
+              <h3
+                id={headingId}
+                className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+              >
+                {group.label}
+              </h3>
+              <ul aria-labelledby={headingId} className="space-y-1">
+                {group.items.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <li key={item.to}>
+                      <NavLink
+                        to={item.to}
+                        end={item.end}
+                        onClick={onNavigate}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                            isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                          }`
+                        }
+                      >
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span className="truncate">{item.label}</span>
+                      </NavLink>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
           )
         })}
       </nav>
@@ -118,9 +194,7 @@ export default function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
-  const nav = isWorker
-    ? workerNav
-    : [...adminNav.filter((item) => !item.permission || (Array.isArray(item.permission) ? item.permission.some(can) : can(item.permission))), securityNav]
+  const navGroups = filterNavGroups(isWorker ? workerNavGroups : adminNavGroups, can)
 
   const handleLogout = async () => {
     await logout()
@@ -128,12 +202,12 @@ export default function AppLayout() {
   }
 
   const headerLabel = isAdministrative ? 'Panel administrativo' : isWorker ? 'Panel del trabajador' : 'Panel restringido'
-  const sectionLabel = currentSection(nav, location.pathname, headerLabel)
+  const sectionLabel = currentSection(navGroups, location.pathname, headerLabel)
   const testIds = isWorker
     ? { sidebar: 'worker-sidebar', workspace: 'worker-workspace', scroll: 'worker-scroll', drawer: 'worker-drawer' }
     : { sidebar: 'admin-sidebar', workspace: 'admin-workspace', scroll: 'admin-scroll', drawer: 'admin-drawer' }
   const sidebar = (
-    <Sidebar nav={nav} user={user} onLogout={handleLogout} onNavigate={() => setOpen(false)} />
+    <Sidebar groups={navGroups} user={user} onLogout={handleLogout} onNavigate={() => setOpen(false)} />
   )
 
   return (

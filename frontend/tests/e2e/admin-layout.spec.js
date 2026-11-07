@@ -457,9 +457,13 @@ test('la navegación administrativa conserva todos los módulos y el drawer móv
   await page.getByLabel('Abrir menú').click()
   const drawer = page.getByTestId('admin-drawer')
   await expect(drawer).toBeVisible()
+  for (const label of ['GENERAL', 'ORGANIZACIÓN', 'GESTIÓN DOCUMENTAL', 'CONTROL INSTITUCIONAL', 'CUENTA Y SEGURIDAD']) {
+    await expect(drawer.getByRole('heading', { name: label })).toBeVisible()
+  }
   for (const label of ['Dashboard', 'Trabajadores', 'Áreas y cargos', 'Conexiones Drive', 'Descargas', 'Trabajos', 'Almacenamiento', 'Auditoría', 'Política', 'Seguridad']) {
     await expect(drawer.getByRole('link', { name: label, exact: true })).toBeVisible()
   }
+  expect(await drawer.getByRole('link', { name: 'Dashboard', exact: true }).count()).toBe(1)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
   expect(overflow).toBeFalsy()
 })

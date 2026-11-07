@@ -209,6 +209,9 @@ test('el moderador solo ve los módulos y acciones permitidos', async ({ page })
   await expect(moderatorNav.getByRole('link', { name: 'Almacenamiento' })).toHaveCount(0)
   await expect(moderatorNav.getByRole('link', { name: 'Auditoría' })).toBeVisible()
   await expect(moderatorNav.getByRole('link', { name: 'Política' })).toHaveCount(0)
+  for (const label of ['GENERAL', 'ORGANIZACIÓN', 'GESTIÓN DOCUMENTAL', 'CONTROL INSTITUCIONAL', 'CUENTA Y SEGURIDAD']) {
+    await expect(moderatorNav.getByRole('heading', { name: label })).toBeVisible()
+  }
   await expect(page.getByRole('link', { name: 'Ver auditoría' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Política institucional' })).toHaveCount(0)
 
@@ -235,6 +238,9 @@ test('solo lectura consulta trabajadores sin formularios ni módulos de escritur
   await expect(readOnlyNav.getByRole('link', { name: 'Auditoría' })).toBeVisible()
   await expect(readOnlyNav.getByRole('link', { name: 'Descargas' })).toHaveCount(0)
   await expect(readOnlyNav.getByRole('link', { name: 'Política' })).toHaveCount(0)
+  for (const label of ['GENERAL', 'ORGANIZACIÓN', 'GESTIÓN DOCUMENTAL', 'CONTROL INSTITUCIONAL', 'CUENTA Y SEGURIDAD']) {
+    await expect(readOnlyNav.getByRole('heading', { name: label })).toBeVisible()
+  }
   await expect(page.getByRole('link', { name: 'Ver auditoría' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Política institucional' })).toHaveCount(0)
 

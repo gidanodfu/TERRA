@@ -249,9 +249,13 @@ test('el drawer móvil reutiliza la sidebar y cierra al navegar', async ({ page 
   await page.getByLabel('Abrir menú').click()
   const drawer = page.getByTestId('worker-drawer')
   await expect(drawer).toBeVisible()
+  for (const label of ['GENERAL', 'GESTIÓN DOCUMENTAL', 'CUENTA Y SEGURIDAD']) {
+    await expect(drawer.getByRole('heading', { name: label })).toBeVisible()
+  }
   for (const label of ['Inicio', 'Mi perfil', 'Google Drive', 'Mis descargas', 'Mis documentos', 'Seguridad']) {
     await expect(drawer.getByRole('link', { name: label, exact: true })).toBeVisible()
   }
+  await expect(drawer.getByRole('heading', { name: /ORGANIZACIÓN|CONTROL INSTITUCIONAL/ })).toHaveCount(0)
   await expect(drawer.getByRole('button', { name: 'Activar modo oscuro' })).toBeVisible()
 
   await drawer.getByRole('link', { name: 'Mi perfil', exact: true }).click()
