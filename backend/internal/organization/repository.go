@@ -4,14 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"terra/internal/platform/apperr"
-	"terra/internal/platform/validate"
 )
 
 type Repository struct{ pool *pgxpool.Pool }
@@ -23,7 +22,7 @@ func (r *Repository) ListAreas(ctx context.Context, includeInactive bool) ([]Are
 	if includeInactive {
 		where = ""
 	}
-	rows, err := r.pool.Query(ctx, `SELECT a.id, a.name, a.slug, a.status, a.created_at, a.updated_at,
+	rows, err := r.pool.Query(ctx, `SELECT a.id, a.name, a.slug, a.status, a.responsibilities, a.created_at, a.updated_at,
 		(SELECT count(*) FROM positions p WHERE p.area_id = a.id),
 		(SELECT count(*) FROM users u WHERE u.area_id = a.id)
 		FROM areas a `+where+` ORDER BY a.name`)
@@ -34,7 +33,7 @@ func (r *Repository) ListAreas(ctx context.Context, includeInactive bool) ([]Are
 	var out []Area
 	for rows.Next() {
 		var a Area
-		if err := rows.Scan(&a.ID, &a.Name, &a.Slug, &a.Status, &a.CreatedAt, &a.UpdatedAt,
+		if err := rows.Scan(&a.ID, &a.Name, &a.Slug, &a.Status, &a.Responsibilities, &a.CreatedAt, &a.UpdatedAt,
 			&a.PositionCount, &a.UserCount); err != nil {
 			return nil, err
 		}
@@ -45,12 +44,20 @@ func (r *Repository) ListAreas(ctx context.Context, includeInactive bool) ([]Are
 
 func (r *Repository) GetArea(ctx context.Context, id uuid.UUID) (*Area, error) {
 	var a Area
-	err := r.pool.QueryRow(ctx, `SELECT id, name, slug, status, created_at, updated_at FROM areas WHERE id=$1`, id).
-		Scan(&a.ID, &a.Name, &a.Slug, &a.Status, &a.CreatedAt, &a.UpdatedAt)
+	err := r.pool.QueryRow(ctx, `SELECT id, name, slug, status, responsibilities, created_at, updated_at
+		FROM areas WHERE id=$1`, id).
+		Scan(&a.ID, &a.Name, &a.Slug, &a.Status, &a.Responsibilities, &a.CreatedAt, &a.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.NotFound("Área no encontrada.")
 	}
 	return &a, err
+}
+
+func (r *Repository) AreaNameTaken(ctx context.Context, normalized string, exclude uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM areas
+		WHERE normalized_name=$1 AND id <> $2)`, normalized, exclude).Scan(&exists)
+	return exists, err
 }
 
 func (r *Repository) AreaSlugTaken(ctx context.Context, slug string) (bool, error) {
@@ -60,15 +67,17 @@ func (r *Repository) AreaSlugTaken(ctx context.Context, slug string) (bool, erro
 }
 
 func (r *Repository) CreateArea(ctx context.Context, a *Area) error {
-	_, err := r.pool.Exec(ctx, `INSERT INTO areas (id, name, slug, status) VALUES ($1,$2,$3,$4)`,
-		a.ID, a.Name, a.Slug, a.Status)
-	return err
+	_, err := r.pool.Exec(ctx, `INSERT INTO areas (id, name, slug, status, responsibilities)
+		VALUES ($1,$2,$3,$4,$5)`, a.ID, a.Name, a.Slug, a.Status, a.Responsibilities)
+	return translateAreaError(err)
 }
 
-func (r *Repository) UpdateArea(ctx context.Context, id uuid.UUID, name, status string) error {
-	ct, err := r.pool.Exec(ctx, `UPDATE areas SET name=$2, status=$3, updated_at=now() WHERE id=$1`, id, name, status)
+func (r *Repository) UpdateArea(ctx context.Context, id uuid.UUID, name, status string, responsibilities []string) error {
+	ct, err := r.pool.Exec(ctx, `UPDATE areas
+		SET name=$2, status=$3, responsibilities=$4, updated_at=now() WHERE id=$1`,
+		id, name, status, responsibilities)
 	if err != nil {
-		return err
+		return translateAreaError(err)
 	}
 	if ct.RowsAffected() == 0 {
 		return apperr.NotFound("Área no encontrada.")
@@ -76,12 +85,35 @@ func (r *Repository) UpdateArea(ctx context.Context, id uuid.UUID, name, status 
 	return nil
 }
 
+func translateAreaError(err error) error {
+	switch constraint(err) {
+	case "areas_normalized_name_unique":
+		return apperr.ConflictFields("area_exists",
+			"Ya existe un área con ese nombre. Las áreas inactivas también conservan su nombre.",
+			map[string]string{"name": "Ya existe un área con ese nombre."})
+	case "areas_slug_unique":
+		return apperr.ConflictFields("area_exists",
+			"Ya existe un área con ese nombre. Las áreas inactivas también conservan su nombre.",
+			map[string]string{"name": "Ya existe un área con ese nombre."})
+	default:
+		return err
+	}
+}
+
+func constraint(err error) string {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return pgErr.ConstraintName
+	}
+	return ""
+}
+
 func (r *Repository) ListPositions(ctx context.Context, areaID uuid.UUID, includeInactive bool) ([]Position, error) {
 	status := "AND status = 'active'"
 	if includeInactive {
 		status = ""
 	}
-	rows, err := r.pool.Query(ctx, `SELECT id, area_id, name, slug, normalized_name, status, created_at, updated_at
+	rows, err := r.pool.Query(ctx, `SELECT id, area_id, name, slug, normalized_name, status, responsibilities, created_at, updated_at
 		FROM positions WHERE area_id=$1 `+status+` ORDER BY name`, areaID)
 	if err != nil {
 		return nil, err
@@ -91,7 +123,7 @@ func (r *Repository) ListPositions(ctx context.Context, areaID uuid.UUID, includ
 	for rows.Next() {
 		var p Position
 		if err := rows.Scan(&p.ID, &p.AreaID, &p.Name, &p.Slug, &p.NormalizedName, &p.Status,
-			&p.CreatedAt, &p.UpdatedAt); err != nil {
+			&p.Responsibilities, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
@@ -101,9 +133,9 @@ func (r *Repository) ListPositions(ctx context.Context, areaID uuid.UUID, includ
 
 func (r *Repository) GetPosition(ctx context.Context, id uuid.UUID) (*Position, error) {
 	var p Position
-	err := r.pool.QueryRow(ctx, `SELECT id, area_id, name, slug, normalized_name, status, created_at, updated_at
+	err := r.pool.QueryRow(ctx, `SELECT id, area_id, name, slug, normalized_name, status, responsibilities, created_at, updated_at
 		FROM positions WHERE id=$1`, id).
-		Scan(&p.ID, &p.AreaID, &p.Name, &p.Slug, &p.NormalizedName, &p.Status, &p.CreatedAt, &p.UpdatedAt)
+		Scan(&p.ID, &p.AreaID, &p.Name, &p.Slug, &p.NormalizedName, &p.Status, &p.Responsibilities, &p.CreatedAt, &p.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.NotFound("Cargo no encontrado.")
 	}
@@ -112,12 +144,9 @@ func (r *Repository) GetPosition(ctx context.Context, id uuid.UUID) (*Position, 
 
 func (r *Repository) CreatePosition(ctx context.Context, p *Position) error {
 	_, err := r.pool.Exec(ctx, `INSERT INTO positions
-		(id, area_id, name, slug, normalized_name, status) VALUES ($1,$2,$3,$4,$5,$6)`,
-		p.ID, p.AreaID, p.Name, p.Slug, p.NormalizedName, p.Status)
-	if err != nil && strings.Contains(err.Error(), "positions_area_name_unique") {
-		return apperr.Conflict("position_exists", "Ya existe un cargo con ese nombre en el área.")
-	}
-	return err
+		(id, area_id, name, slug, status, responsibilities) VALUES ($1,$2,$3,$4,$5,$6)`,
+		p.ID, p.AreaID, p.Name, p.Slug, p.Status, p.Responsibilities)
+	return translatePositionError(err)
 }
 
 func (r *Repository) PositionNameTaken(ctx context.Context, areaID uuid.UUID, normalized string, exclude uuid.UUID) (bool, error) {
@@ -127,16 +156,26 @@ func (r *Repository) PositionNameTaken(ctx context.Context, areaID uuid.UUID, no
 	return exists, err
 }
 
-func (r *Repository) UpdatePosition(ctx context.Context, id uuid.UUID, name, status string) error {
-	ct, err := r.pool.Exec(ctx, `UPDATE positions SET name=$2, normalized_name=$3, status=$4, updated_at=now()
-		WHERE id=$1`, id, name, validate.NormalizeName(name), status)
+func (r *Repository) UpdatePosition(ctx context.Context, id uuid.UUID, name, status string, responsibilities []string) error {
+	ct, err := r.pool.Exec(ctx, `UPDATE positions
+		SET name=$2, status=$3, responsibilities=$4, updated_at=now() WHERE id=$1`,
+		id, name, status, responsibilities)
 	if err != nil {
-		return err
+		return translatePositionError(err)
 	}
 	if ct.RowsAffected() == 0 {
 		return apperr.NotFound("Cargo no encontrado.")
 	}
 	return nil
+}
+
+func translatePositionError(err error) error {
+	if constraint(err) == "positions_area_name_unique" {
+		return apperr.ConflictFields("position_exists",
+			"Ya existe un cargo con ese nombre dentro del área seleccionada.",
+			map[string]string{"name": "Ya existe un cargo con ese nombre en el área."})
+	}
+	return err
 }
 
 // ValidatePositionForArea aplica también la regla de base de datos en el límite del caso de uso.
@@ -178,8 +217,11 @@ func (r *Repository) SlugForArea(ctx context.Context, base string) (string, erro
 }
 
 func (r *Repository) History(ctx context.Context, userID uuid.UUID) ([]History, error) {
-	rows, err := r.pool.Query(ctx, `SELECT h.id, COALESCE(a.name,''), COALESCE(p.name,''),
-		COALESCE(pa.name,''), COALESCE(pp.name,''),
+	rows, err := r.pool.Query(ctx, `SELECT h.id,
+		COALESCE(NULLIF(h.area_name_snapshot,''), a.name, ''),
+		COALESCE(NULLIF(h.position_name_snapshot,''), p.name, ''),
+		COALESCE(NULLIF(h.previous_area_name_snapshot,''), pa.name, ''),
+		COALESCE(NULLIF(h.previous_position_name_snapshot,''), pp.name, ''),
 		COALESCE(NULLIF(btrim(COALESCE(u.first_name,'') || ' ' || COALESCE(u.last_name,'')), ''), u.display_name, 'Sistema'),
 		h.created_at
 		FROM organization_history h

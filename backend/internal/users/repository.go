@@ -170,8 +170,14 @@ func (r *Repository) UpdateProfile(ctx context.Context, userID uuid.UUID, in Upd
 
 	if prevArea != in.AreaID || prevPosition != in.PositionID {
 		if _, err := tx.Exec(ctx, `INSERT INTO organization_history
-			(user_id, area_id, position_id, previous_area_id, previous_position_id, actor_user_id)
-			VALUES ($1,$2,$3,$4,$5,$6)`, userID, in.AreaID, in.PositionID, prevArea, prevPosition, actorID); err != nil {
+			(user_id, area_id, position_id, previous_area_id, previous_position_id, actor_user_id,
+			 area_name_snapshot, position_name_snapshot, previous_area_name_snapshot, previous_position_name_snapshot)
+			VALUES ($1,$2,$3,$4,$5,$6,
+			 COALESCE((SELECT name FROM areas WHERE id=$2),''),
+			 COALESCE((SELECT name FROM positions WHERE id=$3),''),
+			 COALESCE((SELECT name FROM areas WHERE id=$4),''),
+			 COALESCE((SELECT name FROM positions WHERE id=$5),''))`,
+			userID, in.AreaID, in.PositionID, prevArea, prevPosition, actorID); err != nil {
 			return err
 		}
 	}
@@ -266,8 +272,14 @@ func (r *Repository) AdminUpdate(ctx context.Context, userID uuid.UUID, areaID, 
 	}
 	if prevArea != areaID || prevPosition != positionID {
 		if _, err := tx.Exec(ctx, `INSERT INTO organization_history
-			(user_id, area_id, position_id, previous_area_id, previous_position_id, actor_user_id)
-			VALUES ($1,$2,$3,$4,$5,$6)`, userID, areaID, positionID, prevArea, prevPosition, actorID); err != nil {
+			(user_id, area_id, position_id, previous_area_id, previous_position_id, actor_user_id,
+			 area_name_snapshot, position_name_snapshot, previous_area_name_snapshot, previous_position_name_snapshot)
+			VALUES ($1,$2,$3,$4,$5,$6,
+			 COALESCE((SELECT name FROM areas WHERE id=$2),''),
+			 COALESCE((SELECT name FROM positions WHERE id=$3),''),
+			 COALESCE((SELECT name FROM areas WHERE id=$4),''),
+			 COALESCE((SELECT name FROM positions WHERE id=$5),''))`,
+			userID, areaID, positionID, prevArea, prevPosition, actorID); err != nil {
 			return nil, err
 		}
 	}

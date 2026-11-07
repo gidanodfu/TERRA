@@ -11,6 +11,8 @@
 
 Los **cargos organizativos** (`Secretaría`, `Administración`, `Asistente`, etc.) nunca otorgan
 permisos. Se almacenan en `positions` y solo clasifican documentos y snapshots.
+Las responsabilidades de áreas y cargos son texto descriptivo: tampoco otorgan permisos ni
+modifican la matriz RBAC. La autorización depende exclusivamente de los roles del sistema.
 
 La estructura `system_roles` + `user_roles` permite asignar exactamente un rol administrativo
 por cuenta. Las cuentas mixtas o con roles desconocidos no reciben permisos.

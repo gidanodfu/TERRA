@@ -47,6 +47,13 @@ func Conflict(code, message string) *Error {
 	return New(http.StatusConflict, code, message)
 }
 
+// ConflictFields conserva el código funcional estable y añade errores por campo.
+func ConflictFields(code, message string, fields map[string]string) *Error {
+	e := Conflict(code, message)
+	e.Fields = fields
+	return e
+}
+
 func Internal(err error) *Error {
 	return &Error{Status: http.StatusInternalServerError, Code: "internal_error", Message: "Error interno del servidor.", Err: err}
 }

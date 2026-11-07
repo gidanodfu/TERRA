@@ -49,6 +49,15 @@ func Slug(value string) string {
 
 func IsSlug(v string) bool { return slugPattern.MatchString(v) }
 
+// CleanText recorta, colapsa espacios y compone Unicode sin cambiar mayúsculas.
+// Se usa para responsabilidades, donde se conserva el texto visible.
+func CleanText(v string) string {
+	return norm.NFC.String(strings.Join(strings.Fields(strings.TrimSpace(v)), " "))
+}
+
+// NormalizeName define la unicidad organizativa: minúsculas, espacios colapsados y
+// NFC. Los acentos se conservan significativos; la normalización es idéntica a la
+// función SQL terra_normalize_org_name.
 func NormalizeName(v string) string {
-	return strings.ToLower(strings.Join(strings.Fields(strings.TrimSpace(v)), " "))
+	return norm.NFC.String(strings.ToLower(CleanText(v)))
 }

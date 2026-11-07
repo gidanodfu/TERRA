@@ -573,7 +573,7 @@ paths:
                     items: { $ref: "#/components/schemas/Area" }
     post:
       tags: [Administración]
-      summary: Crea un área
+      summary: Crea un área con nombre único global
       requestBody:
         required: true
         content:
@@ -581,17 +581,24 @@ paths:
             schema:
               type: object
               required: [name]
-              properties: { name: { type: string, maxLength: 120 } }
+              properties:
+                name: { type: string, maxLength: 120 }
+                responsibilities:
+                  type: array
+                  maxItems: 20
+                  items: { type: string, maxLength: 300 }
       responses:
         "201":
           description: Creada
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Area" }
+        "409":
+          description: Ya existe un área con el mismo nombre normalizado (incluidas inactivas)
   /admin/areas/{id}:
     patch:
       tags: [Administración]
-      summary: Edita nombre o estado del área
+      summary: Edita nombre, estado o responsabilidades del área
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -602,6 +609,10 @@ paths:
               properties:
                 name: { type: string }
                 status: { type: string, enum: [active, inactive] }
+                responsibilities:
+                  type: array
+                  maxItems: 20
+                  items: { type: string, maxLength: 300 }
       responses:
         "200":
           description: Actualizada
@@ -627,7 +638,7 @@ paths:
                     items: { $ref: "#/components/schemas/Position" }
     post:
       tags: [Administración]
-      summary: Crea un cargo en el área
+      summary: Crea un cargo único dentro del área
       parameters:
         - $ref: "#/components/parameters/AreaId"
       requestBody:
@@ -637,7 +648,12 @@ paths:
             schema:
               type: object
               required: [name]
-              properties: { name: { type: string, maxLength: 120 } }
+              properties:
+                name: { type: string, maxLength: 120 }
+                responsibilities:
+                  type: array
+                  maxItems: 20
+                  items: { type: string, maxLength: 300 }
       responses:
         "201":
           description: Creado
@@ -648,7 +664,7 @@ paths:
   /admin/positions/{id}:
     patch:
       tags: [Administración]
-      summary: Edita nombre o estado del cargo
+      summary: Edita nombre, estado o responsabilidades del cargo
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -659,6 +675,10 @@ paths:
               properties:
                 name: { type: string }
                 status: { type: string, enum: [active, inactive] }
+                responsibilities:
+                  type: array
+                  maxItems: 20
+                  items: { type: string, maxLength: 300 }
       responses:
         "200":
           description: Actualizado
@@ -1060,6 +1080,9 @@ components:
         name: { type: string }
         slug: { type: string }
         status: { type: string, enum: [active, inactive] }
+        responsibilities:
+          type: array
+          items: { type: string }
         position_count: { type: integer }
         user_count: { type: integer }
         created_at: { type: string, format: date-time }
@@ -1072,6 +1095,9 @@ components:
         name: { type: string }
         slug: { type: string }
         status: { type: string, enum: [active, inactive] }
+        responsibilities:
+          type: array
+          items: { type: string }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     Policy:

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, Pencil, Plus } from 'lucide-react'
+import { Building2, Pencil, Plus, X } from 'lucide-react'
 import { api } from '../../services/api'
 import { useAuth } from '../../app/AuthContext'
 import { PERMISSIONS } from '../../features/auth/permissions'
@@ -18,6 +18,67 @@ import {
   Spinner,
 } from '../../components/ui'
 
+const MAX_RESPONSIBILITIES = 20
+const MAX_RESPONSIBILITY_LENGTH = 300
+
+function cleanResponsibilities(values) {
+  const cleaned = []
+  const seen = new Set()
+  for (const raw of values) {
+    const value = raw.trim().replace(/\s+/g, ' ')
+    if (!value) return { error: 'Las responsabilidades no pueden estar vacías.' }
+    if ([...value].length > MAX_RESPONSIBILITY_LENGTH) {
+      return { error: `Cada responsabilidad puede tener como máximo ${MAX_RESPONSIBILITY_LENGTH} caracteres.` }
+    }
+    const key = value.normalize('NFC').toLocaleLowerCase()
+    if (seen.has(key)) return { error: 'No repita responsabilidades dentro de la misma lista.' }
+    seen.add(key)
+    cleaned.push(value)
+  }
+  if (cleaned.length > MAX_RESPONSIBILITIES) {
+    return { error: `Puede registrar como máximo ${MAX_RESPONSIBILITIES} responsabilidades.` }
+  }
+  return { values: cleaned }
+}
+
+function ResponsibilitiesEditor({ idPrefix, values, onChange, disabled }) {
+  const update = (index, value) => onChange(values.map((item, i) => (i === index ? value : item)))
+  const remove = (index) => onChange(values.filter((_, i) => i !== index))
+  return (
+    <div className="space-y-2">
+      {values.map((value, index) => (
+        <div key={`${idPrefix}-${index}`} className="flex items-start gap-2">
+          <Input
+            value={value}
+            onChange={(e) => update(index, e.target.value)}
+            maxLength={MAX_RESPONSIBILITY_LENGTH}
+            placeholder="Descripción de la responsabilidad"
+            aria-label={`Responsabilidad ${index + 1}`}
+            disabled={disabled}
+          />
+          <button
+            type="button"
+            onClick={() => remove(index)}
+            disabled={disabled}
+            className="mt-1 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-700"
+            aria-label={`Quitar responsabilidad ${index + 1}`}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => onChange([...values, ''])}
+        disabled={disabled || values.length >= MAX_RESPONSIBILITIES}
+      >
+        <Plus className="h-4 w-4" /> Añadir responsabilidad
+      </Button>
+    </div>
+  )
+}
+
 export default function OrganizationPage() {
   const { can } = useAuth()
   const canWrite = can(PERMISSIONS.ORGANIZATION_WRITE)
@@ -28,6 +89,8 @@ export default function OrganizationPage() {
   const [success, setSuccess] = useState('')
   const [areaModal, setAreaModal] = useState(null)
   const [positionModal, setPositionModal] = useState(null)
+  const [areaFieldErrors, setAreaFieldErrors] = useState({})
+  const [positionFieldErrors, setPositionFieldErrors] = useState({})
   const [busy, setBusy] = useState(false)
 
   const loadAreas = useCallback(async () => {
@@ -66,20 +129,29 @@ export default function OrganizationPage() {
 
   const saveArea = async (event) => {
     event.preventDefault()
-    setBusy(true)
     setError('')
+    setAreaFieldErrors({})
+    const responsibilities = cleanResponsibilities(areaModal.responsibilities || [])
+    if (responsibilities.error) {
+      setAreaFieldErrors({ responsibilities: responsibilities.error })
+      return
+    }
+    setBusy(true)
     try {
+      const payload = { name: areaModal.name, responsibilities: responsibilities.values }
       if (areaModal.id) {
-        await api.patch(`/admin/areas/${areaModal.id}`, { name: areaModal.name, status: areaModal.status })
+        await api.patch(`/admin/areas/${areaModal.id}`, { ...payload, status: areaModal.status })
         setSuccess('Área actualizada.')
       } else {
-        await api.post('/admin/areas', { name: areaModal.name })
+        await api.post('/admin/areas', payload)
         setSuccess('Área creada.')
       }
       setAreaModal(null)
       await loadAreas()
     } catch (err) {
-      setError(err.message)
+      if (err.code === 'area_exists') setAreaFieldErrors({ name: err.message })
+      else if (err.fields) setAreaFieldErrors(err.fields)
+      else setError(err.message)
     } finally {
       setBusy(false)
     }
@@ -87,14 +159,21 @@ export default function OrganizationPage() {
 
   const savePosition = async (event) => {
     event.preventDefault()
-    setBusy(true)
     setError('')
+    setPositionFieldErrors({})
+    const responsibilities = cleanResponsibilities(positionModal.responsibilities || [])
+    if (responsibilities.error) {
+      setPositionFieldErrors({ responsibilities: responsibilities.error })
+      return
+    }
+    setBusy(true)
     try {
+      const payload = { name: positionModal.name, responsibilities: responsibilities.values }
       if (positionModal.id) {
-        await api.patch(`/admin/positions/${positionModal.id}`, { name: positionModal.name, status: positionModal.status })
+        await api.patch(`/admin/positions/${positionModal.id}`, { ...payload, status: positionModal.status })
         setSuccess('Cargo actualizado.')
       } else {
-        await api.post(`/admin/areas/${selectedArea.id}/positions`, { name: positionModal.name })
+        await api.post(`/admin/areas/${selectedArea.id}/positions`, payload)
         setSuccess('Cargo creado.')
       }
       setPositionModal(null)
@@ -102,7 +181,9 @@ export default function OrganizationPage() {
       const data = await api.get(`/admin/areas/${selectedArea.id}/positions`)
       setPositions(data.data || [])
     } catch (err) {
-      setError(err.message)
+      if (err.code === 'position_exists') setPositionFieldErrors({ name: err.message })
+      else if (err.fields) setPositionFieldErrors(err.fields)
+      else setError(err.message)
     } finally {
       setBusy(false)
     }
@@ -112,9 +193,9 @@ export default function OrganizationPage() {
     <div>
       <PageHeader
         title="Áreas y cargos"
-        description="Catálogo organizativo municipal. Los cargos pertenecen siempre a un área y nunca otorgan permisos de sistema."
+        description="Catálogo organizativo institucional. Áreas y cargos tienen nombres únicos y responsabilidades descriptivas; estas nunca otorgan permisos de sistema."
         actions={canWrite ? (
-          <Button onClick={() => setAreaModal({ name: '', status: 'active' })}>
+          <Button onClick={() => { setAreaFieldErrors({}); setAreaModal({ name: '', status: 'active', responsibilities: [] }) }}>
             <Plus className="h-4 w-4" /> Nueva área
           </Button>
         ) : null}
@@ -148,12 +229,17 @@ export default function OrganizationPage() {
                       <p className="text-xs text-slate-500">
                         {area.status === 'active' ? 'Activa' : 'Inactiva'} · {area.position_count} cargos · {area.user_count} trabajadores
                       </p>
+                      {area.responsibilities?.length ? (
+                        <p className="mt-0.5 truncate text-[11px] text-slate-400" title={area.responsibilities.join(' · ')}>
+                          {area.responsibilities[0]}{area.responsibilities.length > 1 ? ` +${area.responsibilities.length - 1}` : ''}
+                        </p>
+                      ) : null}
                     </button>
                     {canWrite ? (
                       <button
                         type="button"
                         className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                        onClick={() => setAreaModal({ id: area.id, name: area.name, status: area.status })}
+                        onClick={() => { setAreaFieldErrors({}); setAreaModal({ id: area.id, name: area.name, status: area.status, responsibilities: area.responsibilities || [] }) }}
                         aria-label={`Editar ${area.name}`}
                       >
                         <Pencil className="h-4 w-4" />
@@ -176,7 +262,7 @@ export default function OrganizationPage() {
               {canWrite ? (
                 <Button
                   variant="secondary"
-                  onClick={() => setPositionModal({ name: '', status: 'active' })}
+                  onClick={() => { setPositionFieldErrors({}); setPositionModal({ name: '', status: 'active', responsibilities: [] }) }}
                   disabled={!selectedArea}
                 >
                   <Plus className="h-4 w-4" /> Nuevo cargo
@@ -196,12 +282,17 @@ export default function OrganizationPage() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-800">{position.name}</p>
                       <p className="text-xs text-slate-500">{position.status === 'active' ? 'Activo' : 'Inactivo'}</p>
+                      {position.responsibilities?.length ? (
+                        <p className="mt-0.5 truncate text-[11px] text-slate-400" title={position.responsibilities.join(' · ')}>
+                          {position.responsibilities[0]}{position.responsibilities.length > 1 ? ` +${position.responsibilities.length - 1}` : ''}
+                        </p>
+                      ) : null}
                     </div>
                     {canWrite ? (
                       <button
                         type="button"
                         className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                        onClick={() => setPositionModal({ id: position.id, name: position.name, status: position.status })}
+                        onClick={() => { setPositionFieldErrors({}); setPositionModal({ id: position.id, name: position.name, status: position.status, responsibilities: position.responsibilities || [] }) }}
                         aria-label={`Editar ${position.name}`}
                       >
                         <Pencil className="h-4 w-4" />
@@ -230,13 +321,26 @@ export default function OrganizationPage() {
       >
         {areaModal ? (
           <form onSubmit={saveArea} className="space-y-4">
-            <Field label="Nombre del área" htmlFor="area-name">
+            <Field label="Nombre del área" htmlFor="area-name" error={areaFieldErrors.name}>
               <Input
                 id="area-name"
                 value={areaModal.name}
                 onChange={(e) => setAreaModal({ ...areaModal, name: e.target.value })}
+                error={areaFieldErrors.name}
                 maxLength={120}
                 autoFocus
+              />
+            </Field>
+            <Field
+              label="Responsabilidades generales"
+              error={areaFieldErrors.responsibilities}
+              hint="Máximo 20 responsabilidades; cada una hasta 300 caracteres."
+            >
+              <ResponsibilitiesEditor
+                idPrefix="area-responsibility"
+                values={areaModal.responsibilities || []}
+                onChange={(responsibilities) => setAreaModal({ ...areaModal, responsibilities })}
+                disabled={busy}
               />
             </Field>
             {areaModal.id ? (
@@ -271,13 +375,26 @@ export default function OrganizationPage() {
         {positionModal ? (
           <form onSubmit={savePosition} className="space-y-4">
             <p className="rounded-xl bg-muted p-3 text-sm text-slate-600">Área: {selectedArea?.name}</p>
-            <Field label="Nombre del cargo" htmlFor="position-name">
+            <Field label="Nombre del cargo" htmlFor="position-name" error={positionFieldErrors.name}>
               <Input
                 id="position-name"
                 value={positionModal.name}
                 onChange={(e) => setPositionModal({ ...positionModal, name: e.target.value })}
+                error={positionFieldErrors.name}
                 maxLength={120}
                 autoFocus
+              />
+            </Field>
+            <Field
+              label="Responsabilidades del cargo"
+              error={positionFieldErrors.responsibilities}
+              hint="Máximo 20 responsabilidades; cada una hasta 300 caracteres."
+            >
+              <ResponsibilitiesEditor
+                idPrefix="position-responsibility"
+                values={positionModal.responsibilities || []}
+                onChange={(responsibilities) => setPositionModal({ ...positionModal, responsibilities })}
+                disabled={busy}
               />
             </Field>
             {positionModal.id ? (
