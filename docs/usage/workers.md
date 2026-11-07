@@ -36,10 +36,11 @@ Lista los trabajos solicitados por el trabajador o ejecutados sobre su Drive.
 Cada trabajo muestra estado, progreso, errores y elementos. Desde el detalle se
 puede cancelar un trabajo en curso cuando el estado lo permite.
 
-## Mis documentos
+## Documentos desde los trabajos
 
-Lista los archivos ya almacenados y permite descargarlos mediante la API
-autenticada. Solo se muestran documentos de trabajos propios.
+Este módulo independiente fue retirado. Los archivos se consultan desde el
+detalle de cada trabajo, donde los elementos completados ofrecen **Descargar**
+cuando existe un archivo almacenado disponible.
 
 ## Seguridad
 

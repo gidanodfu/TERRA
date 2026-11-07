@@ -5,7 +5,6 @@ import {
   Building2,
   Database,
   FileClock,
-  FolderTree,
   HardDrive,
   Home,
   KeyRound,
@@ -38,7 +37,6 @@ const workerNavGroups = [
     items: [
       { to: '/app/drive', label: 'Google Drive', icon: HardDrive },
       { to: '/app/jobs', label: 'Mis descargas', icon: ListChecks },
-      { to: '/app/documents', label: 'Mis documentos', icon: FolderTree },
     ],
   },
   {
@@ -73,7 +71,6 @@ const adminNavGroups = [
       { to: '/app/admin/connections', label: 'Conexiones Drive', icon: Database, permission: PERMISSIONS.DRIVE_READ },
       { to: '/app/admin/downloads', label: 'Descargas', icon: ArrowLeftRight, permission: PERMISSIONS.JOBS_CREATE },
       { to: '/app/admin/jobs', label: 'Trabajos', icon: FileClock, permission: PERMISSIONS.JOBS_READ },
-      { to: '/app/admin/storage', label: 'Almacenamiento', icon: HardDrive, permission: PERMISSIONS.STORAGE_READ },
     ],
   },
   {

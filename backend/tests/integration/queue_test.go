@@ -90,4 +90,8 @@ func TestQueueClaimIdempotencyAndCancel(t *testing.T) {
 	if err != nil || total != 1 || len(list) != 1 {
 		t.Fatalf("listado restringido: %v total=%d list=%d", err, total, len(list))
 	}
+	all, allTotal, err := repo.List(ctx, downloads.ListFilter{Page: 1, Size: 10})
+	if err != nil || allTotal != 1 || len(all) != 1 {
+		t.Fatalf("listado administrativo: %v total=%d list=%d", err, allTotal, len(all))
+	}
 }

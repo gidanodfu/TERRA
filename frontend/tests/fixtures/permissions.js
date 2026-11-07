@@ -13,7 +13,6 @@ export const ADMIN_PERMISSIONS = [
   'admin.jobs.create',
   'admin.jobs.cancel',
   'admin.jobs.retry',
-  'admin.storage.read',
   'admin.audit.read',
   'admin.policy.write',
   'admin.files.read',
@@ -35,7 +34,6 @@ export const READ_ONLY_PERMISSIONS = [
   'admin.organization.read',
   'admin.drive.read',
   'admin.jobs.read',
-  'admin.storage.read',
   'admin.audit.read',
 ]
 
@@ -46,6 +44,5 @@ export const WORKER_PERMISSIONS = [
   'me.drive.connect',
   'me.drive.disconnect',
   'me.jobs.read',
-  'me.files.read',
   'me.policy.accept',
 ]

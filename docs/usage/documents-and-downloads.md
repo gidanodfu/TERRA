@@ -43,15 +43,22 @@ Los estados terminales no vuelven a procesarse.
 
 ## Documentos almacenados
 
-- **Mis documentos** muestra los archivos de los trabajos propios.
-- **Almacenamiento** muestra metadatos para los roles con
-  `admin.storage.read`.
-- La descarga de un archivo pasa por `/api/v1/files/{id}/content`, comprueba
-  propiedad o permiso administrativo y registra el acceso cuando corresponde.
+- Los archivos se consultan desde el detalle del trabajo que los produjo.
+- Cada elemento completado muestra **Descargar** cuando existe un archivo
+  asociado y la cuenta está autorizada.
+- La descarga usa `/api/v1/files/{id}/content` con el identificador interno de
+  `stored_files`, nunca el identificador de Drive ni una ruta física.
+- El backend comprueba la propiedad del trabajo o el permiso `admin.files.read`,
+  y registra el acceso exitoso en auditoría.
+- Si el archivo físico no está disponible, la interfaz muestra el mensaje del
+  servidor y el intento fallido queda auditado.
 - Los binarios se conservan byte a byte.
 - Los documentos nativos de Google se exportan a formatos abiertos u ofimáticos.
   Google Forms se serializa como JSON. Consulte
   [Formatos de archivo](../development/file-formats.md).
+
+No existen módulos independientes de **Mis documentos** ni **Almacenamiento**.
+`stored_files` sigue siendo la tabla interna de registro de archivos.
 
 ## Retención
 

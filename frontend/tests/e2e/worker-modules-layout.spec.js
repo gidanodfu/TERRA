@@ -105,7 +105,22 @@ async function mockApi(page, { localCredentials = true, mustRotate = false } = {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ data: [], pagination: { page: 1, page_size: 25, total: 0 } }),
+        body: JSON.stringify({
+          data: [{
+            id: 'item-1',
+            job_id: 'job-1',
+            drive_node_id: 'node-1',
+            google_file_id: 'file-1',
+            stored_file_id: 'stored-file-1',
+            name: 'Reporte.pdf',
+            mime_type: 'application/pdf',
+            status: 'completed',
+            attempt_count: 1,
+            size_bytes: 2048,
+            sha256: 'abcdef0123456789abcdef0123456789',
+          }],
+          pagination: { page: 1, page_size: 25, total: 1 },
+        }),
       })
     }
     return route.fulfill({
@@ -164,6 +179,27 @@ test('Google Drive aprovecha el ancho y distribuye política y autorización', a
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Política institucional' })).toBeVisible()
   await page.screenshot({ path: '/tmp/terra-worker-drive-dark-1440.png' })
+})
+
+test('el detalle del trabajo permite descargar elementos completados', async ({ page }) => {
+  await mockApi(page)
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/app/jobs/job-1')
+  await expect(page.getByRole('heading', { name: /Trabajo JOB-1/, level: 1 })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Descargar Reporte.pdf' })).toBeVisible()
+  await assertNoOverflow(page, 'detalle de trabajo')
+
+  for (const width of [768, 390]) {
+    await page.setViewportSize({ width, height: 800 })
+    await assertNoOverflow(page, `detalle de trabajo ${width}`)
+  }
+
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.evaluate(() => localStorage.setItem('terra-theme', 'dark'))
+  await page.reload()
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  await expect(page.getByRole('button', { name: 'Descargar Reporte.pdf' })).toBeVisible()
+  await assertNoOverflow(page, 'detalle de trabajo True Black')
 })
 
 test('Mis descargas usa el ancho y conserva filtros y columnas', async ({ page }) => {

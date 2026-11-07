@@ -253,18 +253,6 @@ func (s *Service) Items(ctx context.Context, actorID uuid.UUID, admin bool, jobI
 	return items, total, err
 }
 
-func (s *Service) StoredFiles(ctx context.Context, actorID uuid.UUID, admin bool, page, size int) ([]StoredFile, int, error) {
-	var owner *uuid.UUID
-	if !admin {
-		owner = &actorID
-	}
-	files, total, err := s.repo.ListStoredFiles(ctx, owner, page, size)
-	if files == nil {
-		files = []StoredFile{}
-	}
-	return files, total, err
-}
-
 // OpenFile devuelve un documento almacenado solo después de comprobar la propiedad del trabajo o los derechos de administrador.
 func (s *Service) OpenFile(ctx context.Context, actorID uuid.UUID, admin bool, fileID uuid.UUID, ipHash string) (*os.File, os.FileInfo, *StoredFile, error) {
 	file, err := s.repo.GetStoredFile(ctx, fileID)
@@ -280,12 +268,14 @@ func (s *Service) OpenFile(ctx context.Context, actorID uuid.UUID, admin bool, f
 	}
 	f, info, err := s.store.OpenRead(file.RelativePath)
 	if err != nil {
+		s.audit.Record(ctx, audit.Event{ActorUserID: &actorID, Action: "file.access_failed", TargetType: "stored_file",
+			TargetID: file.ID.String(), Metadata: map[string]any{
+				"owner_user_id": file.OwnerUserID, "job_id": file.JobID, "reason": "not_available",
+			}, IPHash: ipHash})
 		return nil, nil, nil, apperr.NotFound("El documento no está disponible en el almacenamiento.")
 	}
-	if admin {
-		s.audit.Record(ctx, audit.Event{ActorUserID: &actorID, Action: "file.accessed", TargetType: "stored_file",
-			TargetID: file.ID.String(), Metadata: map[string]any{"owner_user_id": file.OwnerUserID, "job_id": file.JobID}, IPHash: ipHash})
-	}
+	s.audit.Record(ctx, audit.Event{ActorUserID: &actorID, Action: "file.accessed", TargetType: "stored_file",
+		TargetID: file.ID.String(), Metadata: map[string]any{"owner_user_id": file.OwnerUserID, "job_id": file.JobID}, IPHash: ipHash})
 	return f, info, file, nil
 }
 

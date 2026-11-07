@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Cloud, FileText, FolderOpen, HardDrive, ListChecks, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Cloud, HardDrive, ListChecks, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../../app/AuthContext'
 import { api } from '../../services/api'
 import { Alert, Card, CardBody, LoadingBlock, PageHeader, StatCard } from '../../components/ui'
@@ -17,10 +17,9 @@ export default function WorkerHome() {
     Promise.all([
       api.get('/me/drive/connection'),
       api.get('/download-jobs?page_size=5'),
-      api.get('/me/stored-files?page_size=1'),
     ])
-      .then(([drive, jobs, files]) => {
-        if (active) setData({ drive, jobs, files })
+      .then(([drive, jobs]) => {
+        if (active) setData({ drive, jobs })
       })
       .catch((err) => active && setError(err.message))
     return () => {
@@ -33,17 +32,16 @@ export default function WorkerHome() {
 
   const connection = data.drive.connection
   const jobs = data.jobs.data || []
-  const totalFiles = data.files.pagination?.total || 0
   const activeJobs = jobs.filter((job) => !['completed', 'partially_completed', 'failed', 'cancelled'].includes(job.status))
 
   return (
     <div>
       <PageHeader
         title={`Hola, ${user?.first_name || user?.display_name || 'bienvenido'}`}
-        description="Consulte el estado de su conexión, sus descargas y los documentos resguardados por TERRA."
+        description="Consulte el estado de su conexión, sus descargas y la política institucional."
       />
 
-      <div className="grid gap-4 @sm:grid-cols-2 @3xl:grid-cols-4">
+      <div className="grid gap-4 @sm:grid-cols-2 @3xl:grid-cols-3">
         <StatCard
           label="Conexión de Google Drive"
           value={connection ? 'Vinculada' : 'Sin conectar'}
@@ -51,7 +49,6 @@ export default function WorkerHome() {
           icon={HardDrive}
         />
         <StatCard label="Trabajos activos" value={activeJobs.length} hint="Descargas en curso o en cola" icon={ListChecks} />
-        <StatCard label="Documentos disponibles" value={totalFiles} hint="Archivos resguardados en el servidor" icon={FileText} />
         <StatCard
           label="Política institucional"
           value={connection?.policy_consent_version ? 'Aceptada' : 'Pendiente'}
@@ -111,9 +108,6 @@ export default function WorkerHome() {
             <div className="mt-5 space-y-2">
               <Link to="/app/drive" className="btn-secondary w-full">
                 <Cloud className="h-4 w-4" /> Gestionar Google Drive
-              </Link>
-              <Link to="/app/documents" className="btn-secondary w-full">
-                <FolderOpen className="h-4 w-4" /> Mis documentos
               </Link>
             </div>
           </CardBody>

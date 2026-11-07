@@ -15,7 +15,7 @@ func TestPermissionsForExactRoleSets(t *testing.T) {
 			"admin.accounts.read", "admin.accounts.create", "admin.accounts.write",
 			"admin.organization.read", "admin.organization.write", "admin.drive.read",
 			"admin.drive.browse", "admin.jobs.read", "admin.jobs.create", "admin.jobs.cancel",
-			"admin.jobs.retry", "admin.storage.read", "admin.audit.read", "admin.policy.write",
+			"admin.jobs.retry", "admin.audit.read", "admin.policy.write",
 			"admin.files.read",
 		}},
 		{[]string{"moderator"}, []string{
@@ -25,11 +25,11 @@ func TestPermissionsForExactRoleSets(t *testing.T) {
 		}},
 		{[]string{"read_only"}, []string{
 			"admin.dashboard.read", "admin.users.read", "admin.organization.read",
-			"admin.drive.read", "admin.jobs.read", "admin.storage.read", "admin.audit.read",
+			"admin.drive.read", "admin.jobs.read", "admin.audit.read",
 		}},
 		{[]string{"user"}, []string{
 			"me.read", "me.profile.write", "me.drive.read", "me.drive.connect",
-			"me.drive.disconnect", "me.jobs.read", "me.files.read", "me.policy.accept",
+			"me.drive.disconnect", "me.jobs.read", "me.policy.accept",
 		}},
 		{[]string{"admin", "moderator"}, nil},
 		{[]string{"future_role"}, nil},

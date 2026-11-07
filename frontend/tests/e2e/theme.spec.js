@@ -95,9 +95,6 @@ function payloadFor(url, getUser) {
   if (path.endsWith('/download-jobs') || path.endsWith('/admin/download-jobs')) {
     return { data: [], pagination: { total: 0 } }
   }
-  if (path.endsWith('/me/stored-files') || path.endsWith('/admin/storage')) {
-    return { data: [], pagination: { total: 0 } }
-  }
   return { data: [], pagination: { total: 0 } }
 }
 

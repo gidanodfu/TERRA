@@ -103,6 +103,7 @@ type Item struct {
 	MimeType     string     `json:"mime_type"`
 	Status       string     `json:"status"`
 	AttemptCount int        `json:"attempt_count"`
+	StoredFileID *uuid.UUID `json:"stored_file_id,omitempty"`
 	RelativePath string     `json:"-"`
 	SizeBytes    *int64     `json:"size_bytes,omitempty"`
 	SHA256       string     `json:"sha256,omitempty"`

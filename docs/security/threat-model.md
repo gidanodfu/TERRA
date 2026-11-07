@@ -12,7 +12,7 @@ sesiones, historial/auditoría, integridad de snapshots.
 | **Spoofing** | Bypass de Turnstile | Siteverify servidor, acción y hostname, rate limit, fallo cerrado | Usar claves del widget local correcto |
 | **Tampering** | Modificar documentos en disco | Volumen privado, permisos, rutas por UUID, checksums, rename atómico | Un administrador del host puede modificarlos; se recomienda monitoreo de integridad |
 | **Tampering** | Alterar el estado de un trabajo | PostgreSQL como fuente de verdad; transiciones en servicio; lease | Acceso directo a la BD por administradores de infraestructura |
-| **Repudiation** | Negar una descarga/consulta | Auditoría de creación, cancelación, conexión, política y acceso administrativo | La retención de registros/BD depende de la operación |
+| **Repudiation** | Negar una descarga/consulta | Auditoría de creación, cancelación, conexión, política y acceso a documentos, incluido el propietario | La retención de registros/BD depende de la operación |
 | **Information disclosure** | IDOR a documentos de otro trabajador | Verificación de propietario/solicitante en cada recurso | Un admin puede acceder conforme a política; queda auditado |
 | **Information disclosure** | Fuga de refresh token | AES-256-GCM, nunca al frontend/logs, clave externa | Compromiso del host o de la clave |
 | **Information disclosure** | Path traversal/symlink | Sanitización por segmento, rechazo de `..`/absolutas, `Lstat`, `O_NOFOLLOW`, contención | Bugs futuros deben cubrirse con tests |

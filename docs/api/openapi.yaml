@@ -282,27 +282,6 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
-  /me/stored-files:
-    get:
-      tags: [Perfil propio]
-      summary: Documentos propios resguardados
-      parameters:
-        - $ref: "#/components/parameters/Page"
-        - $ref: "#/components/parameters/PageSize"
-      responses:
-        "200":
-          description: Lista paginada
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ListResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items: { $ref: "#/components/schemas/StoredFile" }
-
   /download-jobs:
     get:
       tags: [Trabajos]
@@ -882,26 +861,6 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Job" }
-  /admin/storage:
-    get:
-      tags: [Administración]
-      summary: Documentos almacenados de todos los trabajadores
-      parameters:
-        - $ref: "#/components/parameters/Page"
-        - $ref: "#/components/parameters/PageSize"
-      responses:
-        "200":
-          description: Lista paginada
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ListResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items: { $ref: "#/components/schemas/StoredFile" }
   /admin/audit-events:
     get:
       tags: [Auditoría]
@@ -1252,6 +1211,11 @@ components:
         mime_type: { type: string }
         status: { type: string, enum: [pending, downloading, completed, skipped, retrying, failed, cancelled] }
         attempt_count: { type: integer }
+        stored_file_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Presente solo si existe un archivo completado asociado al elemento; se usa para `/files/{id}/content`.
         size_bytes: { type: integer, format: int64 }
         sha256: { type: string }
         error_code: { type: string }
@@ -1259,20 +1223,6 @@ components:
         next_retry_at: { type: string, format: date-time }
         started_at: { type: string, format: date-time }
         finished_at: { type: string, format: date-time }
-    StoredFile:
-      type: object
-      properties:
-        id: { type: string, format: uuid }
-        job_id: { type: string, format: uuid }
-        drive_owner_user_id: { type: string, format: uuid }
-        name: { type: string }
-        size_bytes: { type: integer, format: int64 }
-        sha256: { type: string }
-        export_mime_type: { type: string }
-        created_at: { type: string, format: date-time }
-        owner_name: { type: string }
-        area_name: { type: string }
-        position_name: { type: string }
     AuditEvent:
       type: object
       properties:

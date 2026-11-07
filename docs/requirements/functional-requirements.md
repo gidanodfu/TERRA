@@ -70,7 +70,11 @@ Convención: `RF-xx` se referencia en pruebas y criterios de aceptación.
 | RF-42 | Sanitizar nombres, bloquear traversal, rutas absolutas, symlinks y nombres reservados. | `storage` + tests |
 | RF-43 | Colisiones con sufijo determinista por ID de Drive. | `UniqueName` |
 | RF-44 | Escritura `.part` + streaming + SHA-256 + rename atómico. | Worker |
-| RF-45 | Documentos accesibles solo por API autenticada y auditada. | `/files/{id}/content` |
+| RF-45 | Documentos accesibles solo por API autenticada y auditada, desde el detalle del trabajo. | `/files/{id}/content` |
+
+Los listados globales `/admin/storage` y `/me/stored-files` fueron retirados. La
+tabla `stored_files` y el pipeline de escritura se conservan; la navegación de
+archivos se realiza desde los trabajos y snapshots.
 
 ## Administración, progreso y auditoría
 

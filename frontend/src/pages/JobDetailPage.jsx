@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Ban, RefreshCw, RotateCcw, WifiOff } from 'lucide-react'
+import { ArrowLeft, Ban, Download, RefreshCw, RotateCcw, WifiOff } from 'lucide-react'
 import { useAuth } from '../app/AuthContext'
 import { PERMISSIONS } from '../features/auth/permissions'
 import { api, queryString } from '../services/api'
@@ -35,6 +35,7 @@ export default function JobDetailPage({ basePath }) {
   const [error, setError] = useState('')
   const [actionError, setActionError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [downloadingId, setDownloadingId] = useState('')
   const pageSize = 25
   const itemsSignature = useRef('')
 
@@ -108,10 +109,42 @@ export default function JobDetailPage({ basePath }) {
     }
   }
 
+  const download = async (item) => {
+    setActionError('')
+    setDownloadingId(item.stored_file_id)
+    try {
+      const response = await fetch(`/api/v1/files/${item.stored_file_id}/content`, { credentials: 'include' })
+      if (!response.ok) {
+        let message = 'El documento no está disponible en el almacenamiento.'
+        try {
+          const payload = await response.json()
+          message = payload?.error?.message || message
+        } catch {
+          // La respuesta no es JSON; se conserva el mensaje funcional.
+        }
+        throw new Error(message)
+      }
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = item.name || 'documento'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setActionError(err.message)
+    } finally {
+      setDownloadingId('')
+    }
+  }
+
   if (!job && !error) return <LoadingBlock />
   if (error && !job) return <Alert tone="error">{error}</Alert>
 
   const active = ACTIVE.includes(job.status)
+  const canDownload = adminView ? can(PERMISSIONS.FILES_READ) : true
   const percent = progressPercent(job)
   const tone = job.status === 'failed' ? 'bg-red-500' : job.status === 'partially_completed' ? 'bg-amber-500' : 'bg-brand-600'
 
@@ -304,6 +337,7 @@ export default function JobDetailPage({ basePath }) {
                       <th className="hidden sm:table-cell">Intentos</th>
                       <th className="hidden md:table-cell">Tamaño</th>
                       <th>Detalle</th>
+                      <th className="text-right">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -331,6 +365,24 @@ export default function JobDetailPage({ basePath }) {
                             <span className="font-mono">{item.sha256.slice(0, 16)}…</span>
                           ) : (
                             '—'
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap text-right">
+                          {item.status === 'completed' && item.stored_file_id && canDownload ? (
+                            <Button
+                              variant="secondary"
+                              className="px-3 py-1.5"
+                              onClick={() => download(item)}
+                              disabled={downloadingId === item.stored_file_id}
+                              aria-label={`Descargar ${item.name}`}
+                            >
+                              {downloadingId === item.stored_file_id ? <Spinner className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                              Descargar
+                            </Button>
+                          ) : item.status === 'completed' && canDownload ? (
+                            <span className="text-xs text-slate-400">No disponible</span>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
                           )}
                         </td>
                       </tr>

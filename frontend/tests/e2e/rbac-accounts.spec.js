@@ -234,7 +234,7 @@ test('solo lectura consulta trabajadores sin formularios ni módulos de escritur
   await page.goto('/app/admin')
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
   const readOnlyNav = page.getByTestId('admin-sidebar')
-  await expect(readOnlyNav.getByRole('link', { name: 'Almacenamiento' })).toBeVisible()
+  await expect(readOnlyNav.getByRole('link', { name: 'Almacenamiento' })).toHaveCount(0)
   await expect(readOnlyNav.getByRole('link', { name: 'Auditoría' })).toBeVisible()
   await expect(readOnlyNav.getByRole('link', { name: 'Descargas' })).toHaveCount(0)
   await expect(readOnlyNav.getByRole('link', { name: 'Política' })).toHaveCount(0)

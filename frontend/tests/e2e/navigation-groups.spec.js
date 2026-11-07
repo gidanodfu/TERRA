@@ -71,7 +71,7 @@ test('el administrador ve las cinco categorías con sus módulos', async ({ page
   ])
   expect(await groupLinks(sidebar, 'GENERAL')).toEqual(['Dashboard'])
   expect(await groupLinks(sidebar, 'ORGANIZACIÓN')).toEqual(['Trabajadores', 'Áreas y cargos'])
-  expect(await groupLinks(sidebar, 'GESTIÓN DOCUMENTAL')).toEqual(['Conexiones Drive', 'Descargas', 'Trabajos', 'Almacenamiento'])
+  expect(await groupLinks(sidebar, 'GESTIÓN DOCUMENTAL')).toEqual(['Conexiones Drive', 'Descargas', 'Trabajos'])
   expect(await groupLinks(sidebar, 'CONTROL INSTITUCIONAL')).toEqual(['Auditoría', 'Política'])
   expect(await groupLinks(sidebar, 'CUENTA Y SEGURIDAD')).toEqual(['Seguridad'])
 
@@ -97,7 +97,7 @@ test('moderador y solo lectura conservan solo sus grupos y módulos', async ({ p
   await mockSession(page, 'read_only')
   await page.reload()
   const readOnly = page.getByTestId('admin-sidebar')
-  expect(await groupLinks(readOnly, 'GESTIÓN DOCUMENTAL')).toEqual(['Conexiones Drive', 'Trabajos', 'Almacenamiento'])
+  expect(await groupLinks(readOnly, 'GESTIÓN DOCUMENTAL')).toEqual(['Conexiones Drive', 'Trabajos'])
   expect(await groupLinks(readOnly, 'CONTROL INSTITUCIONAL')).toEqual(['Auditoría'])
   await expect(readOnly.getByRole('link', { name: 'Descargas' })).toHaveCount(0)
   await expect(readOnly.getByRole('link', { name: 'Política' })).toHaveCount(0)
@@ -112,7 +112,7 @@ test('el trabajador ve solo sus tres categorías', async ({ page }) => {
     'GENERAL', 'GESTIÓN DOCUMENTAL', 'CUENTA Y SEGURIDAD',
   ])
   expect(await groupLinks(sidebar, 'GENERAL')).toEqual(['Inicio', 'Mi perfil'])
-  expect(await groupLinks(sidebar, 'GESTIÓN DOCUMENTAL')).toEqual(['Google Drive', 'Mis descargas', 'Mis documentos'])
+  expect(await groupLinks(sidebar, 'GESTIÓN DOCUMENTAL')).toEqual(['Google Drive', 'Mis descargas'])
   expect(await groupLinks(sidebar, 'CUENTA Y SEGURIDAD')).toEqual(['Seguridad'])
   await expect(sidebar.getByRole('heading', { name: 'ORGANIZACIÓN' })).toHaveCount(0)
 })

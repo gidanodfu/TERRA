@@ -125,9 +125,6 @@ function payloadFor(url, asAdmin) {
   if (path.endsWith('/download-jobs') || path.endsWith('/admin/download-jobs')) {
     return { data: workerJobs, pagination: { total: workerJobs.length } }
   }
-  if (path.endsWith('/me/stored-files') || path.endsWith('/admin/storage')) {
-    return { data: [], pagination: { total: 3 } }
-  }
   return { data: [], pagination: { total: 0 } }
 }
 
@@ -513,6 +510,13 @@ test('el modal de cuenta administrativa oculta la barra y conserva el scroll con
   await expect(page.getByRole('heading', { name: 'Nuevo usuario administrativo' })).toBeVisible()
 })
 
+test('la ruta legacy de almacenamiento redirige a trabajos', async ({ page }) => {
+  await mockApi(page)
+  await page.goto('/app/admin/storage')
+  await expect(page).toHaveURL(/\/app\/admin\/jobs$/)
+  await expect(page.getByRole('heading', { name: 'Trabajos', level: 1 })).toBeVisible()
+})
+
 test('la navegación administrativa conserva todos los módulos y el drawer móvil', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 })
   await mockApi(page)
@@ -525,9 +529,10 @@ test('la navegación administrativa conserva todos los módulos y el drawer móv
   for (const label of ['GENERAL', 'ORGANIZACIÓN', 'GESTIÓN DOCUMENTAL', 'CONTROL INSTITUCIONAL', 'CUENTA Y SEGURIDAD']) {
     await expect(drawer.getByRole('heading', { name: label })).toBeVisible()
   }
-  for (const label of ['Dashboard', 'Trabajadores', 'Áreas y cargos', 'Conexiones Drive', 'Descargas', 'Trabajos', 'Almacenamiento', 'Auditoría', 'Política', 'Seguridad']) {
+  for (const label of ['Dashboard', 'Trabajadores', 'Áreas y cargos', 'Conexiones Drive', 'Descargas', 'Trabajos', 'Auditoría', 'Política', 'Seguridad']) {
     await expect(drawer.getByRole('link', { name: label, exact: true })).toBeVisible()
   }
+  await expect(drawer.getByRole('link', { name: 'Almacenamiento' })).toHaveCount(0)
   expect(await drawer.getByRole('link', { name: 'Dashboard', exact: true }).count()).toBe(1)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
   expect(overflow).toBeFalsy()

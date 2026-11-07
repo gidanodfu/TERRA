@@ -9,7 +9,7 @@ sensible se valida en backend y se registra en auditoría.
 |---|---|
 | General | Dashboard |
 | Organización | Trabajadores, Áreas y cargos |
-| Gestión documental | Conexiones Drive, Descargas, Trabajos, Almacenamiento |
+| Gestión documental | Conexiones Drive, Descargas, Trabajos |
 | Control institucional | Auditoría, Política |
 | Cuenta y seguridad | Seguridad |
 
@@ -67,8 +67,10 @@ Drive en nombre del trabajador.
 
 - Consulta trabajos con filtros por estado, texto, área, cargo y fechas.
 - Puede cancelar trabajos y reintentar elementos fallidos según los permisos.
-- El almacenamiento muestra metadatos de archivos; la descarga pasa por la API
-  autenticada y queda auditada.
+- Desde el detalle puede descargar archivos completados con su identificador
+  interno de almacenamiento; el acceso queda auditado.
+- El almacenamiento físico es interno: no hay un módulo independiente de
+  Almacenamiento.
 
 ## Auditoría
 

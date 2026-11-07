@@ -83,9 +83,13 @@ sobrescribe el directorio de otro trabajo.
 ## Acceso
 
 - El servicio web no monta el volumen documental.
+- Los archivos se consultan desde el detalle del trabajo; no existe un listado
+  independiente de almacenamiento ni una página «Mis documentos».
 - `GET /api/v1/files/{id}/content` resuelve por ID interno, verifica propietario/solicitante o
   administrador, verifica que el job corresponda y transmite como `attachment`.
-- Todo acceso administrativo se audita (`file.accessed`).
+- Todo acceso exitoso se audita (`file.accessed`), incluido el del trabajador propietario.
+- Un intento sobre un archivo físico ausente registra `file.access_failed` y devuelve un
+  mensaje funcional.
 - Se envían cabeceras `nosniff`, `Content-Disposition` segura y `Cache-Control: private, no-store`.
 
 ## Capacidad

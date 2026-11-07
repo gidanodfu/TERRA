@@ -8,7 +8,6 @@ import WorkerHome from '../pages/worker/HomePage'
 import WorkerProfile from '../pages/worker/ProfilePage'
 import WorkerDrive from '../pages/worker/DrivePage'
 import WorkerJobs from '../pages/worker/JobsPage'
-import WorkerDocuments from '../pages/worker/DocumentsPage'
 import SecurityPage from '../pages/worker/SecurityPage'
 import JobDetailPage from '../pages/JobDetailPage'
 import AdminDashboard from '../pages/admin/DashboardPage'
@@ -18,7 +17,6 @@ import OrganizationPage from '../pages/admin/OrganizationPage'
 import ConnectionsPage from '../pages/admin/ConnectionsPage'
 import DownloadWizardPage from '../pages/admin/DownloadWizardPage'
 import AdminJobsPage from '../pages/admin/JobsPage'
-import StoragePage from '../pages/admin/StoragePage'
 import AuditPage from '../pages/admin/AuditPage'
 import PolicyPage from '../pages/admin/PolicyPage'
 import NotFoundPage from '../pages/NotFoundPage'
@@ -119,7 +117,7 @@ export default function App() {
         <Route path="drive" element={<WorkerOnly><WorkerDrive /></WorkerOnly>} />
         <Route path="jobs" element={<WorkerOnly><WorkerJobs /></WorkerOnly>} />
         <Route path="jobs/:id" element={<WorkerOnly><JobDetailPage basePath="/app/jobs" /></WorkerOnly>} />
-        <Route path="documents" element={<WorkerOnly><WorkerDocuments /></WorkerOnly>} />
+        <Route path="documents" element={<Navigate to="/app/jobs" replace />} />
         <Route path="security" element={<SecurityPage />} />
 
         <Route path="admin" element={<PermissionOnly permission={PERMISSIONS.DASHBOARD_READ}><AdminDashboard /></PermissionOnly>} />
@@ -130,7 +128,7 @@ export default function App() {
         <Route path="admin/downloads" element={<PermissionOnly permission={PERMISSIONS.JOBS_CREATE}><DownloadWizardPage /></PermissionOnly>} />
         <Route path="admin/jobs" element={<PermissionOnly permission={PERMISSIONS.JOBS_READ}><AdminJobsPage /></PermissionOnly>} />
         <Route path="admin/jobs/:id" element={<PermissionOnly permission={PERMISSIONS.JOBS_READ}><JobDetailPage basePath="/app/admin/jobs" /></PermissionOnly>} />
-        <Route path="admin/storage" element={<PermissionOnly permission={PERMISSIONS.STORAGE_READ}><StoragePage /></PermissionOnly>} />
+        <Route path="admin/storage" element={<Navigate to="/app/admin/jobs" replace />} />
         <Route path="admin/audit" element={
           <PermissionAny permissions={[PERMISSIONS.AUDIT_READ, PERMISSIONS.AUDIT_OPERATIONAL_READ]}>
             <AuditPage />

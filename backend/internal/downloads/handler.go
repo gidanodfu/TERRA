@@ -288,32 +288,6 @@ func jsonMarshal(v any) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func (h *Handler) MyFiles(w http.ResponseWriter, r *http.Request) {
-	actor, _ := principal.Current(r.Context())
-	page, size, _ := httpx.Pagination(r)
-	files, total, err := h.svc.StoredFiles(r.Context(), actor.ID, false, page, size)
-	if err != nil {
-		httpx.WriteError(w, r, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.ListResponse{
-		Data: files, Pagination: httpx.Page{Page: page, PageSize: size, Total: total},
-	})
-}
-
-func (h *Handler) AdminStorage(w http.ResponseWriter, r *http.Request) {
-	actor, _ := principal.Current(r.Context())
-	page, size, _ := httpx.Pagination(r)
-	files, total, err := h.svc.StoredFiles(r.Context(), actor.ID, true, page, size)
-	if err != nil {
-		httpx.WriteError(w, r, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.ListResponse{
-		Data: files, Pagination: httpx.Page{Page: page, PageSize: size, Total: total},
-	})
-}
-
 func (h *Handler) FileContent(w http.ResponseWriter, r *http.Request) {
 	actor, _ := principal.Current(r.Context())
 	fileID, err := uuid.Parse(r.PathValue("id"))

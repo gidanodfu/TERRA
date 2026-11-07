@@ -79,6 +79,9 @@ físicas de snapshots existentes.
 - `drive_connections` incluye `google_subject`, refresh token cifrado, scopes, estado y consentimiento.
 - `drive_nodes` conserva metadatos observados (nombre, MIME, tamaño, fechas, enlace, descripción, destacado, compartido, capacidad de descarga, atajos y revisión); `drive_node_parents` mantiene las relaciones padre-hijo actuales.
 - `stored_files` referencia nodo, job, propietario, ruta relativa, MIME exportado, SHA-256 y estado.
+  Los elementos de trabajo exponen su `stored_files.id` mediante una consulta derivada
+  `job_id + drive_node_id`; no se añade una FK ni se modifica `download_items`.
+  La interfaz consulta los archivos desde el detalle del trabajo.
 
 ### Trabajos y cola
 

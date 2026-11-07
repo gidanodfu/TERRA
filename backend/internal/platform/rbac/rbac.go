@@ -24,7 +24,6 @@ const (
 	PermJobsCreate           = "admin.jobs.create"
 	PermJobsCancel           = "admin.jobs.cancel"
 	PermJobsRetry            = "admin.jobs.retry"
-	PermStorageRead          = "admin.storage.read"
 	PermAuditRead            = "admin.audit.read"
 	PermAuditOperationalRead = "admin.audit.operational.read"
 	PermPolicyWrite          = "admin.policy.write"
@@ -46,7 +45,6 @@ var adminPermissions = []string{
 	PermJobsCreate,
 	PermJobsCancel,
 	PermJobsRetry,
-	PermStorageRead,
 	PermAuditRead,
 	PermPolicyWrite,
 	PermFilesRead,
@@ -70,13 +68,12 @@ var readOnlyPermissions = []string{
 	PermOrganizationRead,
 	PermDriveRead,
 	PermJobsRead,
-	PermStorageRead,
 	PermAuditRead,
 }
 
 var userPermissions = []string{
 	"me.read", "me.profile.write", "me.drive.read", "me.drive.connect", "me.drive.disconnect",
-	"me.jobs.read", "me.files.read", "me.policy.accept",
+	"me.jobs.read", "me.policy.accept",
 }
 
 // IsAdministrativeRole indica si el rol pertenece a los perfiles administrativos.

@@ -48,18 +48,6 @@ const jobs = Array.from({ length: 18 }, (_, index) => ({
   requested_by_name: 'Ada Admin',
 }))
 
-const files = Array.from({ length: 8 }, (_, index) => ({
-  id: `file-${index}-12345678`,
-  name: `informe-ejecutivo-${index}-con-un-nombre-extremadamente-largo-2026.pdf`,
-  job_id: `abcdef${index}12345678`,
-  area_name: longArea,
-  position_name: longPosition,
-  owner_name: workerUser.display_name,
-  size_bytes: 987654321,
-  created_at: '2026-11-03T12:00:00Z',
-  export_mime_type: index === 0 ? 'application/vnd.google-apps.document' : null,
-}))
-
 const connection = {
   status: 'connected',
   google_email: workerUser.email,
@@ -111,9 +99,6 @@ function payloadFor(url, getUser) {
   if (path.endsWith('/me/drive/connection')) return { connection, policy }
   if (path.endsWith('/download-jobs') || path.endsWith('/admin/download-jobs')) {
     return { data: jobs, pagination: { total: jobs.length } }
-  }
-  if (path.endsWith('/me/stored-files') || path.endsWith('/admin/storage')) {
-    return { data: files, pagination: { total: files.length } }
   }
   if (path.endsWith('/public/areas')) {
     return { data: [{ id: 'a1', name: longArea, status: 'active' }] }
@@ -167,9 +152,10 @@ test('el panel del trabajador usa dos superficies homologadas con administració
   await expect(header).toContainText('Inicio')
   await expect(header.getByText('Trabajador', { exact: true })).toBeVisible()
 
-  for (const label of ['Inicio', 'Mi perfil', 'Google Drive', 'Mis descargas', 'Mis documentos', 'Seguridad']) {
+  for (const label of ['Inicio', 'Mi perfil', 'Google Drive', 'Mis descargas', 'Seguridad']) {
     await expect(sidebar.getByRole('link', { name: label, exact: true })).toBeVisible()
   }
+  await expect(sidebar.getByRole('link', { name: 'Mis documentos' })).toHaveCount(0)
 
   const scroll = page.getByTestId('worker-scroll')
   await expect(scroll).toBeVisible()
@@ -222,7 +208,6 @@ test('los módulos del trabajador se ejecutan dentro del workspace', async ({ pa
     ['/app/profile', 'Mi perfil', 'Mi perfil'],
     ['/app/drive', 'Conexión de Google Drive', 'Google Drive'],
     ['/app/jobs', 'Mis descargas', 'Mis descargas'],
-    ['/app/documents', 'Mis documentos', 'Mis documentos'],
     ['/app/security', 'Seguridad y sesión', 'Seguridad'],
   ]
 
@@ -239,6 +224,30 @@ test('los módulos del trabajador se ejecutan dentro del workspace', async ({ pa
   }
 })
 
+test('el inicio no consulta el listado legacy ni muestra Mis documentos', async ({ page }) => {
+  const paths = []
+  page.on('request', (request) => {
+    const pathname = new URL(request.url()).pathname
+    if (pathname.startsWith('/api/v1/')) paths.push(pathname)
+  })
+  await mockApi(page, () => workerUser)
+  await page.goto('/app')
+  await expect(page.getByRole('heading', { name: 'Hola, María Fernanda' })).toBeVisible()
+
+  expect(paths.filter((pathname) => pathname.endsWith('/me/stored-files'))).toHaveLength(0)
+  await expect(page.getByText('Documentos disponibles')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Mis documentos' })).toHaveCount(0)
+  await expect(page.getByText('Política institucional', { exact: true })).toBeVisible()
+  await expect(page.getByText('Trabajos activos', { exact: true })).toBeVisible()
+})
+
+test('la ruta legacy de documentos redirige a Mis descargas', async ({ page }) => {
+  await mockApi(page, () => workerUser)
+  await page.goto('/app/documents')
+  await expect(page).toHaveURL(/\/app\/jobs$/)
+  await expect(page.getByRole('heading', { name: 'Mis descargas', level: 1 })).toBeVisible()
+})
+
 test('el drawer móvil reutiliza la sidebar y cierra al navegar', async ({ page }) => {
   await mockApi(page, () => workerUser)
   await page.setViewportSize({ width: 390, height: 844 })
@@ -252,9 +261,10 @@ test('el drawer móvil reutiliza la sidebar y cierra al navegar', async ({ page 
   for (const label of ['GENERAL', 'GESTIÓN DOCUMENTAL', 'CUENTA Y SEGURIDAD']) {
     await expect(drawer.getByRole('heading', { name: label })).toBeVisible()
   }
-  for (const label of ['Inicio', 'Mi perfil', 'Google Drive', 'Mis descargas', 'Mis documentos', 'Seguridad']) {
+  for (const label of ['Inicio', 'Mi perfil', 'Google Drive', 'Mis descargas', 'Seguridad']) {
     await expect(drawer.getByRole('link', { name: label, exact: true })).toBeVisible()
   }
+  await expect(drawer.getByRole('link', { name: 'Mis documentos' })).toHaveCount(0)
   await expect(drawer.getByRole('heading', { name: /ORGANIZACIÓN|CONTROL INSTITUCIONAL/ })).toHaveCount(0)
   await expect(drawer.getByRole('button', { name: 'Activar modo oscuro' })).toBeVisible()
 

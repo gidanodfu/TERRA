@@ -96,7 +96,8 @@ trabajo original, `202` y `Idempotent-Replayed: true`, sin volver a descargar na
 ## Autorización por recurso
 
 - Trabajador: solo sus propios perfiles, conexión, trabajos y documentos (propietario o solicitante).
-- Administrador: gestión y supervisión; acceso a documentos con auditoría.
+- Administrador: gestión y supervisión; acceso a documentos con `admin.files.read` y auditoría.
+- Moderador y solo lectura: consultan trabajos, pero no descargan documentos ajenos.
 - El rol de sistema decide; el cargo organizativo no otorga permisos.
 - Ocultar un botón en el frontend no sustituye la comprobación del backend.
 

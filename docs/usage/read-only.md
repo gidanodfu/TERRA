@@ -8,7 +8,7 @@ El rol `read_only` supervisa la operación sin modificar datos.
 |---|---|
 | General | Dashboard |
 | Organización | Trabajadores, Áreas y cargos |
-| Gestión documental | Conexiones Drive, Trabajos, Almacenamiento |
+| Gestión documental | Conexiones Drive, Trabajos |
 | Control institucional | Auditoría |
 | Cuenta y seguridad | Seguridad |
 
@@ -17,7 +17,7 @@ El rol `read_only` supervisa la operación sin modificar datos.
 - Consultar el dashboard.
 - Consultar trabajadores y su detalle, sin formularios de escritura.
 - Consultar áreas, cargos e historial organizativo.
-- Consultar conexiones Drive, trabajos y metadatos de almacenamiento.
+- Consultar conexiones Drive, trabajos y su detalle.
 - Revisar la auditoría institucional completa.
 
 ## No puede

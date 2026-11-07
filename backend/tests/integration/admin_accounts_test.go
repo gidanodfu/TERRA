@@ -751,7 +751,7 @@ func TestPermissionMiddlewareByRole(t *testing.T) {
 	allowed := map[uuid.UUID][]string{
 		f.adminID:     {rbac.PermAccountsCreate, rbac.PermPolicyWrite, rbac.PermFilesRead},
 		f.moderatorID: {rbac.PermUsersWrite, rbac.PermJobsRead, rbac.PermAuditOperationalRead},
-		f.readOnlyID:  {rbac.PermUsersRead, rbac.PermStorageRead, rbac.PermAuditRead},
+		f.readOnlyID:  {rbac.PermUsersRead, rbac.PermJobsRead, rbac.PermAuditRead},
 	}
 	for actor, permissions := range allowed {
 		for _, permission := range permissions {

@@ -13,7 +13,6 @@ export const PERMISSIONS = {
   JOBS_CREATE: 'admin.jobs.create',
   JOBS_CANCEL: 'admin.jobs.cancel',
   JOBS_RETRY: 'admin.jobs.retry',
-  STORAGE_READ: 'admin.storage.read',
   AUDIT_READ: 'admin.audit.read',
   AUDIT_OPERATIONAL_READ: 'admin.audit.operational.read',
   POLICY_WRITE: 'admin.policy.write',
@@ -28,7 +27,7 @@ export const ADMIN_ROLE_OPTIONS = [
     can: [
       'Trabajadores y cuentas administrativas',
       'Organización, conexiones y trabajos',
-      'Almacenamiento, políticas y auditoría completa',
+      'Políticas y auditoría completa',
     ],
     cannot: [],
   },

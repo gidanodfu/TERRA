@@ -613,8 +613,14 @@ func (r *Repository) ListItems(ctx context.Context, jobID uuid.UUID, f ItemFilte
 	args = append(args, f.Size, (f.Page-1)*f.Size)
 	rows, err := r.pool.Query(ctx, `SELECT i.id, i.job_id, i.drive_node_id, n.google_file_id, n.name, n.mime_type,
 		i.status, i.attempt_count, i.relative_path, i.size_bytes, COALESCE(i.sha256,''),
-		COALESCE(i.error_code,''), COALESCE(i.error_message,''), i.next_retry_at, i.started_at, i.finished_at
-		FROM download_items i JOIN drive_nodes n ON n.id=i.drive_node_id`+where+`
+		COALESCE(i.error_code,''), COALESCE(i.error_message,''), i.next_retry_at, i.started_at, i.finished_at,
+		sf.id
+		FROM download_items i JOIN drive_nodes n ON n.id=i.drive_node_id
+		LEFT JOIN LATERAL (
+			SELECT sf.id FROM stored_files sf
+			WHERE sf.job_id=i.job_id AND sf.drive_node_id=i.drive_node_id AND sf.status='completed'
+			ORDER BY sf.created_at DESC, sf.id LIMIT 1
+		) sf ON true`+where+`
 		ORDER BY i.relative_path LIMIT $`+itoa(len(args)-1)+` OFFSET $`+itoa(len(args)), args...)
 	if err != nil {
 		return nil, 0, err
@@ -625,7 +631,8 @@ func (r *Repository) ListItems(ctx context.Context, jobID uuid.UUID, f ItemFilte
 		var it Item
 		if err := rows.Scan(&it.ID, &it.JobID, &it.DriveNodeID, &it.GoogleFileID, &it.Name, &it.MimeType,
 			&it.Status, &it.AttemptCount, &it.RelativePath, &it.SizeBytes, &it.SHA256,
-			&it.ErrorCode, &it.ErrorMessage, &it.NextRetryAt, &it.StartedAt, &it.FinishedAt); err != nil {
+			&it.ErrorCode, &it.ErrorMessage, &it.NextRetryAt, &it.StartedAt, &it.FinishedAt,
+			&it.StoredFileID); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, it)
@@ -677,44 +684,6 @@ func (r *Repository) EventsAfter(ctx context.Context, jobID uuid.UUID, afterID i
 }
 
 // --- archivos almacenados ---
-
-func (r *Repository) ListStoredFiles(ctx context.Context, ownerID *uuid.UUID, page, size int) ([]StoredFile, int, error) {
-	where := ""
-	args := []any{}
-	if ownerID != nil {
-		args = append(args, *ownerID)
-		where = " WHERE sf.drive_owner_user_id=$1"
-	}
-	var total int
-	if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM stored_files sf`+where, args...).Scan(&total); err != nil {
-		return nil, 0, err
-	}
-	args = append(args, size, (page-1)*size)
-	rows, err := r.pool.Query(ctx, `SELECT sf.id, sf.job_id, sf.drive_owner_user_id, n.name, sf.relative_path,
-		sf.size_bytes, sf.sha256, COALESCE(sf.export_mime_type,''), sf.created_at,
-		COALESCE(NULLIF(btrim(COALESCE(u.first_name,'') || ' ' || COALESCE(u.last_name,'')), ''), u.display_name, ''),
-		COALESCE(a.name,''), COALESCE(p.name,'')
-		FROM stored_files sf JOIN drive_nodes n ON n.id=sf.drive_node_id
-		JOIN users u ON u.id=sf.drive_owner_user_id
-		LEFT JOIN areas a ON a.id=u.area_id
-		LEFT JOIN positions p ON p.id=u.position_id`+where+`
-		ORDER BY sf.relative_path LIMIT $`+itoa(len(args)-1)+` OFFSET $`+itoa(len(args)), args...)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer rows.Close()
-	var out []StoredFile
-	for rows.Next() {
-		var f StoredFile
-		if err := rows.Scan(&f.ID, &f.JobID, &f.OwnerUserID, &f.Name, &f.RelativePath,
-			&f.SizeBytes, &f.SHA256, &f.ExportMIME, &f.CreatedAt,
-			&f.OwnerName, &f.AreaName, &f.PositionName); err != nil {
-			return nil, 0, err
-		}
-		out = append(out, f)
-	}
-	return out, total, rows.Err()
-}
 
 func (r *Repository) GetStoredFile(ctx context.Context, id uuid.UUID) (*StoredFile, error) {
 	var f StoredFile

@@ -106,7 +106,6 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 	mux.Handle("POST /api/v1/me/drive/connect", requireAuth(requireActive(http.HandlerFunc(h.Drive.ConnectMine))))
 	mux.Handle("DELETE /api/v1/me/drive/connection", requireAuth(requireActive(http.HandlerFunc(h.Drive.DisconnectMine))))
 	mux.Handle("POST /api/v1/me/drive/consent", requireAuth(requireActive(http.HandlerFunc(h.Drive.AcceptPolicy))))
-	mux.Handle("GET /api/v1/me/stored-files", requireAuth(requireActive(http.HandlerFunc(h.Download.MyFiles))))
 
 	// --- trabajos accesibles al propietario/solicitante (el admin ve todos, aplicado en el caso de uso) ---
 	mux.Handle("GET /api/v1/download-jobs", requireAuth(requireActive(limited(jobReadLimiter, "jobs")(http.HandlerFunc(h.Download.List)))))
@@ -172,8 +171,6 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 		requireAuth(requirePermission(rbac.PermJobsCancel)(http.HandlerFunc(h.Download.Cancel))))
 	mux.Handle("POST /api/v1/download-jobs/{id}/retry-failed",
 		requireAuth(requirePermission(rbac.PermJobsRetry)(http.HandlerFunc(h.Download.Retry))))
-	mux.Handle("GET /api/v1/admin/storage",
-		requireAuth(requirePermission(rbac.PermStorageRead)(http.HandlerFunc(h.Download.AdminStorage))))
 	mux.Handle("GET /api/v1/admin/audit-events",
 		requireAuth(requireAnyPermission("audit", rbac.PermAuditRead, rbac.PermAuditOperationalRead)(
 			http.HandlerFunc(h.Admin.AuditEvents))))

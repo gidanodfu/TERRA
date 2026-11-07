@@ -26,11 +26,13 @@ frontend/src/
 | `/politica-de-cookies` | público | Política de cookies |
 | `/Política-*`, `/Términos-*`, etc. | público | Redirección a rutas canónicas |
 | `/app` | trabajador | Inicio |
-| `/app/profile`, `/app/drive`, `/app/jobs`, `/app/documents`, `/app/security` | trabajador | Panel |
+| `/app/profile`, `/app/drive`, `/app/jobs`, `/app/security` | trabajador | Panel |
+| `/app/documents` | trabajador | Redirección a `/app/jobs` |
+| `/app/admin/storage` | autenticado | Redirección a `/app/admin/jobs` |
 | `/app/admin` | admin | Dashboard |
 | `/app/admin/workers`, `.../organization`, `.../connections` | admin | Gestión |
 | `/app/admin/downloads` | admin | Asistente de descarga |
-| `/app/admin/jobs`, `.../storage`, `.../audit`, `.../policy` | admin | Supervisión |
+| `/app/admin/jobs`, `.../audit`, `.../policy` | admin | Supervisión |
 | `/app/jobs/:id`, `/app/admin/jobs/:id` | propietario/admin | Detalle y SSE |
 
 ## Layout administrativo y del trabajador
