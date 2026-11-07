@@ -14,6 +14,7 @@ import (
 	"terra/internal/platform/crypto"
 	"terra/internal/platform/googleoauth"
 	"terra/internal/platform/oauthstate"
+	"terra/internal/platform/validate"
 	"terra/internal/users"
 )
 
@@ -158,6 +159,13 @@ func (s *Service) Disconnect(ctx context.Context, userID uuid.UUID, ipHash strin
 }
 
 func (s *Service) AcceptPolicy(ctx context.Context, userID uuid.UUID, version, ipHash string) (*Connection, error) {
+	version = strings.TrimSpace(version)
+	fields := map[string]string{}
+	validate.Required(fields, "version", version)
+	validate.MaxLen(fields, "version", version, 60)
+	if len(fields) > 0 {
+		return nil, apperr.Invalid("Revise la versión de la política.", fields)
+	}
 	latest, err := s.repo.LatestPolicy(ctx)
 	if err != nil {
 		return nil, err
@@ -182,12 +190,9 @@ func (s *Service) CreatePolicy(ctx context.Context, actor uuid.UUID, version, co
 	version = strings.TrimSpace(version)
 	content = strings.TrimSpace(content)
 	fields := map[string]string{}
-	if version == "" {
-		fields["version"] = "Indique una versión."
-	}
-	if content == "" {
-		fields["content"] = "El contenido es obligatorio."
-	}
+	validate.Required(fields, "version", version)
+	validate.MaxLen(fields, "version", version, 60)
+	validate.Required(fields, "content", content)
 	if len(fields) > 0 {
 		return nil, apperr.Invalid("Revise la política institucional.", fields)
 	}

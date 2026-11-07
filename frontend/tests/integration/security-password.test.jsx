@@ -87,4 +87,19 @@ describe('SecurityPage y credenciales locales', () => {
     expect(screen.getByText('Las contraseñas no coinciden.')).toBeInTheDocument()
     expect(api.post).not.toHaveBeenCalled()
   })
+
+  it('asocia el error del servidor al campo y conserva el formulario', async () => {
+    setRole('moderator')
+    api.post.mockRejectedValue({
+      message: 'La contraseña actual no es correcta.',
+      fields: { current_password: 'Contraseña incorrecta.' },
+    })
+    render(<SecurityPage />)
+    fireEvent.change(screen.getByLabelText('Contraseña actual'), { target: { value: 'InicialSegura-123' } })
+    fireEvent.change(screen.getByLabelText('Nueva contraseña'), { target: { value: 'NuevaSegura-456' } })
+    fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'NuevaSegura-456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar contraseña' }))
+    expect(await screen.findByText('Contraseña incorrecta.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nueva contraseña')).toHaveValue('NuevaSegura-456')
+  })
 })

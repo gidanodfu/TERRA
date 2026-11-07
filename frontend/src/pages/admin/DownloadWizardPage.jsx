@@ -26,6 +26,7 @@ export default function DownloadWizardPage() {
   const [policy, setPolicy] = useState(null)
   const [scope, setScope] = useState('my_drive_full')
   const [selection, setSelection] = useState({ folders: [], files: [] })
+  const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
 
@@ -81,6 +82,7 @@ export default function DownloadWizardPage() {
 
   const create = async () => {
     setError('')
+    setErrors({})
     if (!ready) return
     if (scope === 'selected_items' && selection.folders.length === 0 && selection.files.length === 0) {
       setError('Seleccione al menos una carpeta o archivo para respaldar.')
@@ -101,10 +103,13 @@ export default function DownloadWizardPage() {
       navigate(`/app/admin/jobs/${job.id}`)
     } catch (err) {
       setError(err.message)
+      if (err.fields) setErrors(err.fields)
     } finally {
       setCreating(false)
     }
   }
+
+  const selectionError = errors.root_folder_ids || errors.root_file_ids || errors.scope_type
 
   if (!users && !error) return <LoadingBlock />
 
@@ -204,7 +209,7 @@ export default function DownloadWizardPage() {
                 className="h-4 w-4 text-brand-700 accent-brand-700"
                 value="my_drive_full"
                 checked={scope === 'my_drive_full'}
-                onChange={() => setScope('my_drive_full')}
+                onChange={() => { setScope('my_drive_full'); setErrors({}) }}
               />
               <span className="ml-2 text-sm font-medium text-slate-900">Mi unidad completa</span>
               <p className="mt-2 text-xs text-slate-500">
@@ -218,7 +223,7 @@ export default function DownloadWizardPage() {
                 className="h-4 w-4 text-brand-700 accent-brand-700"
                 value="selected_items"
                 checked={scope === 'selected_items'}
-                onChange={() => setScope('selected_items')}
+                onChange={() => { setScope('selected_items'); setErrors({}) }}
               />
               <span className="ml-2 text-sm font-medium text-slate-900">Archivos y carpetas seleccionados</span>
               <p className="mt-2 text-xs text-slate-500">
@@ -232,9 +237,10 @@ export default function DownloadWizardPage() {
               <FolderPicker
                 userId={workerId}
                 selected={selection}
-                onChange={setSelection}
+                onChange={(next) => { setSelection(next); setErrors({}) }}
                 disabled={!ready || creating}
               />
+              {selectionError ? <p className="field-error">{selectionError}</p> : null}
             </div>
           ) : null}
         </CardBody>

@@ -1,5 +1,8 @@
 # OAuth de Google Drive
 
+La configuración operativa de Google Cloud Console se detalla en
+[Google Cloud, OAuth 2.0 y Google Drive](../integrations/google-cloud-drive-oauth.md).
+
 ## Tipo de aplicación
 
 - **External**, porque los trabajadores usan cuentas personales.

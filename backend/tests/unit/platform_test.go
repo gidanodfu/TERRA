@@ -1,12 +1,16 @@
 package unit_test
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"terra/internal/auth"
 	"terra/internal/downloads"
 	"terra/internal/drive"
 	"terra/internal/platform/apperr"
+	"terra/internal/platform/httpx"
 	"terra/internal/platform/ratelimit"
 	"terra/internal/platform/validate"
 )
@@ -20,6 +24,42 @@ func TestValidationHelpers(t *testing.T) {
 	}
 	if got := validate.NormalizeName("  Cargo   Único "); got != "cargo único" {
 		t.Fatalf("normalización inesperada: %q", got)
+	}
+	fields := map[string]string{}
+	validate.MaxItems(fields, "lista", []string{"a", "b"}, 1, "demasiados")
+	validate.OneOf(fields, "estado", "deleted", "inválido", "active", "inactive")
+	if fields["lista"] == "" || fields["estado"] == "" {
+		t.Fatalf("validadores de lista/enumeración sin error: %+v", fields)
+	}
+}
+
+func TestDecodeRejectsInvalidTransport(t *testing.T) {
+	target := struct {
+		Name string `json:"name"`
+	}{}
+	cases := []struct {
+		name        string
+		contentType string
+		body        string
+	}{
+		{name: "sin content-type", body: `{"name":"x"}`},
+		{name: "content-type incorrecto", contentType: "text/plain", body: `{"name":"x"}`},
+		{name: "json inválido", contentType: "application/json", body: `{"name":`},
+		{name: "campo desconocido", contentType: "application/json", body: `{"name":"x","extra":true}`},
+		{name: "contenido extra", contentType: "application/json", body: `{"name":"x"} {}`},
+		{name: "cuerpo excesivo", contentType: "application/json", body: `{"name":"` + strings.Repeat("a", 1<<21) + `"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.body))
+			if tc.contentType != "" {
+				req.Header.Set("Content-Type", tc.contentType)
+			}
+			err := httpx.Decode(httptest.NewRecorder(), req, &target)
+			if apperr.As(err).Status != http.StatusBadRequest {
+				t.Fatalf("se esperaba 400, recibido %v", err)
+			}
+		})
 	}
 }
 

@@ -128,9 +128,7 @@ func (s *Service) UpdateArea(ctx context.Context, actor uuid.UUID, ipHash string
 	fields := map[string]string{}
 	validate.Required(fields, "name", newName)
 	validate.MaxLen(fields, "name", newName, 120)
-	if newStatus != "active" && newStatus != "inactive" {
-		fields["status"] = "Estado inválido."
-	}
+	validate.OneOf(fields, "status", newStatus, "Estado inválido.", "active", "inactive")
 	if responsibilities != nil {
 		cleanResp, respErr := cleanResponsibilities(*responsibilities)
 		if respErr != "" {
@@ -217,9 +215,7 @@ func (s *Service) UpdatePosition(ctx context.Context, actor uuid.UUID, ipHash st
 	fields := map[string]string{}
 	validate.Required(fields, "name", newName)
 	validate.MaxLen(fields, "name", newName, 120)
-	if newStatus != "active" && newStatus != "inactive" {
-		fields["status"] = "Estado inválido."
-	}
+	validate.OneOf(fields, "status", newStatus, "Estado inválido.", "active", "inactive")
 	if responsibilities != nil {
 		cleanResp, respErr := cleanResponsibilities(*responsibilities)
 		if respErr != "" {

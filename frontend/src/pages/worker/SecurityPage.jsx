@@ -14,6 +14,11 @@ export default function SecurityPage() {
   const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const update = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setErrors((current) => ({ ...current, [key]: undefined }))
+  }
+
   const submit = async (event) => {
     event.preventDefault()
     setError('')
@@ -130,7 +135,7 @@ export default function SecurityPage() {
                     type="password"
                     autoComplete="current-password"
                     value={form.current_password}
-                    onChange={(e) => setForm({ ...form, current_password: e.target.value })}
+                    onChange={(e) => update('current_password', e.target.value)}
                     error={errors.current_password}
                   />
                 </Field>
@@ -141,7 +146,7 @@ export default function SecurityPage() {
                       type="password"
                       autoComplete="new-password"
                       value={form.new_password}
-                      onChange={(e) => setForm({ ...form, new_password: e.target.value })}
+                      onChange={(e) => update('new_password', e.target.value)}
                       error={errors.new_password}
                     />
                   </Field>
@@ -151,7 +156,7 @@ export default function SecurityPage() {
                       type="password"
                       autoComplete="new-password"
                       value={form.confirm}
-                      onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                      onChange={(e) => update('confirm', e.target.value)}
                       error={errors.confirm}
                     />
                   </Field>

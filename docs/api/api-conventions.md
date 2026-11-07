@@ -51,6 +51,9 @@ Códigos de aplicación relevantes:
 
 `request_id` aparece también en la cabecera `X-Request-ID` y en los logs.
 
+El estándar de validación y el manejo de `fields` en React se documentan en
+[Validación de formularios](../development/form-validation.md).
+
 ## Paginación
 
 ```

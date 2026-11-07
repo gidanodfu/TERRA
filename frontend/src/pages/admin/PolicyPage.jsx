@@ -18,6 +18,7 @@ import { formatDate } from '../../utils/format'
 export default function PolicyPage() {
   const [current, setCurrent] = useState(undefined)
   const [form, setForm] = useState({ version: '', content: '' })
+  const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [busy, setBusy] = useState(false)
@@ -36,10 +37,17 @@ export default function PolicyPage() {
     load()
   }, [])
 
+  const update = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setErrors((current) => ({ ...current, [key]: undefined }))
+  }
+
   const publish = async (event) => {
     event.preventDefault()
+    if (busy) return
     setBusy(true)
     setError('')
+    setErrors({})
     setSuccess('')
     try {
       await api.post('/admin/policies', form)
@@ -48,6 +56,7 @@ export default function PolicyPage() {
       load()
     } catch (err) {
       setError(err.message)
+      if (err.fields) setErrors(err.fields)
     } finally {
       setBusy(false)
     }
@@ -97,20 +106,22 @@ export default function PolicyPage() {
               </div>
             </div>
             <form onSubmit={publish} className="space-y-4">
-              <Field label="Identificador de versión" htmlFor="version" hint="Ejemplo: 2026-01. Debe ser único.">
+              <Field label="Identificador de versión" htmlFor="version" error={errors.version} hint="Ejemplo: 2026-01. Debe ser único.">
                 <Input
                   id="version"
                   value={form.version}
-                  onChange={(e) => setForm({ ...form, version: e.target.value })}
+                  onChange={(e) => update('version', e.target.value)}
                   maxLength={60}
+                  error={errors.version}
                   placeholder="2026-01"
                 />
               </Field>
-              <Field label="Contenido aprobado" htmlFor="content">
+              <Field label="Contenido aprobado" htmlFor="content" error={errors.content}>
                 <Textarea
                   id="content"
                   value={form.content}
-                  onChange={(e) => setForm({ ...form, content: e.target.value })}
+                  onChange={(e) => update('content', e.target.value)}
+                  error={errors.content}
                   placeholder="Texto completo de la política institucional aprobada…"
                   className="min-h-48 resize-y leading-relaxed sm:min-h-52"
                 />

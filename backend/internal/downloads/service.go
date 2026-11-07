@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
@@ -12,8 +13,14 @@ import (
 	"terra/internal/drive"
 	"terra/internal/platform/apperr"
 	"terra/internal/platform/config"
+	"terra/internal/platform/validate"
 	"terra/internal/storage"
 	"terra/internal/users"
+)
+
+const (
+	maxRootSelection = 100
+	maxDriveIDLength = 256
 )
 
 type Service struct {
@@ -40,6 +47,16 @@ type CreateInput struct {
 // encola el trabajo. Nunca descarga nada dentro de la petición HTTP.
 func (s *Service) Create(ctx context.Context, actorID, ownerID uuid.UUID, in CreateInput,
 	idempotencyKey, ipHash string) (*Job, bool, error) {
+	fields := map[string]string{}
+	validate.MaxItems(fields, "root_folder_ids", in.RootFolderIDs, maxRootSelection,
+		"Seleccione como máximo 100 carpetas.")
+	validate.MaxItems(fields, "root_file_ids", in.RootFileIDs, maxRootSelection,
+		"Seleccione como máximo 100 archivos.")
+	validateSelectionIDs(fields, "root_folder_ids", in.RootFolderIDs)
+	validateSelectionIDs(fields, "root_file_ids", in.RootFileIDs)
+	if len(fields) > 0 {
+		return nil, false, apperr.Invalid("Revise la selección de archivos y carpetas.", fields)
+	}
 	switch in.ScopeType {
 	case ScopeMyDriveFull:
 		if len(in.RootFolderIDs) > 0 || len(in.RootFileIDs) > 0 {
@@ -164,6 +181,20 @@ func (s *Service) Create(ctx context.Context, actorID, ownerID uuid.UUID, in Cre
 		s.repo.AddEvent(ctx, created.ID, "job.queued", s.Payload(created))
 	}
 	return created, isNew, nil
+}
+
+func validateSelectionIDs(fields map[string]string, key string, values []string) {
+	for _, raw := range values {
+		id := strings.TrimSpace(raw)
+		if id == "" {
+			fields[key] = "Los identificadores de Drive no pueden estar vacíos."
+			return
+		}
+		if utf8.RuneCountInString(id) > maxDriveIDLength {
+			fields[key] = "Uno de los identificadores de Drive es demasiado largo."
+			return
+		}
+	}
 }
 
 func (s *Service) Get(ctx context.Context, actorID uuid.UUID, admin bool, jobID uuid.UUID) (*Job, error) {

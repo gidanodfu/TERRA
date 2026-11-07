@@ -170,7 +170,7 @@ paths:
               type: object
               required: [current_password, new_password]
               properties:
-                current_password: { type: string, format: password }
+                current_password: { type: string, format: password, minLength: 1 }
                 new_password: { type: string, minLength: 12 }
       responses:
         "200": { description: Contraseña actualizada }
@@ -269,13 +269,14 @@ paths:
               type: object
               required: [version]
               properties:
-                version: { type: string }
+                version: { type: string, minLength: 1, maxLength: 60 }
       responses:
         "200":
           description: Consentimiento registrado
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Connection" }
+        "422": { $ref: "#/components/responses/Validation" }
         "409":
           description: La versión no es la vigente o falta conexión
           content:
@@ -489,6 +490,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/User" }
+        "422": { $ref: "#/components/responses/Validation" }
         "409": { description: No puede suspenderse a sí mismo }
   /admin/accounts:
     get:
@@ -777,14 +779,15 @@ paths:
               type: object
               required: [version, content]
               properties:
-                version: { type: string }
-                content: { type: string }
+                version: { type: string, minLength: 1, maxLength: 60 }
+                content: { type: string, minLength: 1 }
       responses:
         "201":
           description: Publicada
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Policy" }
+        "422": { $ref: "#/components/responses/Validation" }
         "409": { description: Versión duplicada }
   /admin/users/{userId}/download-jobs:
     post:
@@ -804,11 +807,13 @@ paths:
                 scope_type: { type: string, enum: [my_drive_full, selected_folders, selected_items] }
                 root_folder_ids:
                   type: array
-                  items: { type: string }
+                  maxItems: 100
+                  items: { type: string, maxLength: 256 }
                   description: Carpetas raíz. Requerido en selected_folders; opcional en selected_items.
                 root_file_ids:
                   type: array
-                  items: { type: string }
+                  maxItems: 100
+                  items: { type: string, maxLength: 256 }
                   description: Archivos individuales para selected_items. No se permiten en my_drive_full.
               description: |
                 `selected_items` acepta carpetas, archivos o ambos. Si un archivo está
@@ -826,6 +831,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Job" }
+        "422": { $ref: "#/components/responses/Validation" }
         "409":
           description: Sin conexión/política o capacidad excedida
           content:

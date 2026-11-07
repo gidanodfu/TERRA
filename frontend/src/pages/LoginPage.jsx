@@ -33,6 +33,11 @@ export default function LoginPage() {
     return <Navigate to={user.roles?.includes('admin') ? '/app/admin' : '/app'} replace />
   }
 
+  const update = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setFieldErrors((current) => ({ ...current, [key]: undefined }))
+  }
+
   const submit = async (event) => {
     event.preventDefault()
     setError('')
@@ -118,7 +123,7 @@ export default function LoginPage() {
                   id="username"
                   autoComplete="username"
                   value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  onChange={(e) => update('username', e.target.value)}
                   error={fieldErrors.username}
                   placeholder="Usuario"
                   disabled={submitting}
@@ -130,7 +135,7 @@ export default function LoginPage() {
                   type="password"
                   autoComplete="current-password"
                   value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  onChange={(e) => update('password', e.target.value)}
                   error={fieldErrors.password}
                   placeholder="••••••••••••"
                   disabled={submitting}

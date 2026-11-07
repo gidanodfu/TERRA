@@ -27,6 +27,7 @@ export default function WorkerDetailPage() {
   const [areas, setAreas] = useState([])
   const [positions, setPositions] = useState([])
   const [form, setForm] = useState({ area_id: '', position_id: '', status: 'active' })
+  const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
@@ -40,6 +41,7 @@ export default function WorkerDetailPage() {
         position_id: data.user.position_id || '',
         status: data.user.status,
       })
+      setErrors({})
       setError('')
     } catch (err) {
       setError(err.message)
@@ -72,9 +74,15 @@ export default function WorkerDetailPage() {
     }
   }, [form.area_id])
 
+  const update = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setErrors((current) => ({ ...current, [key]: undefined }))
+  }
+
   const save = async (event) => {
     event.preventDefault()
     setError('')
+    setErrors({})
     setSuccess('')
     setSaving(true)
     try {
@@ -87,6 +95,7 @@ export default function WorkerDetailPage() {
       await load()
     } catch (err) {
       setError(err.message)
+      if (err.fields) setErrors(err.fields)
     } finally {
       setSaving(false)
     }
@@ -155,11 +164,12 @@ export default function WorkerDetailPage() {
             <form onSubmit={save} className="mt-6 space-y-4 border-t border-slate-100 pt-5">
               <h3 className="text-sm font-semibold text-slate-900">Modificar asignación</h3>
               <div className="grid gap-4 @md:grid-cols-2">
-                <Field label="Área" htmlFor="area_id">
+                <Field label="Área" htmlFor="area_id" error={errors.area_id}>
                   <Select
                     id="area_id"
                     value={form.area_id}
-                    onChange={(e) => setForm({ ...form, area_id: e.target.value, position_id: '' })}
+                    onChange={(e) => { update('area_id', e.target.value); update('position_id', '') }}
+                    error={errors.area_id}
                   >
                     <option value="">Sin área</option>
                     {areas.map((area) => (
@@ -167,12 +177,13 @@ export default function WorkerDetailPage() {
                     ))}
                   </Select>
                 </Field>
-                <Field label="Cargo" htmlFor="position_id">
+                <Field label="Cargo" htmlFor="position_id" error={errors.position_id}>
                   <Select
                     id="position_id"
                     value={form.position_id}
-                    onChange={(e) => setForm({ ...form, position_id: e.target.value })}
+                    onChange={(e) => update('position_id', e.target.value)}
                     disabled={!form.area_id}
+                    error={errors.position_id}
                   >
                     <option value="">Sin cargo</option>
                     {positions.map((position) => (
@@ -183,8 +194,8 @@ export default function WorkerDetailPage() {
                   </Select>
                 </Field>
               </div>
-              <Field label="Estado de la cuenta" htmlFor="status" hint="Suspender o desactivar invalida todas las sesiones activas.">
-                <Select id="status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <Field label="Estado de la cuenta" htmlFor="status" error={errors.status} hint="Suspender o desactivar invalida todas las sesiones activas.">
+                <Select id="status" value={form.status} onChange={(e) => update('status', e.target.value)} error={errors.status}>
                   <option value="active">Activo</option>
                   <option value="pending_profile">Perfil pendiente</option>
                   <option value="suspended">Suspendido</option>

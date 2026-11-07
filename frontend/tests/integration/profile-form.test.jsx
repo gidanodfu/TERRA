@@ -49,4 +49,17 @@ describe('ProfileForm', () => {
       position_id: 'pos-1',
     }))
   })
+
+  it('muestra los errores del servidor junto al campo y conserva los datos', async () => {
+    api.patch.mockRejectedValue({
+      message: 'Revise los campos indicados.',
+      fields: { first_name: 'El nombre no es válido.' },
+    })
+    render(<ProfileForm user={workerUser} />)
+    await screen.findByRole('option', { name: 'Sistemas' })
+    fireEvent.click(screen.getByRole('button', { name: /Guardar perfil/i }))
+    expect(await screen.findByText('El nombre no es válido.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nombres')).toHaveValue(workerUser.first_name)
+    expect(screen.getByLabelText('Apellidos')).toHaveValue(workerUser.last_name)
+  })
 })

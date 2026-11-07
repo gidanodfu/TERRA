@@ -23,6 +23,23 @@ func MaxLen(fields map[string]string, key, value string, max int) {
 	}
 }
 
+// MaxItems registra el error cuando la lista supera el máximo permitido.
+func MaxItems(fields map[string]string, key string, values []string, max int, message string) {
+	if len(values) > max {
+		fields[key] = message
+	}
+}
+
+// OneOf valida una enumeración y conserva un mensaje específico por campo.
+func OneOf(fields map[string]string, key, value, message string, allowed ...string) {
+	for _, candidate := range allowed {
+		if value == candidate {
+			return
+		}
+	}
+	fields[key] = message
+}
+
 // Slug produce un slug ASCII seguro para las restricciones de base de datos y las rutas de almacenamiento.
 // Los acentos se pliegan mediante NFD para que "Área" y "Area" produzcan el mismo identificador.
 func Slug(value string) string {

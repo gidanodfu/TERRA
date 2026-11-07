@@ -325,7 +325,10 @@ export default function OrganizationPage() {
               <Input
                 id="area-name"
                 value={areaModal.name}
-                onChange={(e) => setAreaModal({ ...areaModal, name: e.target.value })}
+                onChange={(e) => {
+                  setAreaModal({ ...areaModal, name: e.target.value })
+                  setAreaFieldErrors((current) => ({ ...current, name: undefined }))
+                }}
                 error={areaFieldErrors.name}
                 maxLength={120}
                 autoFocus
@@ -339,7 +342,10 @@ export default function OrganizationPage() {
               <ResponsibilitiesEditor
                 idPrefix="area-responsibility"
                 values={areaModal.responsibilities || []}
-                onChange={(responsibilities) => setAreaModal({ ...areaModal, responsibilities })}
+                onChange={(responsibilities) => {
+                  setAreaModal({ ...areaModal, responsibilities })
+                  setAreaFieldErrors((current) => ({ ...current, responsibilities: undefined }))
+                }}
                 disabled={busy}
               />
             </Field>
@@ -348,7 +354,10 @@ export default function OrganizationPage() {
                 <Select
                   id="area-status"
                   value={areaModal.status}
-                  onChange={(e) => setAreaModal({ ...areaModal, status: e.target.value })}
+                  onChange={(e) => {
+                  setAreaModal({ ...areaModal, status: e.target.value })
+                  setAreaFieldErrors((current) => ({ ...current, status: undefined }))
+                }}
                 >
                   <option value="active">Activa</option>
                   <option value="inactive">Inactiva</option>
@@ -379,7 +388,10 @@ export default function OrganizationPage() {
               <Input
                 id="position-name"
                 value={positionModal.name}
-                onChange={(e) => setPositionModal({ ...positionModal, name: e.target.value })}
+                onChange={(e) => {
+                  setPositionModal({ ...positionModal, name: e.target.value })
+                  setPositionFieldErrors((current) => ({ ...current, name: undefined }))
+                }}
                 error={positionFieldErrors.name}
                 maxLength={120}
                 autoFocus
@@ -393,7 +405,10 @@ export default function OrganizationPage() {
               <ResponsibilitiesEditor
                 idPrefix="position-responsibility"
                 values={positionModal.responsibilities || []}
-                onChange={(responsibilities) => setPositionModal({ ...positionModal, responsibilities })}
+                onChange={(responsibilities) => {
+                  setPositionModal({ ...positionModal, responsibilities })
+                  setPositionFieldErrors((current) => ({ ...current, responsibilities: undefined }))
+                }}
                 disabled={busy}
               />
             </Field>
@@ -402,7 +417,10 @@ export default function OrganizationPage() {
                 <Select
                   id="position-status"
                   value={positionModal.status}
-                  onChange={(e) => setPositionModal({ ...positionModal, status: e.target.value })}
+                  onChange={(e) => {
+                  setPositionModal({ ...positionModal, status: e.target.value })
+                  setPositionFieldErrors((current) => ({ ...current, status: undefined }))
+                }}
                 >
                   <option value="active">Activo</option>
                   <option value="inactive">Inactivo</option>

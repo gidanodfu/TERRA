@@ -21,6 +21,7 @@ import (
 	"terra/internal/platform/principal"
 	"terra/internal/platform/ratelimit"
 	"terra/internal/platform/rbac"
+	"terra/internal/platform/validate"
 	"terra/internal/users"
 )
 
@@ -244,6 +245,12 @@ func (s *Service) Logout(ctx context.Context, rawToken string, userID string, ip
 }
 
 func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, sessionToken, current, next, ipHash string) error {
+	fields := map[string]string{}
+	validate.Required(fields, "current_password", current)
+	validate.Required(fields, "new_password", next)
+	if len(fields) > 0 {
+		return apperr.Invalid("Complete ambos campos de contraseña.", fields)
+	}
 	cred, err := s.repo.GetLocalCredentialByUserID(ctx, userID)
 	if err != nil {
 		return err
