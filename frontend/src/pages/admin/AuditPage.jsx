@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ScrollText, Search } from 'lucide-react'
 import { api, queryString } from '../../services/api'
 import {
@@ -13,6 +13,8 @@ import {
 import { formatDate } from '../../utils/format'
 import { useAuth } from '../../app/AuthContext'
 import { PERMISSIONS } from '../../features/auth/permissions'
+import AuditDetailDrawer from '../../features/audit/AuditDetailDrawer'
+import { getAuditEventDefinition, getTargetLabel } from '../../features/audit/audit-catalog'
 
 export default function AuditPage() {
   const { can } = useAuth()
@@ -24,8 +26,9 @@ export default function AuditPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [error, setError] = useState('')
-  const [expanded, setExpanded] = useState(null)
+  const [selectedEvent, setSelectedEvent] = useState(null)
   const pageSize = 25
+  const closeDetail = useCallback(() => setSelectedEvent(null), [])
 
   const search = (event) => {
     event?.preventDefault()
@@ -92,37 +95,41 @@ export default function AuditPage() {
                 </tr>
               </thead>
               <tbody>
-                {events.map((event) => (
-                  <tr key={event.id} className="align-top">
-                    <td className="font-medium text-slate-800">{event.action}</td>
-                    <td className="hidden text-sm text-slate-600 sm:table-cell">{event.actor_name || 'Sistema'}</td>
-                    <td className="hidden text-xs text-slate-500 md:table-cell">
-                      {event.target_type}
-                      {event.target_id ? <><br />{event.target_id}</> : null}
-                    </td>
-                    <td className="whitespace-nowrap text-sm text-slate-500">{formatDate(event.created_at)}</td>
-                    <td className="text-right">
-                      <button
-                        type="button"
-                        className="text-sm font-medium text-brand-700 hover:underline"
-                        onClick={() => setExpanded(expanded === event.id ? null : event.id)}
-                      >
-                        {expanded === event.id ? 'Ocultar' : 'Ver'}
-                      </button>
-                      {expanded === event.id ? (
-                        <pre className="code-block mt-2 max-w-xs overflow-x-auto rounded-lg p-2 text-left text-xs">
-                          {JSON.stringify(event.metadata || {}, null, 2)}
-                        </pre>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
+                {events.map((event) => {
+                  const definition = getAuditEventDefinition(event.action)
+                  return (
+                    <tr key={event.id} className={`align-top ${selectedEvent?.id === event.id ? 'bg-muted' : ''}`}>
+                      <td>
+                        <p className="font-medium text-slate-800">{definition.title}</p>
+                        <p className="font-mono text-xs text-slate-400">{event.action}</p>
+                      </td>
+                      <td className="hidden text-sm text-slate-600 sm:table-cell">{event.actor_name || 'Sistema'}</td>
+                      <td className="hidden text-xs text-slate-500 md:table-cell">
+                        {getTargetLabel(event.target_type)}
+                        {event.target_id ? <><br /><span className="font-mono">{event.target_id.slice(0, 8)}…</span></> : null}
+                      </td>
+                      <td className="whitespace-nowrap text-sm text-slate-500">{formatDate(event.created_at)}</td>
+                      <td className="text-right">
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-brand-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+                          onClick={() => setSelectedEvent(event)}
+                          aria-label={`Ver detalle de ${definition.title}`}
+                        >
+                          Ver
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
           <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} />
         </>
       ) : null}
+
+      <AuditDetailDrawer event={selectedEvent} onClose={closeDetail} />
     </div>
   )
 }
