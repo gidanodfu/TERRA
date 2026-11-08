@@ -3,18 +3,21 @@ import {
   ADMIN_PERMISSIONS,
   MODERATOR_PERMISSIONS,
   READ_ONLY_PERMISSIONS,
+  WORKER_PERMISSIONS,
 } from '../fixtures/permissions'
 
 const users = {
   admin: { id: 'admin-1', display_name: 'Ada Admin', email: 'ada@example.test', status: 'active', roles: ['admin'], area_name: 'Sistemas' },
   moderator: { id: 'mod-1', display_name: 'Marta Moderadora', email: 'marta@example.test', status: 'active', roles: ['moderator'], area_name: 'Sistemas' },
   read_only: { id: 'read-1', display_name: 'Rita Consulta', email: 'rita@example.test', status: 'active', roles: ['read_only'], area_name: 'Sistemas' },
+  user: { id: 'user-1', display_name: 'Tra Bajador', email: 'tra@example.test', status: 'active', roles: ['user'], area_name: 'Sistemas' },
 }
 
 const permissions = {
   admin: ADMIN_PERMISSIONS,
   moderator: MODERATOR_PERMISSIONS,
   read_only: READ_ONLY_PERMISSIONS,
+  user: WORKER_PERMISSIONS,
 }
 
 const operatorEvent = {
@@ -98,6 +101,7 @@ const unknownEvent = {
     flag: true,
     list: [1, 2],
     empty: null,
+    ...Object.fromEntries(Array.from({ length: 12 }, (_, index) => [`extra_${index + 1}`, `Valor adicional ${index + 1}`])),
     nested: {
       allowed: 'Anidado visible',
       password: 'secreto-no-visible',
@@ -166,6 +170,13 @@ test('el administrador consulta el detalle contextual de la auditoría', async (
   await expect(dialog.getByText('Correcto').first()).toBeVisible()
   await expect(dialog.getByText('Ada Admin')).toBeVisible()
 
+  const centeredBox = await dialog.boundingBox()
+  expect(centeredBox.width).toBeLessThanOrEqual(800)
+  expect(centeredBox.height).toBeLessThanOrEqual(Math.floor(900 * 0.86))
+  expect(Math.abs(centeredBox.x + centeredBox.width / 2 - 720)).toBeLessThanOrEqual(2)
+  expect(Math.abs(centeredBox.y + centeredBox.height / 2 - 450)).toBeLessThanOrEqual(2)
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden')
+
   const technical = dialog.locator('details')
   expect(await technical.evaluate((element) => element.open)).toBeFalsy()
   await dialog.getByText('Información técnica').click()
@@ -175,6 +186,8 @@ test('el administrador consulta el detalle contextual de la auditoría', async (
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(auditRequests).toBe(requestsBeforeClose)
+  await expect(page.getByRole('button', { name: 'Ver detalle de Inicio de sesión administrativo' })).toBeFocused()
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe('')
 
   await page.getByLabel('Filtrar por acción').fill('download_job.created')
   await page.getByRole('button', { name: 'Filtrar' }).click()
@@ -214,6 +227,19 @@ test('el administrador consulta el detalle contextual de la auditoría', async (
   await expect(dialog.getByText('token-no-visible')).toHaveCount(0)
   await expect(dialog.getByText('ruta/fisica/no-visible')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440)
+
+  const body = page.getByTestId('audit-detail-body')
+  const header = page.getByTestId('audit-detail-header')
+  const footer = page.getByTestId('audit-detail-footer')
+  const headerTop = (await header.boundingBox()).y
+  const footerBottom = (await footer.boundingBox()).y + (await footer.boundingBox()).height
+  expect(await body.evaluate((element) => element.scrollHeight > element.clientHeight)).toBeTruthy()
+  await body.hover()
+  await page.mouse.wheel(0, 600)
+  await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  expect((await header.boundingBox()).y).toBe(headerTop)
+  expect((await footer.boundingBox()).y + (await footer.boundingBox()).height).toBe(footerBottom)
+  await expect(page.getByRole('button', { name: 'Cerrar', exact: true })).toBeVisible()
 })
 
 test('el moderador ve solo sus eventos con el mismo detalle', async ({ page }) => {
@@ -238,16 +264,37 @@ test('solo lectura consulta el detalle sin acciones de escritura', async ({ page
   await expect(dialog.getByRole('button', { name: /Editar|Eliminar|Desactivar|Publicar/i })).toHaveCount(0)
 })
 
+
+test('el trabajador permanece excluido de Auditoría', async ({ page }) => {
+  await mockAudit(page, 'user', [])
+  await page.goto('/app')
+  await expect(page.getByTestId('worker-sidebar')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Auditoría' })).toHaveCount(0)
+  await expect(page.getByText('Ver auditoría')).toHaveCount(0)
+
+  await page.goto('/app/admin/audit')
+  await expect(page.getByText('Acceso no autorizado')).toBeVisible()
+})
+
 test('el detalle se adapta a móvil y True Black', async ({ page }) => {
   await mockAudit(page, 'admin', allEvents)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/app/admin/audit')
   const dialog = await openDetail(page, 'Acceso al archivo rechazado')
   const box = await dialog.boundingBox()
-  expect(Math.round(box.width)).toBe(390)
+  expect(box.width).toBeLessThanOrEqual(390)
+  expect(box.width).toBeGreaterThan(320)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   await expect(dialog.getByText('Rechazado', { exact: true }).first()).toBeVisible()
-  await page.keyboard.press('Escape')
+  await page.mouse.click(2, 2)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  await page.setViewportSize({ width: 768, height: 1024 })
+  const tabletDialog = await openDetail(page, 'Google Drive conectado')
+  const tabletBox = await tabletDialog.boundingBox()
+  expect(tabletBox.width).toBeLessThanOrEqual(768 * 0.9)
+  expect(Math.abs(tabletBox.x + tabletBox.width / 2 - 384)).toBeLessThanOrEqual(2)
+  await tabletDialog.getByRole('button', { name: 'Cerrar', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
 
   await page.setViewportSize({ width: 1280, height: 800 })

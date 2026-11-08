@@ -8,7 +8,7 @@ export default function AuditEventHeader({ event, definition, titleId, onClose, 
   const result = auditEventResult(event)
 
   return (
-    <header className="shrink-0 border-b border-slate-200 px-5 py-4">
+    <header data-testid="audit-detail-header" className="shrink-0 border-b border-slate-200 px-5 py-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

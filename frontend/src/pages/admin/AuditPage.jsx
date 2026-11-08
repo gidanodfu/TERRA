@@ -13,7 +13,7 @@ import {
 import { formatDate } from '../../utils/format'
 import { useAuth } from '../../app/AuthContext'
 import { PERMISSIONS } from '../../features/auth/permissions'
-import AuditDetailDrawer from '../../features/audit/AuditDetailDrawer'
+import AuditDetailModal from '../../features/audit/AuditDetailModal'
 import { getAuditEventDefinition, getTargetLabel } from '../../features/audit/audit-catalog'
 
 export default function AuditPage() {
@@ -129,7 +129,7 @@ export default function AuditPage() {
         </>
       ) : null}
 
-      <AuditDetailDrawer event={selectedEvent} onClose={closeDetail} />
+      <AuditDetailModal event={selectedEvent} onClose={closeDetail} />
     </div>
   )
 }

@@ -110,7 +110,7 @@ export default function AuditDetailFields({ event, definition }) {
 
   const shown = new Set(rows.map((row) => row.key))
   for (const [key, value] of Object.entries(metadata).sort(([a], [b]) => a.localeCompare(b))) {
-    if (!shown.has(key)) rows.push({ key, value })
+    if (!shown.has(key) && key !== 'result') rows.push({ key, value })
   }
 
   return (
@@ -123,16 +123,22 @@ export default function AuditDetailFields({ event, definition }) {
           El evento no registra metadatos adicionales.
         </p>
       ) : (
-        <dl className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-surface-secondary px-4">
-          {rows.map(({ key, value }) => (
-            <div key={key} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-              <dt className="shrink-0 text-sm text-slate-500">{fieldLabel(key)}</dt>
-              <dd className="min-w-0 wrap-anywhere text-sm font-medium text-slate-800 sm:text-right">
-                <NestedValue fieldKey={key} value={value} />
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <div className="rounded-xl border border-slate-200 bg-surface-secondary p-4">
+          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            {rows.map(({ key, value }) => {
+              const wide = value !== null && typeof value === 'object'
+              const longText = typeof value === 'string' && value.length > 48
+              return (
+                <div key={key} className={`min-w-0 ${wide || longText ? 'sm:col-span-2' : ''}`}>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{fieldLabel(key)}</dt>
+                  <dd className="mt-1 min-w-0 wrap-anywhere text-sm font-medium text-slate-800">
+                    <NestedValue fieldKey={key} value={value} />
+                  </dd>
+                </div>
+              )
+            })}
+          </dl>
+        </div>
       )}
     </section>
   )

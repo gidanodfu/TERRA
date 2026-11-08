@@ -75,6 +75,11 @@ export function formatAuditReason(value) {
   return REASON_LABELS[value] || humanizeAuditKey(value)
 }
 
+export function formatAuditKind(value) {
+  const labels = { worker: 'Trabajador', administrative: 'Cuenta administrativa' }
+  return labels[value] || humanizeAuditKey(value)
+}
+
 export function formatAuditProvider(value) {
   return String(value || '').toLowerCase() === 'google' ? 'Google' : humanizeAuditKey(value)
 }
@@ -101,6 +106,7 @@ export function formatAuditValue(key, value) {
   if (key === 'role' || key === 'roles') return formatAuditRole(value)
   if (key === 'status' || key === 'previous_status') return formatAuditStatus(value)
   if (key === 'reason') return formatAuditReason(value)
+  if (key === 'kind') return formatAuditKind(value)
   if (key === 'provider') return formatAuditProvider(value)
   if (SIZE_KEYS.has(key) && Number.isFinite(Number(value))) return formatBytes(value)
   if (IDENTIFIER_KEYS.has(key)) return formatAuditIdentifier(value)
