@@ -79,13 +79,26 @@ func (w *Worker) Run(ctx context.Context) error {
 func (w *Worker) process(parent context.Context, job *Job) {
 	jobCtx, cancel := context.WithCancel(parent)
 	defer cancel()
+	tracker := NewJobProgressTracker(time.Now())
+	progressDone := make(chan struct{})
+	var progressWG sync.WaitGroup
+	progressWG.Add(1)
+	go func() {
+		defer progressWG.Done()
+		w.publishProgress(jobCtx, job.ID, tracker, progressDone)
+	}()
+	defer func() {
+		close(progressDone)
+		progressWG.Wait()
+		w.persistProgress(context.Background(), job.ID, tracker)
+	}()
 
 	var cancelRequested atomic.Bool
 	var leaseLost atomic.Bool
 	stopHeartbeat := make(chan struct{})
 	go w.heartbeat(jobCtx, cancel, stopHeartbeat, job.ID, &cancelRequested, &leaseLost)
 
-	err := w.runJob(jobCtx, parent, job, &cancelRequested)
+	err := w.runJob(jobCtx, parent, job, &cancelRequested, tracker)
 	close(stopHeartbeat)
 
 	if leaseLost.Load() {
@@ -178,7 +191,6 @@ func (w *Worker) heartbeat(ctx context.Context, cancel context.CancelFunc, stop 
 				cancel()
 				return
 			}
-			w.repo.AddEvent(context.Background(), jobID, "job.progress", w.jobPayload(context.Background(), jobID))
 			if requested {
 				cancelRequested.Store(true)
 				cancel()
@@ -188,7 +200,7 @@ func (w *Worker) heartbeat(ctx context.Context, cancel context.CancelFunc, stop 
 	}
 }
 
-func (w *Worker) runJob(ctx context.Context, parent context.Context, job *Job, cancelRequested *atomic.Bool) error {
+func (w *Worker) runJob(ctx context.Context, parent context.Context, job *Job, cancelRequested *atomic.Bool, tracker *JobProgressTracker) error {
 	conn, err := w.driveRepo.GetByID(ctx, job.DriveConnectionID)
 	if err != nil {
 		return fmt.Errorf("drive connection unavailable: %w", err)
@@ -222,7 +234,7 @@ func (w *Worker) runJob(ctx context.Context, parent context.Context, job *Job, c
 	}
 
 	if job.ScanCompletedAt == nil {
-		if err := w.scan(ctx, job, api, jobRoot); err != nil {
+		if err := w.scan(ctx, job, api, jobRoot, tracker); err != nil {
 			return err
 		}
 		w.driveRepo.MarkRefreshed(parent, conn.ID)
@@ -234,7 +246,7 @@ func (w *Worker) runJob(ctx context.Context, parent context.Context, job *Job, c
 		_ = w.repo.SetStatus(parent, job.ID, JobDownloading)
 	}
 
-	if err := w.downloadAll(ctx, parent, job, api, jobRoot, cancelRequested); err != nil {
+	if err := w.downloadAll(ctx, parent, job, api, jobRoot, cancelRequested, tracker); err != nil {
 		return err
 	}
 	return nil
@@ -247,7 +259,7 @@ type folderTask struct {
 	segments []string
 }
 
-func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot string) error {
+func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot string, tracker *JobProgressTracker) error {
 	rootID, err := api.RootID(ctx)
 	if err != nil {
 		return err
@@ -255,6 +267,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 	var queue []folderTask
 	if job.ScopeType == ScopeMyDriveFull {
 		queue = append(queue, folderTask{id: rootID})
+		tracker.FolderDiscovered()
 	} else {
 		for _, root := range job.Roots {
 			chain, err := api.PathToRoot(ctx, root.GoogleFolderID)
@@ -269,6 +282,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 				segments = append(segments, storage.Sanitize(f.Name))
 			}
 			queue = append(queue, folderTask{id: root.GoogleFolderID, segments: segments})
+			tracker.FolderDiscovered()
 		}
 	}
 
@@ -286,6 +300,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 			continue
 		}
 		visited[task.id] = true
+		tracker.FolderScanned()
 
 		dirRel := storage.Child(jobRoot, task.segments...)
 		if _, err := w.store.EnsureDir(dirRel); err != nil {
@@ -310,6 +325,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 			if child.Trashed {
 				continue
 			}
+			tracker.ItemFound()
 			if child.MimeType == drive.MimeFolder {
 				name := storage.UniqueName(used[dirKey], child.Name, child.ID)
 				nodeID, err := w.driveRepo.UpsertNode(ctx, job.DriveConnectionID, child)
@@ -325,6 +341,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 					return err
 				}
 				queue = append(queue, folderTask{id: child.ID, segments: append(append([]string{}, task.segments...), name)})
+				tracker.FolderDiscovered()
 				continue
 			}
 
@@ -348,6 +365,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 				if created {
 					inserted++
 				}
+				tracker.SkippedItem()
 				continue
 			}
 			if drive.IsNative(child.MimeType) {
@@ -363,6 +381,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 						return err
 					}
 					inserted++
+					tracker.SkippedItem()
 					continue
 				}
 				if !child.CanDownload {
@@ -372,6 +391,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 						return err
 					}
 					inserted++
+					tracker.SkippedItem()
 					continue
 				}
 				display := withExtension(child.Name, exportMime)
@@ -383,6 +403,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 				}
 				if created {
 					inserted++
+					tracker.DownloadableItem()
 				}
 				continue
 			}
@@ -393,6 +414,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 					return err
 				}
 				inserted++
+				tracker.SkippedItem()
 				continue
 			}
 			name := storage.UniqueName(used[dirKey], child.Name, child.ID)
@@ -404,6 +426,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 			}
 			if created {
 				inserted++
+				tracker.DownloadableItem()
 			}
 		}
 	}
@@ -412,7 +435,7 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 		rootFolders[root.GoogleFolderID] = true
 	}
 	for _, root := range job.FileRoots {
-		created, err := w.scanFileRoot(ctx, job, api, jobRoot, root, used, rootFolders)
+		created, err := w.scanFileRoot(ctx, job, api, jobRoot, root, used, rootFolders, tracker)
 		if err != nil {
 			return err
 		}
@@ -430,7 +453,8 @@ func (w *Worker) scan(ctx context.Context, job *Job, api *drive.API, jobRoot str
 // scanFileRoot registra un archivo seleccionado individualmente conservando su
 // ruta original y sin recorrer su carpeta contenedora.
 func (w *Worker) scanFileRoot(ctx context.Context, job *Job, api *drive.API, jobRoot string,
-	root FileRoot, used map[string]map[string]string, rootFolders map[string]bool) (int, error) {
+	root FileRoot, used map[string]map[string]string, rootFolders map[string]bool, tracker *JobProgressTracker) (int, error) {
+	tracker.ItemFound()
 	file, err := api.GetFile(ctx, root.GoogleFileID)
 	if err != nil {
 		return w.skipFileRoot(ctx, job, root, "source_missing", "El archivo ya no existe en Google Drive.")
@@ -590,7 +614,7 @@ func withExtension(name, exportMime string) string {
 // --- descarga ---
 
 func (w *Worker) downloadAll(ctx context.Context, parent context.Context, job *Job, api *drive.API,
-	jobRoot string, cancelRequested *atomic.Bool) error {
+	jobRoot string, cancelRequested *atomic.Bool, tracker *JobProgressTracker) error {
 	concurrency := w.cfg.Worker.Concurrency
 	if w.cfg.Worker.PerAccountConcurrency < concurrency {
 		concurrency = w.cfg.Worker.PerAccountConcurrency
@@ -657,7 +681,7 @@ func (w *Worker) downloadAll(ctx context.Context, parent context.Context, job *J
 					_ = w.repo.ResetToPending(parent, item.ID)
 					return
 				}
-				w.downloadItem(ctx, parent, job, api, item, &reauth, &capacity, &capacityCode)
+				w.downloadItem(ctx, parent, job, api, item, &reauth, &capacity, &capacityCode, tracker)
 			}()
 		}
 		wg.Wait()
@@ -693,7 +717,7 @@ func (w *Worker) checkCapacity(ctx context.Context, job *Job) error {
 }
 
 func (w *Worker) downloadItem(ctx context.Context, parent context.Context, job *Job, api *drive.API,
-	item WorkerItem, reauth, capacity *atomic.Bool, capacityCode *atomic.Value) {
+	item WorkerItem, reauth, capacity *atomic.Bool, capacityCode *atomic.Value, tracker *JobProgressTracker) {
 	ok, err := w.repo.MarkDownloading(parent, item.ID)
 	if err != nil || !ok {
 		return
@@ -722,6 +746,23 @@ func (w *Worker) downloadItem(ctx context.Context, parent context.Context, job *
 	}
 	defer body.Close()
 
+	expected := expectedLen
+	if item.SizeBytes != nil && *item.SizeBytes > 0 {
+		expected = *item.SizeBytes
+	}
+	var expectedPtr *int64
+	if expected > 0 {
+		expectedPtr = &expected
+		if item.SizeBytes == nil {
+			_ = w.repo.SetItemExpectedSize(parent, item.ID, expected)
+		}
+	}
+	tracker.StartItem(item.ID, item.Name, expectedPtr)
+	w.repo.AddEvent(parent, job.ID, "item.started", map[string]any{
+		"item_id": item.ID, "name": item.Name, "expected_bytes": expectedPtr,
+	})
+	defer tracker.FailItem(item.ID)
+
 	tmp, tmpPath, err := w.store.CreateTemp(item.RelativePath, item.ID)
 	if err != nil {
 		w.handleItemError(parent, job, item, err, reauth, capacity, capacityCode)
@@ -749,7 +790,7 @@ func (w *Worker) downloadItem(ctx context.Context, parent context.Context, job *
 	md5h := md5.New()
 	reader := io.LimitReader(body, limit+1)
 	buf := make([]byte, 256*1024)
-	written, copyErr := io.CopyBuffer(io.MultiWriter(tmp, sha, md5h), reader, buf)
+	written, copyErr := io.CopyBuffer(io.MultiWriter(tmp, tracker.Writer(item.ID), sha, md5h), reader, buf)
 	if copyErr != nil {
 		_ = tmp.Close()
 		w.handleItemError(parent, job, item, copyErr, reauth, capacity, capacityCode)
@@ -802,7 +843,12 @@ func (w *Worker) downloadItem(ctx context.Context, parent context.Context, job *
 	if err := w.repo.MarkCompleted(parent, job.ID, job.DriveOwnerUserID, item.ID, item.DriveNodeID,
 		item.RelativePath, written, sum, exportMime, item.RevisionID, item.ModifiedTime); err != nil {
 		w.log.Error("mark_completed_failed", "job_id", job.ID, "item_id", item.ID, "error", err)
+		return
 	}
+	tracker.CompleteItem(item.ID, written)
+	w.repo.AddEvent(parent, job.ID, "item.completed", map[string]any{
+		"item_id": item.ID, "name": item.Name, "size_bytes": written, "sha256": sum,
+	})
 }
 
 func (w *Worker) handleItemError(ctx context.Context, job *Job, item WorkerItem, err error,
@@ -834,6 +880,7 @@ func (w *Worker) handleItemError(ctx context.Context, job *Job, item WorkerItem,
 		}
 		next := time.Now().Add(backoff(item.AttemptCount+1, apiErr.RetryAfter))
 		_ = w.repo.MarkRetry(ctx, item.ID, apiErr.Code, describeError(apiErr.Code), next)
+		w.emitItem(ctx, job.ID, item, ItemRetrying, apiErr.Code)
 		return
 	}
 	if strings.Contains(strings.ToLower(err.Error()), "no space") ||
@@ -882,5 +929,41 @@ func sleepCtx(ctx context.Context, d time.Duration) bool {
 		return true
 	case <-ctx.Done():
 		return false
+	}
+}
+
+func (w *Worker) publishProgress(ctx context.Context, jobID uuid.UUID, tracker *JobProgressTracker, stop <-chan struct{}) {
+	w.persistProgress(ctx, jobID, tracker)
+	interval := w.cfg.Worker.ProgressInterval
+	if interval < 100*time.Millisecond {
+		interval = 100 * time.Millisecond
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.persistProgress(ctx, jobID, tracker)
+		}
+	}
+}
+
+func (w *Worker) persistProgress(ctx context.Context, jobID uuid.UUID, tracker *JobProgressTracker) {
+	job, err := w.repo.Get(ctx, jobID)
+	if err != nil {
+		w.log.Debug("progress_job_unavailable", "job_id", jobID, "error", err)
+		return
+	}
+	snapshot, err := w.repo.BuildProgress(ctx, job, tracker)
+	if err != nil {
+		w.log.Warn("progress_build_failed", "job_id", jobID, "error", err)
+		return
+	}
+	if _, err := w.repo.SaveProgress(ctx, snapshot); err != nil {
+		w.log.Warn("progress_save_failed", "job_id", jobID, "error", err)
 	}
 }

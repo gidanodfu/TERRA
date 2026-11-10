@@ -101,28 +101,26 @@ trabajo original, `202` y `Idempotent-Replayed: true`, sin volver a descargar na
 - El rol de sistema decide; el cargo organizativo no otorga permisos.
 - Ocultar un botón en el frontend no sustituye la comprobación del backend.
 
-## SSE
+## WebSocket en tiempo real
 
 ```
-GET /api/v1/download-jobs/{id}/events
-Accept: text/event-stream
-Last-Event-ID: 123
+GET /api/v1/realtime
+Upgrade: websocket
+Cookie: terra_session=...
 ```
 
-```
-event: snapshot
-data: {"id":"...","status":"downloading","completed_items":12,...}
+Canal central para trabajos y dashboard. La sesión se valida durante el handshake; no se
+aceptan tokens en la URL. Los mensajes de cliente permitidos son `subscribe` y
+`unsubscribe`; los canales son `job:{uuid}` y `admin.dashboard`.
 
-id: 45
-event: job.progress
-data: {...}
+El servidor envía `connection.ready`, `job.snapshot`, `job.progress`, `job.stage`,
+`job.item.*`, `job.done`, `dashboard.snapshot`, `dashboard.metrics` y `realtime.error`.
+Cada mensaje incluye `type`, `at` y `data`; los snapshots incorporan `revision` y los
+eventos durables `event_id`.
 
-event: done
-data: {...}
-```
-
-- `snapshot` inicial y en cambios de contador/estado.
-- `job.*` e `item.*` desde PostgreSQL con `id` monotónico.
+La autorización replica la API REST: `admin.jobs.read` o propiedad/solicitud del trabajo
+para `job:*`, y `admin.dashboard.read` para `admin.dashboard`. Los eventos y snapshots se
+persisten en PostgreSQL antes de notificar.
 - `done` cierra el stream cuando el estado es terminal.
 - Comentarios `: keep-alive` cada 15 s.
 - Si el cliente se desconecta, debe consultar REST y reconectar con `Last-Event-ID`.

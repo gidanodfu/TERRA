@@ -1,30 +1,46 @@
-import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
 import { useJobEvents } from '../../src/features/downloads/useJobEvents'
-import { MockEventSource } from '../helpers/event-source'
+import { useRealtimeChannel } from '../../src/features/realtime/RealtimeContext'
+
+vi.mock('../../src/features/realtime/RealtimeContext', () => ({
+  useRealtimeChannel: vi.fn(() => 'connected'),
+}))
 
 describe('useJobEvents', () => {
-  beforeEach(() => {
-    MockEventSource.instances = []
+  it('se suscribe al canal del trabajo y entrega el snapshot persistido', () => {
+    const onSnapshot = vi.fn()
+    const { result } = renderHook(() => useJobEvents('job-1', onSnapshot))
+    expect(result.current).toBe(true)
+    expect(useRealtimeChannel).toHaveBeenCalledWith('job:job-1', expect.any(Function))
+    const handler = useRealtimeChannel.mock.calls[0][1]
+
+    handler({
+      type: 'job.snapshot',
+      revision: 4,
+      data: { job: { id: 'job-1', status: 'downloading' }, progress: { byte_progress_percent: 30 } },
+    })
+    expect(onSnapshot).toHaveBeenCalledWith({
+      id: 'job-1',
+      status: 'downloading',
+      progress: { byte_progress_percent: 30 },
+      progress_revision: 4,
+    })
+
+    handler({
+      type: 'job.progress',
+      revision: 5,
+      data: { job_id: 'job-1', progress: { byte_progress_percent: 42 } },
+    })
+    expect(onSnapshot).toHaveBeenLastCalledWith({
+      progress: { byte_progress_percent: 42 },
+      progress_revision: 5,
+    })
   })
 
-  it('abre el canal con el job y entrega snapshots', () => {
+  it('no abre canal sin trabajo', () => {
     const onSnapshot = vi.fn()
-    const { unmount } = renderHook(() => useJobEvents('job-1', onSnapshot))
-    const source = MockEventSource.instances[0]
-    expect(source.url).toBe('/api/v1/download-jobs/job-1/events')
-    act(() => source.emit('snapshot', { status: 'downloading', completed_items: 1 }))
-    expect(onSnapshot).toHaveBeenCalledWith({ status: 'downloading', completed_items: 1 })
-    unmount()
-    expect(source.closed).toBe(true)
-  })
-
-  it('cierra el canal al recibir done', () => {
-    const onSnapshot = vi.fn()
-    renderHook(() => useJobEvents('job-2', onSnapshot))
-    const source = MockEventSource.instances[0]
-    act(() => source.emit('done', { status: 'completed' }))
-    expect(onSnapshot).toHaveBeenCalledWith({ status: 'completed' })
-    expect(source.closed).toBe(true)
+    renderHook(() => useJobEvents(null, onSnapshot))
+    expect(useRealtimeChannel).toHaveBeenLastCalledWith(null, expect.any(Function))
   })
 })

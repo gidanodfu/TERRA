@@ -9,7 +9,7 @@ raíz `./terra`.
 ## 2. Arquitectura implementada
 
 ```
-web (Vite + React) ──/api──► api (Go REST + SSE) ──► db (PostgreSQL)
+web (Vite + React) ──/api──► api (Go REST + WebSocket) ──► db (PostgreSQL)
                                      ▲                    ▲
                                      │                    │
                              worker (Go) ─────────────────┘
@@ -27,7 +27,7 @@ Exactamente cuatro servicios. Sin Nginx, broker, Redis ni contenedores auxiliare
 - Exploración de Mi unidad, shortcuts, exportación y descarga.
 - Cola PostgreSQL, leases, heartbeat, cancelación, reintentos e idempotencia.
 - Almacenamiento privado con rutas seguras, checksums y escritura atómica.
-- Paneles trabajador/administrador, SSE, dashboard y exploradores.
+- Paneles trabajador/administrador, WebSocket, dashboard y exploradores.
 - Scripts de operación local, copias de seguridad y recuperación.
 - Pruebas unitarias, integración, E2E y CI Docker-only.
 
@@ -66,7 +66,7 @@ TERRA/
 | Servicio | Imagen | Función |
 |---|---|---|
 | `web` | `terra-web:local` | Vite, React, proxy `/api` |
-| `api` | `terra-backend:local` | REST, SSE, OAuth |
+| `api` | `terra-backend:local` | REST, WebSocket, OAuth |
 | `worker` | `terra-backend:local` | cola y transferencias |
 | `db` | `postgres:18-alpine` | PostgreSQL |
 

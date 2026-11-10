@@ -47,6 +47,7 @@ contrastarse con el código actual; los contratos HTTP se mantienen únicamente 
 - [Diseño de base de datos](architecture/database-design.md)
 - [Pipeline de descargas](architecture/download-pipeline.md)
 - [Almacenamiento](architecture/storage-design.md)
+- [Tiempo real y progreso](architecture/realtime-progress.md)
 - [Catálogo organizativo](architecture/organization-catalog.md)
 - [ADR-0001: cuatro contenedores y cola PostgreSQL](decisions/ADR-0001-four-containers-postgres-queue.md)
 - [ADR-0002: OAuth External y Drive de solo lectura](decisions/ADR-0002-oauth-external-drive-readonly.md)

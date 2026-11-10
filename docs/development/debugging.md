@@ -97,9 +97,9 @@ mantiene `node_modules` dentro de la imagen y fuerza la recreación de web en
 
 No se desactiva HMR ni React Refresh. No se parchea el puerto para ocultar el fallo.
 
-## SSE y proxy
+## WebSocket y proxy
 
-El endpoint SSE está en `/api/v1/download-jobs/{id}/events`. Vite lo redirige mediante
+El canal de tiempo real está en `/api/v1/realtime`. Vite lo redirige mediante
 proxy a `api:8080`. Verifica:
 
 ```bash

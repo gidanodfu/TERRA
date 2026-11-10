@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatBytes,
   isTerminal,
+  progressIsIndeterminate,
   progressPercent,
   JOB_STATUS,
   ITEM_STATUS,
@@ -22,6 +23,12 @@ describe('progressPercent', () => {
     expect(progressPercent({ total_items: 10, completed_items: 3, skipped_items: 1, failed_items: 1 })).toBe(50)
     expect(progressPercent({ total_items: 0, completed_items: 0 })).toBe(0)
     expect(progressPercent(null)).toBe(0)
+  })
+
+  it('prioriza el porcentaje real por bytes y detecta total desconocido', () => {
+    expect(progressPercent({ progress: { byte_progress_percent: 67.8 } })).toBe(68)
+    expect(progressIsIndeterminate({ progress: { byte_progress_percent: null } })).toBe(true)
+    expect(progressIsIndeterminate({ progress: { byte_progress_percent: 10 } })).toBe(false)
   })
 })
 

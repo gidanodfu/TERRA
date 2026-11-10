@@ -58,9 +58,9 @@ function renderPage(basePath = '/app/jobs') {
   )
 }
 
-function mockApi(items) {
+function mockApi(items, jobOverride = job) {
   api.get.mockImplementation((path) => {
-    if (path === '/download-jobs/job-1') return Promise.resolve(job)
+    if (path === '/download-jobs/job-1') return Promise.resolve(jobOverride)
     if (path.startsWith('/download-jobs/job-1/items')) {
       return Promise.resolve({ data: items, pagination: { page: 1, page_size: 25, total: items.length } })
     }
@@ -113,6 +113,44 @@ describe('JobDetailPage y descarga de archivos almacenados', () => {
     await screen.findByText('Reporte.pdf')
     expect(screen.queryByRole('button', { name: 'Descargar Reporte.pdf' })).not.toBeInTheDocument()
     expect(screen.getByText('No disponible')).toBeInTheDocument()
+  })
+
+  it('muestra progreso indeterminado, velocidad y transferencias activas', async () => {
+    mockApi([item()], {
+      ...job,
+      status: 'downloading',
+      progress: {
+        stage: 'downloading',
+        status: 'downloading',
+        completed_bytes: 0,
+        in_flight_bytes: 1234,
+        transferred_bytes: 1234,
+        known_total_bytes: 0,
+        unknown_size_items: 1,
+        byte_progress_percent: null,
+        completed_items: 0,
+        skipped_items: 0,
+        failed_items: 0,
+        pending_items: 1,
+        retrying_items: 0,
+        downloading_items: 1,
+        download_speed_bytes_per_second: 1024,
+        average_speed_bytes_per_second: 900,
+        eta_seconds: null,
+        scan: { folders_discovered: 3, folders_scanned: 2, items_found: 4, downloadable_items: 1, skipped_items: 1 },
+        active_downloads: [{
+          item_id: 'active-1', name: 'grande.bin', transferred_bytes: 1234,
+          expected_bytes: null, progress_percent: null,
+        }],
+      },
+    })
+    renderPage()
+
+    expect(await screen.findByText('Transferencias activas')).toBeInTheDocument()
+    expect(screen.getByText('grande.bin')).toBeInTheDocument()
+    expect(screen.getByText(/sin tamaño conocido/)).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', 'Progreso indeterminado')
+    expect(screen.getByText('En vuelo')).toBeInTheDocument()
   })
 
   it('oculta la descarga administrativa sin admin.files.read', async () => {

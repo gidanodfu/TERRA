@@ -1,7 +1,6 @@
 package downloads
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -144,6 +143,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, err)
 		return
 	}
+	job.Progress, job.ProgressRevision = h.svc.Progress(r.Context(), job)
 	httpx.WriteJSON(w, http.StatusOK, job)
 }
 
@@ -194,98 +194,6 @@ func (h *Handler) Retry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusAccepted, job)
-}
-
-// Events transmite el progreso por SSE; PostgreSQL sigue siendo la fuente de verdad.
-func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
-	actor, _ := principal.Current(r.Context())
-	jobID, err := uuid.Parse(r.PathValue("id"))
-	if err != nil {
-		httpx.WriteError(w, r, apperr.BadRequest("Identificador de trabajo inválido."))
-		return
-	}
-	job, err := h.svc.Get(r.Context(), actor.ID, actor.Can(rbac.PermJobsRead), jobID)
-	if err != nil {
-		httpx.WriteError(w, r, err)
-		return
-	}
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		httpx.WriteError(w, r, apperr.Internal(fmt.Errorf("streaming unsupported")))
-		return
-	}
-	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-Accel-Buffering", "no")
-	w.WriteHeader(http.StatusOK)
-	_, _ = fmt.Fprint(w, "retry: 3000\n\n")
-	writeEvent(w, "", "snapshot", h.svc.Payload(job))
-	flusher.Flush()
-
-	lastID := int64(0)
-	if raw := r.Header.Get("Last-Event-ID"); raw != "" {
-		lastID, _ = strconv.ParseInt(raw, 10, 64)
-	} else if raw := r.URL.Query().Get("last_event_id"); raw != "" {
-		lastID, _ = strconv.ParseInt(raw, 10, 64)
-	}
-
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	pulse := time.NewTicker(15 * time.Second)
-	defer pulse.Stop()
-	lastStatus := job.Status
-	lastUpdated := ""
-
-	for {
-		select {
-		case <-r.Context().Done():
-			return
-		case <-pulse.C:
-			_, _ = fmt.Fprint(w, ": keep-alive\n\n")
-			flusher.Flush()
-		case <-ticker.C:
-			events, err := h.repo.EventsAfter(r.Context(), jobID, lastID, 100)
-			if err != nil {
-				return
-			}
-			for _, ev := range events {
-				writeEvent(w, strconv.FormatInt(ev.ID, 10), ev.Type, ev.Payload)
-				lastID = ev.ID
-			}
-			current, err := h.svc.Get(r.Context(), actor.ID, actor.Can(rbac.PermJobsRead), jobID)
-			if err != nil {
-				return
-			}
-			payload := h.svc.Payload(current)
-			updated := fmt.Sprintf("%d/%d/%d/%d", current.TotalItems, current.CompletedItems,
-				current.SkippedItems, current.FailedItems)
-			if updated != lastUpdated || current.Status != lastStatus {
-				writeEvent(w, "", "snapshot", payload)
-				lastUpdated = updated
-				lastStatus = current.Status
-			}
-			flusher.Flush()
-			if IsTerminal(current.Status) {
-				writeEvent(w, "", "done", payload)
-				flusher.Flush()
-				return
-			}
-		}
-	}
-}
-
-func writeEvent(w http.ResponseWriter, id, eventType string, payload map[string]any) {
-	if id != "" {
-		_, _ = fmt.Fprintf(w, "id: %s\n", id)
-	}
-	_, _ = fmt.Fprintf(w, "event: %s\n", eventType)
-	raw, _ := jsonMarshal(payload)
-	_, _ = fmt.Fprintf(w, "data: %s\n\n", raw)
-}
-
-func jsonMarshal(v any) ([]byte, error) {
-	return json.Marshal(v)
 }
 
 func (h *Handler) FileContent(w http.ResponseWriter, r *http.Request) {

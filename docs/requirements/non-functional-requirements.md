@@ -26,7 +26,7 @@
 | RNF-22 | Privacidad | Auditoría sin tokens, contraseñas, cookies ni contenido documental. | `audit` |
 | RNF-23 | Recuperación | Copias de seguridad coordinadas de BD, volumen y clave separada. | scripts + doc |
 | RNF-24 | Escalabilidad | Un worker puede procesar elementos con goroutines bajo límites. | worker |
-| RNF-25 | Compatibilidad | PostgreSQL 18, navegadores modernos con SSE. | versiones fijadas |
+| RNF-25 | Compatibilidad | PostgreSQL 18, navegadores modernos con WebSocket. | versiones fijadas |
 
 ## Supuestos
 

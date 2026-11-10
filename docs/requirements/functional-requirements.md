@@ -82,6 +82,6 @@ archivos se realiza desde los trabajos y snapshots.
 |---|---|---|
 | RF-46 | Dashboard con métricas operativas. | `/admin/dashboard` |
 | RF-47 | Historial de trabajos con filtros y detalle. | `/download-jobs`, UI |
-| RF-48 | SSE con snapshot y eventos; REST como fuente de verdad. | `/download-jobs/{id}/events` |
+| RF-48 | Progreso real por bytes y tiempo real por WebSocket; REST como fuente de verdad y respaldo. | `/api/v1/realtime`, `download_job_progress` |
 | RF-49 | Auditoría de operaciones sensibles sin secretos ni contenido. | `audit_events` |
 | RF-50 | Panel del trabajador limitado a sus propios recursos. | Checks de propietario/solicitante |

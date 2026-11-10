@@ -12,7 +12,7 @@ Docker y no incluye despliegue productivo.
 ## Fase 1 — Plataforma Docker local
 
 - [x] `deploy/compose.yaml` único con exactamente `web`, `api`, `worker`, `db`.
-- [x] `web` con Vite dev server, HMR y proxy `/api`/SSE hacia `api:8080`.
+- [x] `web` con Vite dev server, HMR y proxy `/api`/WebSocket hacia `api:8080`.
 - [x] `api` y `worker` con imagen backend compartida y comandos independientes.
 - [x] Go, Node, npm y PostgreSQL dentro de contenedores.
 - [x] PostgreSQL 18 con volumen persistente.
@@ -45,7 +45,7 @@ Docker y no incluye despliegue productivo.
 
 - [x] Panel trabajador y panel administrativo responsive.
 - [x] Selector de carpetas, historial, dashboard, almacenamiento y auditoría.
-- [x] SSE con fallback REST y estados completos.
+- [x] WebSocket con fallback REST, progreso por bytes y estados completos.
 
 ## Fase 6 — Calidad, pruebas y CI
 

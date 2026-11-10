@@ -33,7 +33,7 @@ frontend/src/
 | `/app/admin/workers`, `.../organization`, `.../connections` | admin | Gestión |
 | `/app/admin/downloads` | admin | Asistente de descarga |
 | `/app/admin/jobs`, `.../audit`, `.../policy` | admin | Supervisión |
-| `/app/jobs/:id`, `/app/admin/jobs/:id` | propietario/admin | Detalle y SSE |
+| `/app/jobs/:id`, `/app/admin/jobs/:id` | propietario/admin | Detalle y tiempo real |
 
 ## Layout administrativo y del trabajador
 
@@ -111,11 +111,14 @@ límites se validan antes de crear la sesión; el frontend no autoriza nada.
 - `has_local_credentials` controla la visibilidad del formulario de contraseña; no se deduce del rol.
 - `must_rotate_password` solo fuerza el aviso y la redirección del primer acceso.
 
-## SSE
+## Tiempo real
 
-`useJobEvents` abre `EventSource` al detalle del trabajo. Escucha `snapshot`, `done` y eventos
-de progreso. Ante error, cierra y el detalle hace polling REST cada 5 s. El estado se mezcla con
-la fila obtenida por REST; SSE no es autoridad.
+`RealtimeProvider` mantiene una única conexión WebSocket por sesión. Los componentes se
+suscriben a `job:{uuid}` o `admin.dashboard` y se desuscriben al desmontar. Ante error se
+reconecta con backoff y jitter, reenvía suscripciones y recibe un snapshot persistido.
+`JobDetailPage` usa `useJobEvents`, la lista de trabajos actualiza solo las filas afectadas y
+el dashboard recibe snapshots del canal administrativo. REST sigue siendo la carga inicial y
+el respaldo; WebSocket no es autoridad.
 
 ## Autorización de UI
 
@@ -137,8 +140,7 @@ la fila obtenida por REST; SSE no es autoridad.
 ## Servidor de desarrollo
 
 `web` ejecuta `vite` como servidor de desarrollo con HMR en el puerto 5173 del
-contenedor. Compose publica `${WEB_PORT:-8080}` y Vite hace proxy de `/api` (REST y
-SSE) a `http://api:8080`. No se usa Nginx en esta distribución local.
+contenedor. Compose publica `${WEB_PORT:-8080}` y Vite hace proxy de `/api` (REST y WebSocket Upgrade) a `http://api:8080`. No se usa Nginx en esta distribución local.
 
 `npm run build` se usa únicamente para validar la compilación y en pruebas; el
 artefacto se escribe en `/tmp` para no ensuciar el host.

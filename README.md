@@ -19,7 +19,7 @@ Incluye:
 
 - cuatro servicios Docker: `web`, `api`, `worker` y `db`;
 - Vite con HMR y proxy `/api`;
-- API Go con REST y SSE;
+- API Go con REST y WebSockets;
 - worker independiente con cola PostgreSQL;
 - PostgreSQL con volumen persistente;
 - comando unificado `./terra` y scripts de operación local;
@@ -31,7 +31,7 @@ dominios, VPS, Traefik, Cloudflare Tunnel ni procedimientos de publicación.
 ## Arquitectura
 
 ```text
-web (Vite + React) ──/api──► api (Go REST + SSE) ──► db (PostgreSQL)
+web (Vite + React) ──/api──► api (Go REST + WebSocket) ──► db (PostgreSQL)
                                      ▲                    ▲
                                      │                    │
                              worker (Go) ─────────────────┘
@@ -39,8 +39,8 @@ web (Vite + React) ──/api──► api (Go REST + SSE) ──► db (Postgre
                 STORAGE_HOST_PATH (documentos externos)
 ```
 
-- **web**: interfaz React, HMR y proxy REST/SSE.
-- **api**: autenticación, RBAC, OAuth, organización, trabajos, SSE y archivos.
+- **web**: interfaz React, HMR y proxy REST/WebSocket.
+- **api**: autenticación, RBAC, OAuth, organización, trabajos, WebSockets y archivos.
 - **worker**: cola, leases, Drive, descargas/exportaciones y escritura atómica.
 - **db**: fuente de verdad y cola persistente (`FOR UPDATE SKIP LOCKED`).
 

@@ -10,7 +10,7 @@ necesita Docker, Compose, Bash y Git.
 
 ## Infraestructura
 
-- Vite dev server en `web`, con HMR y proxy `/api`/SSE a `api:8080`.
+- Vite dev server en `web`, con HMR y proxy `/api`/WebSocket a `api:8080`.
 - API y worker con imagen backend compartida y comandos independientes.
 - Go, Node, npm, PostgreSQL y herramientas de pruebas dentro de contenedores.
 - PostgreSQL 18 con volumen `terra_terra-db`.
@@ -26,7 +26,7 @@ necesita Docker, Compose, Bash y Git.
 - OAuth Drive separado, refresh tokens cifrados y estados de conexión.
 - Exploración de Mi unidad, shortcuts, exportación y descarga.
 - Cola persistente, leases, cancelaciones, reintentos y snapshots.
-- Paneles trabajador/administrador, SSE y exploradores.
+- Paneles trabajador/administrador, WebSocket y exploradores.
 
 ## Pruebas ejecutadas
 

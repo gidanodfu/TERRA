@@ -62,7 +62,7 @@ Reconstruya y recree:
 ./terra up
 ```
 
-## Proxy de API y SSE
+## Proxy de API y WebSocket
 
 `vite.config.js` redirige `/api` a `http://api:8080`. Esto incluye REST y
 Server-Sent Events. No use `localhost` para el tráfico entre contenedores.

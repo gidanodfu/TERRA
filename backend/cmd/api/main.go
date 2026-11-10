@@ -24,6 +24,7 @@ import (
 	"terra/internal/platform/logx"
 	"terra/internal/platform/migrate"
 	"terra/internal/platform/oauthstate"
+	"terra/internal/realtime"
 	"terra/internal/server"
 	"terra/internal/storage"
 	"terra/internal/users"
@@ -93,6 +94,15 @@ func main() {
 	authSvc := auth.NewService(cfg, authRepo, usersRepo, google, states, turnstile, auditRepo)
 	downloadSvc := downloads.NewService(cfg, downloadRepo, driveSvc, usersRepo, store, auditRepo)
 	adminSvc := admin.NewService(pool, usersRepo, orgRepo, auditRepo, driveRepo, downloadRepo)
+	realtimeSvc := realtime.NewService(cfg, log, pool, downloadSvc, downloadRepo, authRepo, usersRepo,
+		func(ctx context.Context, full bool) (any, error) {
+			scope := audit.ScopeOperational
+			if full {
+				scope = audit.ScopeFull
+			}
+			return adminSvc.Dashboard(ctx, scope)
+		})
+	go realtimeSvc.RunListener(ctx, cfg.DatabaseURL)
 
 	handler := server.New(cfg, log, pool, server.Handlers{
 		Auth:     auth.NewHandler(authSvc, cfg.SessionSecret),
@@ -101,14 +111,15 @@ func main() {
 		Drive:    drive.NewHandler(driveSvc, cfg.SessionSecret),
 		Download: downloads.NewHandler(downloadSvc, downloadRepo, cfg, cfg.SessionSecret),
 		Admin:    admin.NewHandler(adminSvc, cfg.SessionSecret),
+		Realtime: realtimeSvc,
 	})
 
 	srv := &http.Server{
 		Addr:              ":8080",
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      0, // SSE streams stay open
+		ReadTimeout:       0, // Las conexiones WebSocket permanecen abiertas.
+		WriteTimeout:      0,
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    1 << 20,
 	}
@@ -127,5 +138,6 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("shutdown_failed", "error", err)
 	}
+	realtimeSvc.Close()
 	log.Info("api_stopped")
 }

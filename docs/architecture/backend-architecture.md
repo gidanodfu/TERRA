@@ -14,7 +14,8 @@ backend/
 │   ├── users/
 │   ├── organization/
 │   ├── drive/             # OAuth documental + adaptador Drive v3
-│   ├── downloads/         # trabajos, cola, worker, SSE, archivos
+│   ├── downloads/         # trabajos, cola, worker, progreso y archivos
+│   ├── realtime/          # WebSocket, hub, LISTEN/NOTIFY y suscripciones
 │   ├── storage/
 │   ├── admin/
 │   ├── audit/
@@ -65,7 +66,7 @@ administrativa; eso vive en `downloads.Create` y en las políticas HTTP.
 | Rutas | `internal/server/router.go` |
 | DTOs de respuesta | tipos con tags JSON en cada módulo |
 | Errores | `apperr` → `{"error":{code,message,fields}}` |
-| SSE | `downloads.Handler.Events` |
+| Tiempo real | `realtime.Service` (`GET /api/v1/realtime`) |
 | OpenAPI | `docs/api/openapi.yaml` |
 
 ## Reglas de diseño aplicadas

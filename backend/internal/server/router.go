@@ -21,6 +21,7 @@ import (
 	"terra/internal/platform/principal"
 	"terra/internal/platform/ratelimit"
 	"terra/internal/platform/rbac"
+	"terra/internal/realtime"
 	"terra/internal/users"
 )
 
@@ -31,6 +32,7 @@ type Handlers struct {
 	Drive    *drive.Handler
 	Download *downloads.Handler
 	Admin    *admin.Handler
+	Realtime *realtime.Service
 }
 
 func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) http.Handler {
@@ -57,6 +59,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 	mux.HandleFunc("GET /api/v1/auth/google/callback", h.Auth.GoogleCallback)
 	mux.HandleFunc("GET /api/v1/auth/google/drive/callback", h.Drive.Callback)
 	mux.HandleFunc("POST /api/v1/auth/admin/login", h.Auth.AdminLogin)
+	mux.Handle("GET /api/v1/realtime", h.Realtime)
 
 	adminOpsLimiter := ratelimit.New(240, time.Minute)
 	accountCreateLimiter := ratelimit.New(10, time.Minute)
@@ -111,7 +114,6 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, h Handlers) ht
 	mux.Handle("GET /api/v1/download-jobs", requireAuth(requireActive(limited(jobReadLimiter, "jobs")(http.HandlerFunc(h.Download.List)))))
 	mux.Handle("GET /api/v1/download-jobs/{id}", requireAuth(requireActive(limited(jobReadLimiter, "jobs")(http.HandlerFunc(h.Download.Get)))))
 	mux.Handle("GET /api/v1/download-jobs/{id}/items", requireAuth(requireActive(limited(jobReadLimiter, "jobs")(http.HandlerFunc(h.Download.Items)))))
-	mux.Handle("GET /api/v1/download-jobs/{id}/events", requireAuth(requireActive(http.HandlerFunc(h.Download.Events))))
 	mux.Handle("POST /api/v1/download-jobs/{id}/cancel", requireAuth(requireActive(limited(jobReadLimiter, "jobs")(http.HandlerFunc(h.Download.Cancel)))))
 	mux.Handle("GET /api/v1/files/{id}/content", requireAuth(requireActive(limited(fileReadLimiter, "files")(http.HandlerFunc(h.Download.FileContent)))))
 

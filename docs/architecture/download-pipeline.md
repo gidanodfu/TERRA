@@ -134,14 +134,21 @@ Un error individual no detiene el trabajo; al final:
 ## Recuperación
 
 - Lease vencida → otro reclamo continúa desde `scan_completed_at`.
-- Elementos ya completados no se vuelven a descargar (`UNIQUE(job_id, drive_node_id)` + estado).
+- Los elementos que quedaron en `downloading` se reencolan como `pending` de forma
+  transaccional; nunca se cuentan como completados.
+- El snapshot de progreso limpia `in_flight_bytes` y `active_downloads` del worker anterior.
+- Los elementos ya completados no se vuelven a descargar (`UNIQUE(job_id, drive_node_id)` + estado).
 - El escaneo es idempotente por upserts.
 - Un lease perdido no finaliza el trabajo: el nuevo propietario lo retoma.
 
-## SSE
+## Progreso y tiempo real
 
-- `snapshot` inicial con estado real de PostgreSQL.
-- Eventos `job.*` e `item.*` desde `job_events`.
-- `done` cuando el estado es terminal.
-- `Last-Event-ID` permite reanudar.
-- El frontend mantiene polling REST como respaldo.
+- El worker instrumenta cada escritura aceptada por el destino y mantiene bytes en vuelo en memoria.
+- `download_job_progress` guarda el snapshot agregado con revisión incremental.
+- `downloaded_bytes` sigue significando bytes completados; `transferred_bytes` suma completados y en vuelo.
+- Las actualizaciones frecuentes no crean filas en `job_events`; solo los cambios de estado e
+  hitos de elementos son durables.
+- PostgreSQL notifica `terra_progress` y `terra_events`; la API consulta el estado persistido
+  y distribuye por `/api/v1/realtime`.
+- El frontend mantiene REST como carga inicial y respaldo, y usa una única conexión WebSocket
+  por sesión con resuscripción y backoff.

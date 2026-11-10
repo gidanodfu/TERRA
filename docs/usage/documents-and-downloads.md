@@ -31,7 +31,7 @@ Reglas del backend:
 6. Se recorren las carpetas, se descargan los binarios y se exportan los
    documentos nativos de Google.
 7. Cada archivo se escribe de forma atómica en su snapshot.
-8. El progreso se consulta por REST o por SSE.
+8. El progreso se consulta por REST o por el canal WebSocket `/api/v1/realtime`.
 
 El navegador puede cerrarse: el worker continúa en el servidor.
 

@@ -19,9 +19,18 @@ import {
 } from '../components/ui'
 import { StatusBadge, ScopeLabel } from '../features/downloads/StatusBadge'
 import { useJobEvents } from '../features/downloads/useJobEvents'
-import { formatBytes, formatDate, durationBetween, isTerminal, progressPercent } from '../utils/format'
+import { formatBytes, formatDate, formatSeconds, durationBetween, isTerminal, progressIsIndeterminate, progressPercent } from '../utils/format'
 
 const ACTIVE = ['queued', 'scanning', 'downloading', 'waiting_authorization', 'cancel_requested']
+
+function Metric({ label, children }) {
+  return (
+    <div className="rounded-xl bg-muted p-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-900">{children}</p>
+    </div>
+  )
+}
 
 export default function JobDetailPage({ basePath }) {
   const { id } = useParams()
@@ -146,6 +155,13 @@ export default function JobDetailPage({ basePath }) {
   const active = ACTIVE.includes(job.status)
   const canDownload = adminView ? can(PERMISSIONS.FILES_READ) : true
   const percent = progressPercent(job)
+  const progress = job.progress
+  const indeterminate = progressIsIndeterminate(job) && !isTerminal(job.status)
+  const progressLabel = progress && progress.byte_progress_percent !== null
+    ? `${formatBytes(progress.transferred_bytes)} / ${formatBytes(progress.known_total_bytes)} · ${percent}%`
+    : progress
+      ? `${formatBytes(progress.transferred_bytes)} transferidos · ${progress.unknown_size_items} archivo(s) sin tamaño conocido`
+      : `${job.completed_items}/${job.total_items} archivos completados`
   const tone = job.status === 'failed' ? 'bg-red-500' : job.status === 'partially_completed' ? 'bg-amber-500' : 'bg-brand-600'
 
   return (
@@ -218,8 +234,54 @@ export default function JobDetailPage({ basePath }) {
               </span>
             </div>
             <div className="mt-4">
-              <ProgressBar value={percent} tone={tone} label={`${percent}% procesado · ${formatBytes(job.downloaded_bytes)} descargados`} />
+              <ProgressBar value={percent} tone={tone} indeterminate={indeterminate} label={progressLabel} />
             </div>
+            {progress ? (
+              <div className="mt-4 space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2 @2xl:grid-cols-4">
+                  <Metric label="Bytes completados">{formatBytes(progress.completed_bytes)}</Metric>
+                  <Metric label="En vuelo">{formatBytes(progress.in_flight_bytes)}</Metric>
+                  <Metric label="Velocidad">{progress.download_speed_bytes_per_second > 0 ? `${formatBytes(progress.download_speed_bytes_per_second)}/s` : '—'}</Metric>
+                  <Metric label="Restante">{progress.byte_progress_percent !== null ? formatSeconds(progress.eta_seconds) : 'No calculable'}</Metric>
+                </div>
+                <div className="grid gap-3 text-xs text-slate-600 sm:grid-cols-2 @3xl:grid-cols-4">
+                  <p>Completados: <strong>{progress.completed_items}</strong></p>
+                  <p>Pendientes: <strong>{progress.pending_items}</strong></p>
+                  <p>En reintento: <strong>{progress.retrying_items}</strong></p>
+                  <p>Descargándose: <strong>{progress.downloading_items}</strong></p>
+                  <p>Omitidos: <strong>{progress.skipped_items}</strong></p>
+                  <p>Fallidos: <strong>{progress.failed_items}</strong></p>
+                  <p>Total conocido: <strong>{formatBytes(progress.known_total_bytes)}</strong></p>
+                  <p>Sin tamaño: <strong>{progress.unknown_size_items}</strong></p>
+                </div>
+                {progress.scan?.folders_scanned > 0 || progress.stage === 'scanning' ? (
+                  <p className="rounded-lg bg-muted px-3 py-2 text-xs text-slate-600">
+                    Escaneo: {progress.scan.folders_scanned}/{progress.scan.folders_discovered} carpetas · {progress.scan.items_found} elementos encontrados · {progress.scan.downloadable_items} descargables · {progress.scan.skipped_items} omitidos
+                  </p>
+                ) : null}
+                {progress.active_downloads?.length ? (
+                  <div>
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Transferencias activas</h3>
+                    <ul className="space-y-2">
+                      {progress.active_downloads.map((item) => (
+                        <li key={item.item_id} className="rounded-xl border border-slate-200 px-3 py-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">{item.name}</span>
+                            <span className="text-xs text-slate-500">
+                              {formatBytes(item.transferred_bytes)}
+                              {item.expected_bytes ? ` / ${formatBytes(item.expected_bytes)}` : ' · tamaño desconocido'}
+                            </span>
+                          </div>
+                          {item.progress_percent !== null && item.progress_percent !== undefined ? (
+                            <div className="mt-2"><ProgressBar value={item.progress_percent} /></div>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <div className="mt-5 grid grid-cols-2 gap-3 @2xl:grid-cols-4">
               <div className="rounded-xl bg-emerald-50 p-3">
                 <p className="text-xs text-emerald-700">Completados</p>

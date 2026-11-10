@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { StatusBadge, ScopeLabel } from './StatusBadge'
-import { formatBytes, formatDate, progressPercent } from '../../utils/format'
+import { formatBytes, formatDate, progressIsIndeterminate, progressPercent } from '../../utils/format'
+import { useRealtimeJobs } from '../realtime/RealtimeContext'
 import { ProgressBar } from '../../components/ui'
 
 export default function JobTable({ jobs, basePath, showOwner = false }) {
+  const updates = useRealtimeJobs(jobs)
+  const rows = jobs.map((job) => ({ ...job, ...(updates[job.id] || {}) }))
   return (
     <div className="table-wrap">
       <table className="table">
@@ -20,7 +23,7 @@ export default function JobTable({ jobs, basePath, showOwner = false }) {
           </tr>
         </thead>
         <tbody>
-          {jobs.map((job) => (
+          {rows.map((job) => (
             <tr key={job.id} className="hover:bg-muted">
               <td>
                 <Link to={`${basePath}/${job.id}`} className="font-medium text-brand-800 hover:underline">
@@ -50,7 +53,15 @@ export default function JobTable({ jobs, basePath, showOwner = false }) {
                 <StatusBadge type="job" status={job.status} />
               </td>
               <td className="min-w-40">
-                <ProgressBar value={progressPercent(job)} label={`${job.completed_items}/${job.total_items} completados`} />
+                <ProgressBar
+                  value={progressPercent(job)}
+                  indeterminate={progressIsIndeterminate(job) && !['completed', 'partially_completed', 'failed', 'cancelled'].includes(job.status)}
+                  label={job.progress
+                    ? job.progress.byte_progress_percent !== null
+                      ? `${formatBytes(job.progress.transferred_bytes)} / ${formatBytes(job.progress.known_total_bytes)} · ${job.completed_items}/${job.total_items} archivos`
+                      : `${formatBytes(job.progress.transferred_bytes)} transferidos · ${job.progress.unknown_size_items} sin tamaño · ${job.completed_items}/${job.total_items} archivos`
+                    : `${job.completed_items}/${job.total_items} completados`}
+                />
               </td>
               <td className="hidden whitespace-nowrap text-sm text-slate-500 md:table-cell">{formatDate(job.created_at)}</td>
               <td className="text-right">

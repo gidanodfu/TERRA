@@ -4,7 +4,7 @@
 
 ```yaml
 web:    # Vite dev server + React
-api:    # Go, REST + SSE
+api:    # Go, REST + WebSocket
 worker: # Go, mismo backend, proceso independiente
 db:     # PostgreSQL 18
 ```
@@ -53,7 +53,7 @@ Vite proxy:
 '/api': { target: 'http://api:8080' }
 ```
 
-Esto cubre REST y SSE. Los contenedores se comunican por nombre de servicio
+Esto cubre REST y WebSocket Upgrade. Los contenedores se comunican por nombre de servicio
 (`db`, `api`); nunca por `localhost`.
 
 ## Montajes

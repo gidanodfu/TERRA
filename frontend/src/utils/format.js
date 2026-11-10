@@ -79,11 +79,33 @@ export const USER_STATUS = {
   disabled: { label: 'Desactivado', tone: 'bg-red-100 text-red-800' },
 }
 
-export function progressPercent(job) {
+export function itemProgressPercent(job) {
   if (!job) return 0
   const total = Math.max(job.total_items || 0, 1)
   const done = (job.completed_items || 0) + (job.skipped_items || 0) + (job.failed_items || 0)
   return Math.min(100, Math.round((done / total) * 100))
+}
+
+export function progressPercent(job) {
+  const exact = job?.progress?.byte_progress_percent
+  if (exact !== null && exact !== undefined && Number.isFinite(Number(exact))) {
+    return Math.max(0, Math.min(100, Math.round(Number(exact))))
+  }
+  return itemProgressPercent(job)
+}
+
+export function progressIsIndeterminate(job) {
+  return Boolean(job?.progress) && job.progress.byte_progress_percent === null
+}
+
+export function formatSeconds(value) {
+  if (value === null || value === undefined) return '—'
+  const seconds = Math.max(0, Math.round(Number(value)))
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ${seconds % 60}s`
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ${minutes % 60}m`
 }
 
 export function isTerminal(status) {

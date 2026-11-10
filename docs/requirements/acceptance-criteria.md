@@ -5,7 +5,7 @@
 - [x] Un único `deploy/compose.yaml`.
 - [x] Exactamente `web`, `api`, `worker`, `db`.
 - [x] API y worker comparten imagen con comandos independientes.
-- [x] `web` usa Vite dev server y proxy `/api`/SSE.
+- [x] `web` usa Vite dev server y proxy `/api`/WebSocket.
 - [x] API monta documentos en solo lectura; worker en escritura.
 - [x] PostgreSQL usa volumen persistente.
 - [x] Reiniciar el stack conserva base y documentos.
@@ -58,7 +58,7 @@
 - [x] Rutas separadas por rol.
 - [x] Selector de carpetas y solapamiento.
 - [x] Dashboard, historial, almacenamiento y auditoría.
-- [x] SSE y fallback REST.
+- [x] WebSocket, reconexión y fallback REST.
 - [x] Estados loading/empty/error/partial/completed.
 - [x] Responsive.
 - [x] E2E Playwright dentro de Docker.

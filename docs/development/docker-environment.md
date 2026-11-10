@@ -9,7 +9,7 @@ instalan dentro de los contenedores.
 | Servicio | Imagen | Comando | Propósito |
 |---|---|---|---|
 | `web` | `terra-web:local` | `npm run dev -- --host 0.0.0.0 --port 5173` | Servidor de desarrollo Vite, HMR y proxy `/api` |
-| `api` | `terra-backend:local` | `air -c .air.api.toml` | API REST y SSE con recarga automática |
+| `api` | `terra-backend:local` | `air -c .air.api.toml` | API REST y WebSocket con recarga automática |
 | `worker` | `terra-backend:local` | `air -c .air.worker.toml` | Cola de PostgreSQL y transferencias de Drive con recarga automática |
 | `db` | `postgres:18-alpine` | PostgreSQL | Fuente de verdad y cola |
 
@@ -32,7 +32,7 @@ No hay Nginx, Traefik, Redis, broker, Compose de producción ni contenedor auxil
 | `${DB_PORT}` (obligatorio en `.env`) | PostgreSQL vinculado solo a 127.0.0.1 |
 | `8080` | API dentro de la red de Docker |
 
-Vite redirige `/api` (REST y SSE) mediante proxy a `http://api:8080`. La comunicación
+Vite redirige `/api` (REST y WebSocket Upgrade) mediante proxy a `http://api:8080`. La comunicación
 entre contenedores usa los nombres de servicio, nunca `localhost`.
 
 `DB_PORT` no tiene valor por defecto: Compose falla si falta en `.env`. El puerto interno

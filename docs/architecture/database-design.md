@@ -89,7 +89,8 @@ físicas de snapshots existentes.
   propietario, conexión, estado, contadores, bytes, idempotencia, cancelación y lease.
 - `download_job_roots` conserva las raíces seleccionadas y la ruta mostrada.
 - `download_items` conserva estado por archivo, intentos, próximo reintento, ruta relativa, hash y error.
-- `job_events` es la cola de eventos SSE (no la fuente de verdad).
+- `job_events` es el historial durable de eventos operativos (no la fuente de verdad del progreso).
+- `download_job_progress` guarda un snapshot JSONB por trabajo con revisión incremental y `updated_at`.
 - `audit_events` registra actor, acción, objetivo, metadata JSON e IP hash. En las
   operaciones organizativas el evento se inserta con `RecordTx` en la misma
   transacción que el alta o la actualización; si falla, ambas se revierten.

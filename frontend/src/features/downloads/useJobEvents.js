@@ -1,38 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useCallback } from 'react'
+import { useRealtimeChannel } from '../realtime/RealtimeContext'
 
-// Se suscribe al canal SSE del trabajo. PostgreSQL sigue siendo la fuente de verdad: el evento
-// de snapshot transporta la fila actual y la reconexión lo vuelve a enviar.
+// Mantiene el detalle del trabajo suscrito al canal central de WebSockets.
+// PostgreSQL sigue siendo la fuente de verdad y el snapshot permite reconectar.
 export function useJobEvents(jobId, onSnapshot) {
-  const [connected, setConnected] = useState(false)
+  const handleMessage = useCallback((message) => {
+    const data = message.data || {}
+    if (message.type === 'job.snapshot') {
+      onSnapshot({ ...(data.job || {}), progress: data.progress, progress_revision: message.revision })
+      return
+    }
+    if (message.type === 'job.progress') {
+      onSnapshot({ progress: data.progress, progress_revision: message.revision })
+      return
+    }
+    if (message.type === 'job.done') {
+      onSnapshot({ ...(data.payload || {}), progress: data.progress, progress_revision: message.revision })
+    }
+  }, [onSnapshot])
 
-  useEffect(() => {
-    if (!jobId) return undefined
-    const source = new EventSource(`/api/v1/download-jobs/${jobId}/events`)
-    const handler = (event) => {
-      try {
-        onSnapshot(JSON.parse(event.data))
-      } catch {
-        // Ignora tramas malformadas; el polling sigue disponible.
-      }
-    }
-    const onOpen = () => setConnected(true)
-    const onError = () => setConnected(false)
-    const onDone = (event) => {
-      handler(event)
-      setConnected(false)
-      source.close()
-    }
-    source.addEventListener('open', onOpen)
-    source.addEventListener('snapshot', handler)
-    source.addEventListener('done', onDone)
-    source.onopen = onOpen
-    source.onerror = onError
-    return () => {
-      source.removeEventListener('snapshot', handler)
-      source.removeEventListener('done', onDone)
-      source.close()
-    }
-  }, [jobId, onSnapshot])
-
-  return connected
+  const status = useRealtimeChannel(jobId ? `job:${jobId}` : null, handleMessage)
+  return status === 'connected'
 }

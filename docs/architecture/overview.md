@@ -7,7 +7,7 @@ masivamente y el worker nunca sirve HTTP.
 flowchart LR
     U[Trabajador / Administrador] -->|HTTP local| W[web<br/>React + Vite]
     W -->|/api REST| A[api<br/>Go]
-    W -->|/api SSE| A
+    W -->|/api WebSocket| A
     A <-->|SQL| D[(db<br/>PostgreSQL)]
     K[worker<br/>Go] <-->|SQL, leases, cola| D
     K -->|Drive API v3| G[Google Drive]
@@ -34,11 +34,12 @@ flowchart LR
 | `users` | Perfil, estados y asignación vigente |
 | `organization` | Áreas, cargos, historial organizativo |
 | `drive` | OAuth Drive, conexión, metadatos, carpetas, exportación/descarga |
-| `downloads` | Cola, trabajos, worker, SSE, documentos y acceso a archivos |
+| `downloads` | Cola, trabajos, worker, progreso, documentos y acceso a archivos |
 | `storage` | Rutas relativas, sanitización, contención, `.part`, rename, espacio libre |
 | `admin` | Dashboard, trabajadores y auditoría administrativa |
 | `audit` | Registro de operaciones sensibles |
 | `platform` | Config, DB, errores, HTTP, cifrado, password, rate limit, migraciones |
+| `realtime` | WebSocket, canales autorizados, LISTEN/NOTIFY y snapshots |
 | `server` | Cableado de rutas y límites de autorización |
 
 ## Flujo de un snapshot
@@ -58,7 +59,7 @@ sequenceDiagram
     API->>DB: Valida conexión, política, capacidad
     API->>DB: INSERT job (queued) + roots
     API-->>Web: 202 Accepted + job_id
-    Web->>API: GET /download-jobs/{id}/events (SSE)
+    Web->>API: WebSocket /api/v1/realtime + subscribe job:{id}
     Worker->>DB: SELECT ... FOR UPDATE SKIP LOCKED
     Worker->>DB: lease + heartbeat
     Worker->>Drive: files.list (paginado)
@@ -66,8 +67,9 @@ sequenceDiagram
     Worker->>Drive: files.get alt=media / files.export
     Worker->>FS: .part + SHA-256 + rename
     Worker->>DB: item completed + stored_files
-    API->>DB: lee estado/eventos
-    API-->>Web: snapshot / progreso / done
+    Worker->>DB: UPSERT download_job_progress + NOTIFY
+    API->>DB: lee snapshot/eventos notificados
+    API-->>Web: job.snapshot / job.progress / job.done
 ```
 
 ## Decisiones que no se negocian

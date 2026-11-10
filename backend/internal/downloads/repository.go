@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -301,8 +302,13 @@ func (r *Repository) JobBytes(ctx context.Context, jobID uuid.UUID) (int64, erro
 // --- protocolo de cola del worker ---
 
 func (r *Repository) ClaimNext(ctx context.Context, workerID string, lease time.Duration) (*Job, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
 	var id uuid.UUID
-	err := r.pool.QueryRow(ctx, `WITH candidate AS (
+	err = tx.QueryRow(ctx, `WITH candidate AS (
 			SELECT j.id FROM download_jobs j
 			LEFT JOIN drive_connections c ON c.id = j.drive_connection_id
 			WHERE (
@@ -333,6 +339,22 @@ func (r *Repository) ClaimNext(ctx context.Context, workerID string, lease time.
 		return nil, nil
 	}
 	if err != nil {
+		return nil, err
+	}
+	// Un lease vencido puede dejar elementos downloading del worker anterior.
+	// Se reencolan para que el nuevo worker los procese y no se cuenten como completados.
+	if _, err := tx.Exec(ctx, `UPDATE download_items SET status='pending', started_at=NULL
+		WHERE job_id=$1 AND status='downloading'`, id); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE download_job_progress SET
+		snapshot = jsonb_set(jsonb_set(jsonb_set(snapshot, '{in_flight_bytes}', '0'),
+			'{active_downloads}', '[]'), '{transferred_bytes}', snapshot->'completed_bytes'),
+		revision = revision + 1, updated_at = now()
+		WHERE job_id=$1`, id); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 	return r.Get(ctx, id)
@@ -494,6 +516,12 @@ func (r *Repository) PendingItems(ctx context.Context, jobID uuid.UUID, limit in
 	return out, rows.Err()
 }
 
+func (r *Repository) SetItemExpectedSize(ctx context.Context, itemID uuid.UUID, size int64) error {
+	_, err := r.pool.Exec(ctx, `UPDATE download_items SET size_bytes=$2
+		WHERE id=$1 AND size_bytes IS NULL AND $2 > 0`, itemID, size)
+	return err
+}
+
 func (r *Repository) MarkDownloading(ctx context.Context, itemID uuid.UUID) (bool, error) {
 	ct, err := r.pool.Exec(ctx, `UPDATE download_items SET status='downloading', started_at=now()
 		WHERE id=$1 AND status IN ('pending','retrying')`, itemID)
@@ -549,13 +577,13 @@ func (r *Repository) MarkItemCancelled(ctx context.Context, itemID uuid.UUID) er
 
 func (r *Repository) CancelPending(ctx context.Context, jobID uuid.UUID) error {
 	_, err := r.pool.Exec(ctx, `UPDATE download_items SET status='cancelled', finished_at=now()
-		WHERE job_id=$1 AND status IN ('pending','retrying')`, jobID)
+		WHERE job_id=$1 AND status IN ('pending','retrying','downloading')`, jobID)
 	return err
 }
 
 func (r *Repository) FailRemaining(ctx context.Context, jobID uuid.UUID, code, message string) error {
 	_, err := r.pool.Exec(ctx, `UPDATE download_items SET status='failed', error_code=$2, error_message=$3,
-		finished_at=now() WHERE job_id=$1 AND status IN ('pending','retrying')`, jobID, code, message)
+		finished_at=now() WHERE job_id=$1 AND status IN ('pending','retrying','downloading')`, jobID, code, message)
 	return err
 }
 
@@ -659,8 +687,28 @@ func (r *Repository) ItemByID(ctx context.Context, id uuid.UUID) (*Item, error) 
 
 func (r *Repository) AddEvent(ctx context.Context, jobID uuid.UUID, eventType string, payload map[string]any) {
 	raw, _ := json.Marshal(payload)
-	_, _ = r.pool.Exec(ctx, `INSERT INTO job_events (job_id, event_type, payload) VALUES ($1,$2,$3)`,
-		jobID, eventType, raw)
+	var eventID int64
+	err := r.pool.QueryRow(ctx, `INSERT INTO job_events (job_id, event_type, payload) VALUES ($1,$2,$3)
+		RETURNING id`, jobID, eventType, raw).Scan(&eventID)
+	if err == nil {
+		_, _ = r.pool.Exec(ctx, `SELECT pg_notify('terra_events', $1)`,
+			fmt.Sprintf("%s:%d", jobID, eventID))
+	}
+}
+
+func (r *Repository) EventByID(ctx context.Context, id int64) (*JobEvent, error) {
+	var e JobEvent
+	var raw []byte
+	err := r.pool.QueryRow(ctx, `SELECT id, event_type, payload, created_at FROM job_events WHERE id=$1`, id).
+		Scan(&e.ID, &e.Type, &raw, &e.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.NotFound("Evento no encontrado.")
+	}
+	if err != nil {
+		return nil, err
+	}
+	_ = json.Unmarshal(raw, &e.Payload)
+	return &e, nil
 }
 
 func (r *Repository) EventsAfter(ctx context.Context, jobID uuid.UUID, afterID int64, limit int) ([]JobEvent, error) {
@@ -717,6 +765,118 @@ func (r *Repository) StoredFilesByJob(ctx context.Context, jobID uuid.UUID) ([]S
 		out = append(out, f)
 	}
 	return out, rows.Err()
+}
+
+type progressCounts struct {
+	completed, skipped, failed, pending, retrying, downloading int
+	completedBytes, knownTotalBytes                            int64
+	unknownSizeItems                                           int
+}
+
+func (r *Repository) BuildProgress(ctx context.Context, job *Job, tracker *JobProgressTracker) (*ProgressSnapshot, error) {
+	var counts progressCounts
+	err := r.pool.QueryRow(ctx, `SELECT
+		count(*) FILTER (WHERE status='completed'),
+		count(*) FILTER (WHERE status='skipped'),
+		count(*) FILTER (WHERE status='failed'),
+		count(*) FILTER (WHERE status='pending'),
+		count(*) FILTER (WHERE status='retrying'),
+		count(*) FILTER (WHERE status='downloading'),
+		COALESCE(sum(size_bytes) FILTER (WHERE status='completed'),0),
+		COALESCE(sum(size_bytes) FILTER (WHERE status <> 'skipped' AND size_bytes IS NOT NULL),0),
+		count(*) FILTER (WHERE status <> 'skipped' AND size_bytes IS NULL)
+		FROM download_items WHERE job_id=$1`, job.ID).Scan(
+		&counts.completed, &counts.skipped, &counts.failed, &counts.pending, &counts.retrying,
+		&counts.downloading, &counts.completedBytes, &counts.knownTotalBytes, &counts.unknownSizeItems)
+	if err != nil {
+		return nil, err
+	}
+	if tracker == nil {
+		tracker = NewJobProgressTracker(time.Now())
+	}
+	now := time.Now().UTC()
+	state := tracker.Snapshot(counts.completedBytes, now)
+	transferred := counts.completedBytes + state.inFlight
+	var percent *float64
+	if counts.unknownSizeItems == 0 && counts.knownTotalBytes > 0 {
+		value := float64(transferred) / float64(counts.knownTotalBytes) * 100
+		if value > 100 {
+			value = 100
+		}
+		if value < 0 {
+			value = 0
+		}
+		percent = &value
+	}
+	elapsed := int64(now.Sub(job.CreatedAt).Seconds())
+	if job.StartedAt != nil {
+		elapsed = int64(now.Sub(*job.StartedAt).Seconds())
+	}
+	if elapsed < 0 {
+		elapsed = 0
+	}
+	average := 0.0
+	if elapsed > 0 {
+		average = float64(state.sessionDone+state.inFlight) / float64(elapsed)
+	}
+	var eta *int64
+	if percent != nil && state.speed > 0 && transferred < counts.knownTotalBytes {
+		remaining := counts.knownTotalBytes - transferred
+		seconds := int64(math.Ceil(float64(remaining) / state.speed))
+		eta = &seconds
+	}
+	state.scan.PendingItems = counts.pending + counts.retrying
+	return &ProgressSnapshot{
+		JobID: job.ID, Stage: job.Status, Status: job.Status,
+		CompletedBytes: counts.completedBytes, InFlightBytes: state.inFlight,
+		TransferredBytes: transferred, KnownTotalBytes: counts.knownTotalBytes,
+		UnknownSizeItems: counts.unknownSizeItems, ByteProgressPercent: percent,
+		CompletedItems: counts.completed, SkippedItems: counts.skipped, FailedItems: counts.failed,
+		PendingItems: counts.pending, RetryingItems: counts.retrying, DownloadingItems: counts.downloading,
+		ActiveDownloads: state.active, DownloadSpeedBytesPerSec: state.speed,
+		AverageSpeedBytesPerSec: average, ElapsedSeconds: elapsed, ETASeconds: eta,
+		Scan: state.scan, UpdatedAt: now,
+	}, nil
+}
+
+func (r *Repository) SaveProgress(ctx context.Context, snapshot *ProgressSnapshot) (int64, error) {
+	raw, err := json.Marshal(snapshot)
+	if err != nil {
+		return 0, err
+	}
+	var revision int64
+	err = r.pool.QueryRow(ctx, `INSERT INTO download_job_progress (job_id, revision, stage, snapshot)
+		VALUES ($1, 1, $2, $3)
+		ON CONFLICT (job_id) DO UPDATE SET
+			snapshot=EXCLUDED.snapshot, stage=EXCLUDED.stage,
+			revision=download_job_progress.revision + 1, updated_at=now()
+		RETURNING revision`, snapshot.JobID, snapshot.Stage, raw).Scan(&revision)
+	if err != nil {
+		return 0, err
+	}
+	_, _ = r.pool.Exec(ctx, `SELECT pg_notify('terra_progress', $1)`, snapshot.JobID.String())
+	return revision, nil
+}
+
+func (r *Repository) GetProgress(ctx context.Context, jobID uuid.UUID) (*ProgressSnapshot, int64, error) {
+	var raw []byte
+	var revision int64
+	err := r.pool.QueryRow(ctx, `SELECT snapshot, revision FROM download_job_progress WHERE job_id=$1`, jobID).
+		Scan(&raw, &revision)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, 0, apperr.NotFound("Progreso no disponible.")
+	}
+	if err != nil {
+		return nil, 0, err
+	}
+	var snapshot ProgressSnapshot
+	if err := json.Unmarshal(raw, &snapshot); err != nil {
+		return nil, 0, err
+	}
+	if snapshot.ActiveDownloads == nil {
+		snapshot.ActiveDownloads = []ActiveDownload{}
+	}
+	return &snapshot, revision, nil
 }
 
 func nullable(s string) *string {

@@ -98,7 +98,7 @@ la base de datos desechable. Las pruebas son secuenciales e independientes.
 - formateo y cálculos de progreso;
 - cliente HTTP, cabecera CSRF, cuerpos JSON y errores estables de API;
 - badges de estado;
-- comportamiento del hook SSE con un doble controlado de EventSource.
+- comportamiento del hook de tiempo real con WebSocket controlado y fallback REST.
 
 ## Pruebas de integración de frontend
 
@@ -179,7 +179,7 @@ Siteverify real exige un token de Cloudflare.
 | Alineación del footer legal y rutas legales | frontend | Navegador | — | Playwright (2/1 columnas, 320–1920 px) | Cubierto |
 | Ancho/foco/resize del textarea de contenido de políticas | frontend | Navegador | — | Playwright | Cubierto |
 | Login de admin / ciclo de vida del reset de Turnstile | auth + frontend | HTTP + DB + navegador | Siteverify y widget simulados | Integración Go + Vitest + Playwright | Cubierto |
-| SSE | downloads/API | HTTP | hook de cliente | smoke de navegador/proxy | Parcial |
+| WebSocket | realtime/API | WebSocket | hook de cliente | integración WS y smoke de proxy | Cubierto |
 | Proxy de Vite | frontend | HTTP | cliente HTTP | Playwright | Cubierto |
 | Almacenamiento local | storage | Sistema de archivos | pruebas de saneamiento/atomicidad | consistency check | Cubierto |
 

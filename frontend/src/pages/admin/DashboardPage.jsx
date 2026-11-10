@@ -15,6 +15,7 @@ import { useAuth } from '../../app/AuthContext'
 import { PERMISSIONS } from '../../features/auth/permissions'
 import { Alert, Card, CardBody, LoadingBlock, PageHeader, StatCard } from '../../components/ui'
 import { formatBytes, formatDate } from '../../utils/format'
+import { useRealtimeChannel } from '../../features/realtime/RealtimeContext'
 
 export default function AdminDashboard() {
   const { can } = useAuth()
@@ -32,6 +33,12 @@ export default function AdminDashboard() {
       active = false
     }
   }, [])
+
+  useRealtimeChannel('admin.dashboard', (message) => {
+    if (message.type === 'dashboard.snapshot' || message.type === 'dashboard.metrics') {
+      setData(message.data)
+    }
+  })
 
   if (error) return <Alert tone="error">{error}</Alert>
   if (!data) return <LoadingBlock />

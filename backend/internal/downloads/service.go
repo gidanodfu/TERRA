@@ -208,6 +208,18 @@ func (s *Service) Get(ctx context.Context, actorID uuid.UUID, admin bool, jobID 
 	return job, nil
 }
 
+func (s *Service) Progress(ctx context.Context, job *Job) (*ProgressSnapshot, int64) {
+	progress, revision, err := s.repo.GetProgress(ctx, job.ID)
+	if err == nil {
+		return progress, revision
+	}
+	progress, err = s.repo.BuildProgress(ctx, job, nil)
+	if err != nil {
+		return nil, 0
+	}
+	return progress, 0
+}
+
 func (s *Service) List(ctx context.Context, f ListFilter) ([]Job, int, error) {
 	jobs, total, err := s.repo.List(ctx, f)
 	if jobs == nil {

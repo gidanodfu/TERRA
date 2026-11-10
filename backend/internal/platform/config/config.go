@@ -52,6 +52,7 @@ type Worker struct {
 	PerAccountConcurrency int
 	Lease                 time.Duration
 	Heartbeat             time.Duration
+	ProgressInterval      time.Duration
 }
 
 type Limits struct {
@@ -108,6 +109,7 @@ func Load() (Config, error) {
 			PerAccountConcurrency: envInt("WORKER_PER_ACCOUNT_CONCURRENCY", 2),
 			Lease:                 time.Duration(envInt("WORKER_LEASE_SECONDS", 180)) * time.Second,
 			Heartbeat:             time.Duration(envInt("WORKER_HEARTBEAT_SECONDS", 10)) * time.Second,
+			ProgressInterval:      time.Duration(envInt("PROGRESS_INTERVAL_MS", 400)) * time.Millisecond,
 		},
 		Limits: Limits{
 			MaxDownloadBytes:     envInt64("MAX_DOWNLOAD_BYTES", 5<<30),

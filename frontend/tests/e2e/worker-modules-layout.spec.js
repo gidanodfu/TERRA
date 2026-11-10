@@ -46,6 +46,29 @@ const job = (id, status, overrides = {}) => ({
   failed_items: 1,
   total_bytes: 52428800,
   downloaded_bytes: 20971520,
+  progress: {
+    stage: status,
+    status,
+    completed_bytes: 20971520,
+    in_flight_bytes: status === 'downloading' ? 1048576 : 0,
+    transferred_bytes: 20971520 + (status === 'downloading' ? 1048576 : 0),
+    known_total_bytes: 52428800,
+    unknown_size_items: 0,
+    byte_progress_percent: status === 'completed' ? 100 : 42,
+    completed_items: 18,
+    skipped_items: 2,
+    failed_items: 1,
+    pending_items: 19,
+    retrying_items: 0,
+    downloading_items: status === 'downloading' ? 1 : 0,
+    download_speed_bytes_per_second: 1048576,
+    average_speed_bytes_per_second: 900000,
+    eta_seconds: 30,
+    scan: { folders_discovered: 4, folders_scanned: 4, items_found: 40, downloadable_items: 37, skipped_items: 3 },
+    active_downloads: status === 'downloading'
+      ? [{ item_id: 'active-1', name: 'grande.bin', transferred_bytes: 1048576, expected_bytes: 2097152, progress_percent: 50 }]
+      : [],
+  },
   created_at: '2026-11-05T10:00:00Z',
   drive_owner_name: worker.display_name,
   requested_by_name: 'Ada Admin',
@@ -187,6 +210,8 @@ test('el detalle del trabajo permite descargar elementos completados', async ({ 
   await page.goto('/app/jobs/job-1')
   await expect(page.getByRole('heading', { name: /Trabajo JOB-1/, level: 1 })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Descargar Reporte.pdf' })).toBeVisible()
+  await expect(page.getByText('Transferencias activas')).toBeVisible()
+  await expect(page.getByText('grande.bin')).toBeVisible()
   await assertNoOverflow(page, 'detalle de trabajo')
 
   for (const width of [768, 390]) {

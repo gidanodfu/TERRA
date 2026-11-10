@@ -119,11 +119,22 @@ export function Alert({ tone = 'error', title, children, onClose }) {
   )
 }
 
-export function ProgressBar({ value, tone = 'bg-brand-600', label }) {
+export function ProgressBar({ value, tone = 'bg-brand-600', label, indeterminate = false }) {
   return (
     <div>
-      <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
-        <div className={`h-full rounded-full transition-all ${tone}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+      <div
+        className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200"
+        role="progressbar"
+        aria-valuenow={indeterminate ? undefined : value}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuetext={indeterminate ? 'Progreso indeterminado' : undefined}
+      >
+        {indeterminate ? (
+          <div className={`h-full w-1/3 rounded-full ${tone} animate-pulse`} />
+        ) : (
+          <div className={`h-full rounded-full transition-all ${tone}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+        )}
       </div>
       {label ? <p className="mt-1 text-xs text-slate-500">{label}</p> : null}
     </div>
