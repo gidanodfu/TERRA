@@ -17,6 +17,12 @@ type Repository struct{ pool *pgxpool.Pool }
 
 func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: pool} }
 
+// Begin abre una transacción para las operaciones organizativas que deben
+// persistir su evento de auditoría en el mismo commit.
+func (r *Repository) Begin(ctx context.Context) (pgx.Tx, error) {
+	return r.pool.Begin(ctx)
+}
+
 func (r *Repository) ListAreas(ctx context.Context, includeInactive bool) ([]Area, error) {
 	where := "WHERE a.status = 'active'"
 	if includeInactive {
@@ -53,6 +59,17 @@ func (r *Repository) GetArea(ctx context.Context, id uuid.UUID) (*Area, error) {
 	return &a, err
 }
 
+func (r *Repository) GetAreaForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*Area, error) {
+	var a Area
+	err := tx.QueryRow(ctx, `SELECT id, name, slug, status, responsibilities, created_at, updated_at
+		FROM areas WHERE id=$1 FOR UPDATE`, id).
+		Scan(&a.ID, &a.Name, &a.Slug, &a.Status, &a.Responsibilities, &a.CreatedAt, &a.UpdatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.NotFound("Área no encontrada.")
+	}
+	return &a, err
+}
+
 func (r *Repository) AreaNameTaken(ctx context.Context, normalized string, exclude uuid.UUID) (bool, error) {
 	var exists bool
 	err := r.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM areas
@@ -72,8 +89,27 @@ func (r *Repository) CreateArea(ctx context.Context, a *Area) error {
 	return translateAreaError(err)
 }
 
+func (r *Repository) CreateAreaTx(ctx context.Context, tx pgx.Tx, a *Area) error {
+	_, err := tx.Exec(ctx, `INSERT INTO areas (id, name, slug, status, responsibilities)
+		VALUES ($1,$2,$3,$4,$5)`, a.ID, a.Name, a.Slug, a.Status, a.Responsibilities)
+	return translateAreaError(err)
+}
+
 func (r *Repository) UpdateArea(ctx context.Context, id uuid.UUID, name, status string, responsibilities []string) error {
 	ct, err := r.pool.Exec(ctx, `UPDATE areas
+		SET name=$2, status=$3, responsibilities=$4, updated_at=now() WHERE id=$1`,
+		id, name, status, responsibilities)
+	if err != nil {
+		return translateAreaError(err)
+	}
+	if ct.RowsAffected() == 0 {
+		return apperr.NotFound("Área no encontrada.")
+	}
+	return nil
+}
+
+func (r *Repository) UpdateAreaTx(ctx context.Context, tx pgx.Tx, id uuid.UUID, name, status string, responsibilities []string) error {
+	ct, err := tx.Exec(ctx, `UPDATE areas
 		SET name=$2, status=$3, responsibilities=$4, updated_at=now() WHERE id=$1`,
 		id, name, status, responsibilities)
 	if err != nil {
@@ -142,8 +178,26 @@ func (r *Repository) GetPosition(ctx context.Context, id uuid.UUID) (*Position, 
 	return &p, err
 }
 
+func (r *Repository) GetPositionForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*Position, error) {
+	var p Position
+	err := tx.QueryRow(ctx, `SELECT id, area_id, name, slug, normalized_name, status, responsibilities, created_at, updated_at
+		FROM positions WHERE id=$1 FOR UPDATE`, id).
+		Scan(&p.ID, &p.AreaID, &p.Name, &p.Slug, &p.NormalizedName, &p.Status, &p.Responsibilities, &p.CreatedAt, &p.UpdatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.NotFound("Cargo no encontrado.")
+	}
+	return &p, err
+}
+
 func (r *Repository) CreatePosition(ctx context.Context, p *Position) error {
 	_, err := r.pool.Exec(ctx, `INSERT INTO positions
+		(id, area_id, name, slug, status, responsibilities) VALUES ($1,$2,$3,$4,$5,$6)`,
+		p.ID, p.AreaID, p.Name, p.Slug, p.Status, p.Responsibilities)
+	return translatePositionError(err)
+}
+
+func (r *Repository) CreatePositionTx(ctx context.Context, tx pgx.Tx, p *Position) error {
+	_, err := tx.Exec(ctx, `INSERT INTO positions
 		(id, area_id, name, slug, status, responsibilities) VALUES ($1,$2,$3,$4,$5,$6)`,
 		p.ID, p.AreaID, p.Name, p.Slug, p.Status, p.Responsibilities)
 	return translatePositionError(err)
@@ -158,6 +212,19 @@ func (r *Repository) PositionNameTaken(ctx context.Context, areaID uuid.UUID, no
 
 func (r *Repository) UpdatePosition(ctx context.Context, id uuid.UUID, name, status string, responsibilities []string) error {
 	ct, err := r.pool.Exec(ctx, `UPDATE positions
+		SET name=$2, status=$3, responsibilities=$4, updated_at=now() WHERE id=$1`,
+		id, name, status, responsibilities)
+	if err != nil {
+		return translatePositionError(err)
+	}
+	if ct.RowsAffected() == 0 {
+		return apperr.NotFound("Cargo no encontrado.")
+	}
+	return nil
+}
+
+func (r *Repository) UpdatePositionTx(ctx context.Context, tx pgx.Tx, id uuid.UUID, name, status string, responsibilities []string) error {
+	ct, err := tx.Exec(ctx, `UPDATE positions
 		SET name=$2, status=$3, responsibilities=$4, updated_at=now() WHERE id=$1`,
 		id, name, status, responsibilities)
 	if err != nil {

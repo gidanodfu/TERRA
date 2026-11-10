@@ -265,6 +265,83 @@ test('solo lectura consulta el detalle sin acciones de escritura', async ({ page
 })
 
 
+
+test('presenta responsabilidades iniciales y cambios organizativos', async ({ page }) => {
+  const scenarios = [
+    {
+      event: {
+        id: 20, action: 'area.created', actor_name: 'Ada Admin', target_type: 'area', target_id: 'area-20',
+        metadata: { name: 'Área Nueva', responsibilities: { after: ['Primera responsabilidad', 'Segunda responsabilidad'] } },
+        created_at: '2026-11-10T10:00:00Z',
+      },
+      title: 'Área creada',
+      checks: ['Responsabilidades iniciales', 'Primera responsabilidad', 'Segunda responsabilidad'],
+    },
+    {
+      event: {
+        id: 21, action: 'area.updated', actor_name: 'Ada Admin', target_type: 'area', target_id: 'area-21',
+        metadata: { name: 'Área Reordenada', responsibilities: { changed: true, before: ['A', 'B'], after: ['B', 'A', 'C'] } },
+        created_at: '2026-11-10T10:05:00Z',
+      },
+      title: 'Área actualizada',
+      checks: ['Cambios en responsabilidades', 'Antes', 'Después', '1 agregada(s)', '2 conservada(s)', 'Orden modificado', 'Agregada'],
+    },
+    {
+      event: {
+        id: 22, action: 'area.updated', actor_name: 'Ada Admin', target_type: 'area', target_id: 'area-22',
+        metadata: { name: 'Área Editada', responsibilities: { changed: true, before: ['Texto anterior'], after: ['Texto nuevo'] } },
+        created_at: '2026-11-10T10:10:00Z',
+      },
+      title: 'Área actualizada',
+      checks: ['Texto anterior', 'Texto nuevo', '1 agregada(s)', '1 eliminada(s)', 'Agregada', 'Eliminada'],
+    },
+    {
+      event: {
+        id: 23, action: 'position.updated', actor_name: 'Ada Admin', target_type: 'position', target_id: 'position-23',
+        metadata: { name: 'Cargo sin responsabilidades', status: 'active', responsibilities: { changed: true, before: ['A', 'B'], after: [] } },
+        created_at: '2026-11-10T10:15:00Z',
+      },
+      title: 'Cargo actualizado',
+      checks: ['2 eliminada(s)', 'Sin responsabilidades registradas.'],
+    },
+    {
+      event: {
+        id: 24, action: 'area.updated', actor_name: 'Ada Admin', target_type: 'area', target_id: 'area-24',
+        metadata: { name: 'Área solo nombre', status: 'inactive' },
+        created_at: '2026-11-10T10:20:00Z',
+      },
+      title: 'Área actualizada',
+      checks: ['No se registraron cambios de responsabilidades en este evento.'],
+      absent: ['Cambios en responsabilidades'],
+    },
+    {
+      event: {
+        id: 25, action: 'area.created', actor_name: 'Ada Admin', target_type: 'area', target_id: 'area-25',
+        metadata: { name: 'Área histórica' },
+        created_at: '2026-11-10T10:25:00Z',
+      },
+      title: 'Área creada',
+      checks: ['La información de responsabilidades no está disponible en este evento histórico.'],
+    },
+  ]
+
+  for (const scenario of scenarios) {
+    await page.unroute('**/api/v1/**')
+    await mockAudit(page, 'admin', [scenario.event])
+    await page.goto('/app/admin/audit')
+    await expect(page.getByRole('heading', { name: 'Auditoría', level: 1 })).toBeVisible()
+    const dialog = await openDetail(page, scenario.title)
+    for (const text of scenario.checks) {
+      await expect(dialog.getByText(text, { exact: true }).first()).toBeVisible()
+    }
+    for (const text of scenario.absent || []) {
+      await expect(dialog.getByText(text, { exact: true })).toHaveCount(0)
+    }
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  }
+})
+
 test('el trabajador permanece excluido de Auditoría', async ({ page }) => {
   await mockAudit(page, 'user', [])
   await page.goto('/app')

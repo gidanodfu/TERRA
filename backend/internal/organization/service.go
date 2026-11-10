@@ -57,6 +57,27 @@ func conflict(field, code, message string) error {
 	return apperr.ConflictFields(code, message, map[string]string{field: message})
 }
 
+// responsibilitiesChanged compara contenido y orden sin mutar las listas.
+func responsibilitiesChanged(before, after []string) bool {
+	if len(before) != len(after) {
+		return true
+	}
+	for i := range before {
+		if validate.CleanText(before[i]) != validate.CleanText(after[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+// auditResponsibilities garantiza que el JSON de auditoría use [] y no null.
+func auditResponsibilities(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return append([]string{}, values...)
+}
+
 func (s *Service) Areas(ctx context.Context, includeInactive bool) ([]Area, error) {
 	areas, err := s.repo.ListAreas(ctx, includeInactive)
 	if areas == nil {
@@ -102,17 +123,35 @@ func (s *Service) CreateArea(ctx context.Context, actor uuid.UUID, ipHash, name 
 	}
 	a := &Area{ID: uuid.New(), Name: name, Slug: slug, Status: "active",
 		Responsibilities: cleanResp, CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	if err := s.repo.CreateArea(ctx, a); err != nil {
+	tx, err := s.repo.Begin(ctx)
+	if err != nil {
 		return nil, err
 	}
-	s.audit.Record(ctx, audit.Event{ActorUserID: &actor, Action: "area.created", TargetType: "area",
-		TargetID: a.ID.String(), Metadata: map[string]any{"name": name}, IPHash: ipHash})
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := s.repo.CreateAreaTx(ctx, tx, a); err != nil {
+		return nil, err
+	}
+	if err := s.audit.RecordTx(ctx, tx, audit.Event{ActorUserID: &actor, Action: "area.created", TargetType: "area",
+		TargetID: a.ID.String(), Metadata: map[string]any{
+			"name":             name,
+			"responsibilities": map[string]any{"after": auditResponsibilities(cleanResp)},
+		}, IPHash: ipHash}); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
 	return a, nil
 }
 
 func (s *Service) UpdateArea(ctx context.Context, actor uuid.UUID, ipHash string, id uuid.UUID,
 	name, status *string, responsibilities *[]string) (*Area, error) {
-	current, err := s.repo.GetArea(ctx, id)
+	tx, err := s.repo.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	current, err := s.repo.GetAreaForUpdate(ctx, tx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -148,11 +187,24 @@ func (s *Service) UpdateArea(ctx context.Context, actor uuid.UUID, ipHash string
 		return nil, conflict("name", "area_exists",
 			"Ya existe un área con ese nombre. Las áreas inactivas también conservan su nombre.")
 	}
-	if err := s.repo.UpdateArea(ctx, id, newName, newStatus, newResp); err != nil {
+	metadata := map[string]any{"name": newName, "status": newStatus}
+	if responsibilities != nil && responsibilitiesChanged(current.Responsibilities, newResp) {
+		metadata["responsibilities"] = map[string]any{
+			"changed": true,
+			"before":  auditResponsibilities(current.Responsibilities),
+			"after":   auditResponsibilities(newResp),
+		}
+	}
+	if err := s.repo.UpdateAreaTx(ctx, tx, id, newName, newStatus, newResp); err != nil {
 		return nil, err
 	}
-	s.audit.Record(ctx, audit.Event{ActorUserID: &actor, Action: "area.updated", TargetType: "area",
-		TargetID: id.String(), Metadata: map[string]any{"name": newName, "status": newStatus}, IPHash: ipHash})
+	if err := s.audit.RecordTx(ctx, tx, audit.Event{ActorUserID: &actor, Action: "area.updated", TargetType: "area",
+		TargetID: id.String(), Metadata: metadata, IPHash: ipHash}); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
 	return s.repo.GetArea(ctx, id)
 }
 
@@ -189,17 +241,35 @@ func (s *Service) CreatePosition(ctx context.Context, actor uuid.UUID, ipHash st
 		Slug: validate.Slug(name), NormalizedName: validate.NormalizeName(name),
 		Status: "active", Responsibilities: cleanResp,
 	}
-	if err := s.repo.CreatePosition(ctx, p); err != nil {
+	tx, err := s.repo.Begin(ctx)
+	if err != nil {
 		return nil, err
 	}
-	s.audit.Record(ctx, audit.Event{ActorUserID: &actor, Action: "position.created", TargetType: "position",
-		TargetID: p.ID.String(), Metadata: map[string]any{"name": name, "area_id": areaID}, IPHash: ipHash})
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := s.repo.CreatePositionTx(ctx, tx, p); err != nil {
+		return nil, err
+	}
+	if err := s.audit.RecordTx(ctx, tx, audit.Event{ActorUserID: &actor, Action: "position.created", TargetType: "position",
+		TargetID: p.ID.String(), Metadata: map[string]any{
+			"name": name, "area_id": areaID,
+			"responsibilities": map[string]any{"after": auditResponsibilities(cleanResp)},
+		}, IPHash: ipHash}); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
 	return s.repo.GetPosition(ctx, p.ID)
 }
 
 func (s *Service) UpdatePosition(ctx context.Context, actor uuid.UUID, ipHash string, id uuid.UUID,
 	name, status *string, responsibilities *[]string) (*Position, error) {
-	current, err := s.repo.GetPosition(ctx, id)
+	tx, err := s.repo.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	current, err := s.repo.GetPositionForUpdate(ctx, tx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -235,10 +305,23 @@ func (s *Service) UpdatePosition(ctx context.Context, actor uuid.UUID, ipHash st
 		return nil, conflict("name", "position_exists",
 			"Ya existe un cargo con ese nombre dentro del área seleccionada.")
 	}
-	if err := s.repo.UpdatePosition(ctx, id, newName, newStatus, newResp); err != nil {
+	metadata := map[string]any{"name": newName, "status": newStatus}
+	if responsibilities != nil && responsibilitiesChanged(current.Responsibilities, newResp) {
+		metadata["responsibilities"] = map[string]any{
+			"changed": true,
+			"before":  auditResponsibilities(current.Responsibilities),
+			"after":   auditResponsibilities(newResp),
+		}
+	}
+	if err := s.repo.UpdatePositionTx(ctx, tx, id, newName, newStatus, newResp); err != nil {
 		return nil, err
 	}
-	s.audit.Record(ctx, audit.Event{ActorUserID: &actor, Action: "position.updated", TargetType: "position",
-		TargetID: id.String(), Metadata: map[string]any{"name": newName, "status": newStatus}, IPHash: ipHash})
+	if err := s.audit.RecordTx(ctx, tx, audit.Event{ActorUserID: &actor, Action: "position.updated", TargetType: "position",
+		TargetID: id.String(), Metadata: metadata, IPHash: ipHash}); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
 	return s.repo.GetPosition(ctx, id)
 }

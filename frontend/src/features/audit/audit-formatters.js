@@ -68,7 +68,8 @@ export function formatAuditRole(value) {
 }
 
 export function formatAuditStatus(value) {
-  return USER_STATUS[value]?.label || humanizeAuditKey(value)
+  const organizationStatus = { active: 'Activo', inactive: 'Inactivo' }
+  return USER_STATUS[value]?.label || organizationStatus[value] || humanizeAuditKey(value)
 }
 
 export function formatAuditReason(value) {
@@ -113,4 +114,17 @@ export function formatAuditValue(key, value) {
   if (typeof value === 'number') return new Intl.NumberFormat('es-MX').format(value)
   const text = String(value)
   return text.trim() === '' ? 'No disponible' : text
+}
+
+export function compareResponsibilities(before, after) {
+  const previous = Array.isArray(before) ? before : []
+  const current = Array.isArray(after) ? after : []
+  const previousSet = new Set(previous)
+  const currentSet = new Set(current)
+  const added = current.filter((item) => !previousSet.has(item))
+  const removed = previous.filter((item) => !currentSet.has(item))
+  const kept = current.filter((item) => previousSet.has(item))
+  const keptBefore = previous.filter((item) => currentSet.has(item))
+  const reordered = kept.length > 1 && kept.some((item, index) => item !== keptBefore[index])
+  return { added, removed, kept, reordered }
 }

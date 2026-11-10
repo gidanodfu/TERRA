@@ -90,7 +90,9 @@ físicas de snapshots existentes.
 - `download_job_roots` conserva las raíces seleccionadas y la ruta mostrada.
 - `download_items` conserva estado por archivo, intentos, próximo reintento, ruta relativa, hash y error.
 - `job_events` es la cola de eventos SSE (no la fuente de verdad).
-- `audit_events` registra actor, acción, objetivo, metadata JSON e IP hash.
+- `audit_events` registra actor, acción, objetivo, metadata JSON e IP hash. En las
+  operaciones organizativas el evento se inserta con `RecordTx` en la misma
+  transacción que el alta o la actualización; si falla, ambas se revierten.
 
 ## Índices principales
 
@@ -107,6 +109,8 @@ físicas de snapshots existentes.
 - Cancelación: bloqueo `FOR UPDATE`, estado y elementos pendientes.
 - Reintento: reseteo de fallidos + estado del job.
 - Marcado de archivo completado + `stored_files`: una transacción.
+- Alta o actualización de área/cargo + evento `area.*`/`position.*`: una transacción
+  con bloqueo `FOR UPDATE` en la actualización.
 - Migraciones: transacción por archivo + advisory lock global.
 
 ## Retención

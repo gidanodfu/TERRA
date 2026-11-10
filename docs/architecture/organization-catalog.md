@@ -59,6 +59,55 @@ Límites:
 Las responsabilidades son descriptivas. **No son permisos de sistema** y no modifican
 RBAC, roles ni autorización.
 
+## Auditoría de responsabilidades
+
+Las operaciones de áreas y cargos registran su evento de auditoría en la misma
+transacción que la escritura. Si falla el evento, la operación no se confirma.
+
+Identificadores existentes:
+
+- `area.created`
+- `area.updated`
+- `position.created`
+- `position.updated`
+
+Creación:
+
+```json
+{
+  "name": "Área de ejemplo",
+  "responsibilities": {
+    "after": ["Primera responsabilidad", "Segunda responsabilidad"]
+  }
+}
+```
+
+Una lista vacía se registra como `[]`, nunca como `null`.
+
+Actualización con cambio efectivo:
+
+```json
+{
+  "name": "Área de ejemplo",
+  "status": "active",
+  "responsibilities": {
+    "changed": true,
+    "before": ["Responsabilidad anterior"],
+    "after": ["Responsabilidad actualizada", "Nueva responsabilidad"]
+  }
+}
+```
+
+- La comparación considera contenido y orden.
+- Si solo cambian nombre o estado, se omite `responsibilities`.
+- Si se eliminan todas, `after` es `[]`.
+- `before` es el valor persistido que se bloqueó con `SELECT ... FOR UPDATE`.
+- Los eventos históricos pueden no contener `responsibilities`; la interfaz lo
+  indica sin asumir que la lista estaba vacía.
+
+No se crean eventos adicionales para responsabilidades ni se modifican eventos
+históricos.
+
 ## Migración 0009
 
 - agrega normalización y responsabilidades;

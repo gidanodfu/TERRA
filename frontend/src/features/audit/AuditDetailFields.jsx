@@ -1,4 +1,5 @@
 import { Badge } from '../../components/ui'
+import AuditResponsibilities from './AuditResponsibilities'
 import { USER_STATUS } from '../../utils/format'
 import {
   AUDIT_FIELD_LABELS,
@@ -97,8 +98,10 @@ function NestedObject({ value }) {
 export default function AuditDetailFields({ event, definition }) {
   const metadata = safeAuditMetadata(event.metadata)
   const rows = []
+  const organizationEvent = ['area.created', 'area.updated', 'position.created', 'position.updated'].includes(event.action)
 
   for (const key of definition.fields || []) {
+    if (organizationEvent && key === 'responsibilities') continue
     if (key === 'version') {
       if (event.target_id) rows.push({ key, value: event.target_id })
       continue
@@ -110,6 +113,7 @@ export default function AuditDetailFields({ event, definition }) {
 
   const shown = new Set(rows.map((row) => row.key))
   for (const [key, value] of Object.entries(metadata).sort(([a], [b]) => a.localeCompare(b))) {
+    if (organizationEvent && key === 'responsibilities') continue
     if (!shown.has(key) && key !== 'result') rows.push({ key, value })
   }
 
@@ -118,9 +122,14 @@ export default function AuditDetailFields({ event, definition }) {
       <h3 id="audit-context-title" className="mb-2 text-sm font-semibold text-slate-900">
         Detalle del evento
       </h3>
+      {organizationEvent ? (
+        <div className="mb-4">
+          <AuditResponsibilities action={event.action} value={metadata.responsibilities} />
+        </div>
+      ) : null}
       {rows.length === 0 ? (
         <p className="rounded-xl border border-slate-200 bg-surface-secondary px-4 py-3 text-sm text-slate-500">
-          El evento no registra metadatos adicionales.
+          {organizationEvent ? 'El evento no registra otros metadatos adicionales.' : 'El evento no registra metadatos adicionales.'}
         </p>
       ) : (
         <div className="rounded-xl border border-slate-200 bg-surface-secondary p-4">

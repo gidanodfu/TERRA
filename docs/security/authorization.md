@@ -74,6 +74,9 @@ operaciones dependen exclusivamente de `admin.accounts.*`.
   claves de idempotencia, secretos ni contenido documental.
 - El COUNT, los filtros y la paginación se calculan con las mismas restricciones de alcance.
 - Dashboard y Auditoría usan exactamente el mismo alcance.
+- Las altas y cambios de áreas/cargos registran `area.*` y `position.*` con sus
+  responsabilidades antes/después en la misma transacción; la auditoría operacional
+  no incorpora estos eventos si no están en su allowlist.
 
 ## Reglas por recurso
 

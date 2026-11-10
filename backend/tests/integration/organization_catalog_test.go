@@ -27,6 +27,12 @@ func newOrganizationFixture(t *testing.T) (*organization.Service, *organization.
 	return organization.NewService(repo, audit.NewRepository(pool)), repo, users.NewRepository(pool), pool
 }
 
+func seedOrganizationActor(t *testing.T, pool *pgxpool.Pool) uuid.UUID {
+	t.Helper()
+	areaID, positionID := helpers.SeedOrganization(t, pool, "Actor Organización", "Cargo Actor")
+	return helpers.SeedUser(t, pool, areaID, positionID, "active")
+}
+
 func hasCode(t *testing.T, err error, code string) bool {
 	t.Helper()
 	var appErr *apperr.Error
@@ -36,7 +42,7 @@ func hasCode(t *testing.T, err error, code string) bool {
 func TestOrganizationAreaUniqueness(t *testing.T) {
 	svc, _, _, pool := newOrganizationFixture(t)
 	ctx := context.Background()
-	actor := uuid.New()
+	actor := seedOrganizationActor(t, pool)
 
 	area, err := svc.CreateArea(ctx, actor, "ip", "Recursos Humanos", []string{"Personal", "  Procesos   internos "})
 	if err != nil {
@@ -93,9 +99,9 @@ func TestOrganizationAreaUniqueness(t *testing.T) {
 }
 
 func TestOrganizationPositionUniqueness(t *testing.T) {
-	svc, _, _, _ := newOrganizationFixture(t)
+	svc, _, _, pool := newOrganizationFixture(t)
 	ctx := context.Background()
-	actor := uuid.New()
+	actor := seedOrganizationActor(t, pool)
 
 	areaA, err := svc.CreateArea(ctx, actor, "ip", "Área A", nil)
 	if err != nil {
@@ -142,9 +148,9 @@ func TestOrganizationPositionUniqueness(t *testing.T) {
 }
 
 func TestOrganizationResponsibilitiesValidation(t *testing.T) {
-	svc, _, _, _ := newOrganizationFixture(t)
+	svc, _, _, pool := newOrganizationFixture(t)
 	ctx := context.Background()
-	actor := uuid.New()
+	actor := seedOrganizationActor(t, pool)
 
 	invalid := [][]string{
 		{""},
@@ -170,9 +176,9 @@ func TestOrganizationResponsibilitiesValidation(t *testing.T) {
 }
 
 func TestOrganizationConcurrentAreaCreation(t *testing.T) {
-	svc, _, _, _ := newOrganizationFixture(t)
+	svc, _, _, pool := newOrganizationFixture(t)
 	ctx := context.Background()
-	actor := uuid.New()
+	actor := seedOrganizationActor(t, pool)
 	start := make(chan struct{})
 	errs := make([]error, 2)
 	var wg sync.WaitGroup
@@ -225,7 +231,7 @@ func TestOrganizationHistoryPreservesNames(t *testing.T) {
 	svc := organization.NewService(organization.NewRepository(pool), audit.NewRepository(pool))
 	usersRepo := users.NewRepository(pool)
 	ctx := context.Background()
-	actor := uuid.New()
+	actor := seedOrganizationActor(t, pool)
 
 	areaA, err := svc.CreateArea(ctx, actor, "ip", "Área Origen", nil)
 	if err != nil {

@@ -75,22 +75,22 @@ export const AUDIT_ACTIONS = {
   'area.created': action(
     'Área creada', 'organization',
     'Alta de un área organizativa.',
-    ['name'],
+    ['name', 'responsibilities'],
   ),
   'area.updated': action(
     'Área actualizada', 'organization',
     'Modificación de un área organizativa.',
-    ['name', 'status'],
+    ['name', 'status', 'responsibilities'],
   ),
   'position.created': action(
     'Cargo creado', 'organization',
     'Alta de un cargo dentro de un área.',
-    ['name', 'area_id'],
+    ['name', 'area_id', 'responsibilities'],
   ),
   'position.updated': action(
     'Cargo actualizado', 'organization',
     'Modificación de un cargo.',
-    ['name', 'status'],
+    ['name', 'status', 'responsibilities'],
   ),
 
   'drive.connected': action(
@@ -170,6 +170,7 @@ export const AUDIT_FIELD_LABELS = {
   reason: 'Motivo',
   name: 'Nombre',
   version: 'Versión',
+  responsibilities: 'Responsabilidades',
 }
 
 export const TARGET_LABELS = {
