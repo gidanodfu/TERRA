@@ -9,14 +9,14 @@ export default function WorkerProfile() {
   const navigate = useNavigate()
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full min-w-0">
       <PageHeader
         title="Mi perfil"
         description="Sus datos personales y su asignación organizativa vigente. Todo cambio de área o cargo queda registrado."
       />
-      <Card>
+      <Card className="w-full">
         <CardBody>
-          <div className="mb-5 flex items-center gap-3 rounded-xl bg-muted p-4">
+          <div className="mb-6 flex min-w-0 items-center gap-3 rounded-xl bg-muted p-4 sm:px-5">
             <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-100 text-brand-800">
               <UserRound className="h-5 w-5" />
             </span>
@@ -27,6 +27,7 @@ export default function WorkerProfile() {
           </div>
           <ProfileForm
             user={user}
+            variant="workspace"
             onSaved={async () => {
               await refresh()
               navigate('/app')

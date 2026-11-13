@@ -56,6 +56,20 @@ describe('ProfileForm', () => {
     }))
   })
 
+  it('mantiene la variante de onboarding y activa las secciones de workspace solo cuando se solicita', async () => {
+    const { container, rerender } = render(<ProfileForm user={workerUser} />)
+    await waitFor(() => expect(screen.getByLabelText('Área')).not.toBeDisabled())
+    expect(screen.queryByText('Datos personales', { exact: true })).not.toBeInTheDocument()
+    expect(container.querySelector('form')).toHaveClass('space-y-4')
+
+    rerender(<ProfileForm user={workerUser} variant="workspace" />)
+    await waitFor(() => expect(screen.getByLabelText('Área')).not.toBeDisabled())
+    expect(screen.getByText('Datos personales', { exact: true })).toBeInTheDocument()
+    expect(screen.getByText('Asignación organizativa', { exact: true })).toBeInTheDocument()
+    expect(screen.getByTestId('profile-personal-section')).toBeInTheDocument()
+    expect(screen.getByTestId('profile-organization-section')).toBeInTheDocument()
+  })
+
   it('muestra los errores del servidor junto al campo y conserva los datos', async () => {
     api.patch.mockRejectedValue({
       message: 'Revise los campos indicados.',
