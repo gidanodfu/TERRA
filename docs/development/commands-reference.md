@@ -64,7 +64,9 @@ El bootstrap es idempotente y no sobrescribe credenciales existentes.
 ./terra restart api          # reinicio excepcional de uno
 ```
 
-`restart` no recarga `.env` ni reconstruye imágenes. `down` nunca usa `-v`.
+`up` reconstruye la imagen web con caché antes de iniciar o recrear web, para mantener
+sincronizadas las dependencias de `package.json` y `package-lock.json`. `restart` solo
+reinicia procesos: no recarga `.env` ni actualiza dependencias. `down` nunca usa `-v`.
 
 ## 5. Construcción de imágenes
 

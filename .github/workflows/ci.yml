@@ -141,6 +141,12 @@ jobs:
       - name: Inicializar TERRA
         run: ./terra init
 
+      - name: Verificar dependencias frontend y resolución de Radix
+        run: |
+          ./terra check
+          docker compose --env-file .env -p terra -f deploy/compose.yaml exec -T web npm ls --depth=0
+          docker compose --env-file .env -p terra -f deploy/compose.yaml exec -T web node -e "require.resolve('@radix-ui/react-select')"
+
       - name: Ejecutar todas las pruebas de frontend y backend
         run: ./terra test all
 

@@ -35,11 +35,18 @@ docker compose exec -T web npm run test:unit       # comando puntual
 docker compose exec -T web npm run lint
 ```
 
-Después de cambiar `package.json` o `package-lock.json`, reconstruya y recree el servicio web:
+Los manifiestos `package.json` y `package-lock.json` se montan en `/app` como solo lectura.
+`node_modules` permanece dentro de la imagen y se instala con `npm ci`; no se monta desde el host.
+
+`./terra up` reconstruye la imagen web con caché antes de iniciar o recrear web, por lo que
+las dependencias declaradas quedan sincronizadas. No es necesario ejecutar `npm install` en
+el host.
 
 ```bash
-./terra build web
-./terra up
+./terra up                       # valida/actualiza web y recrea el contenedor
+./terra up --recreate=web        # reconstruye web y lo recrea
+./terra build web                # construcción explícita
+./terra restart web              # solo reinicia el proceso; no actualiza dependencias
 ```
 
 No se requiere Node.js en el host; solo forma parte de la imagen web.
@@ -55,17 +62,18 @@ esté disponible y que la aplicación monte en `#root`:
 ```
 
 Si `/@vite/client` devuelve HTML, el contenedor web no puede leer sus dependencias.
-Reconstruya y recree:
+`./terra doctor` valida que `node_modules` resuelva todas las dependencias directas de
+`package.json` y que `@radix-ui/react-select` pueda resolverse. Reconstruya y recree:
 
 ```bash
 ./terra build web
-./terra up
+./terra up --recreate=web
+./terra doctor
 ```
 
 ## Proxy de API y WebSocket
 
-`vite.config.js` redirige `/api` a `http://api:8080`. Esto incluye REST y
-Server-Sent Events. No use `localhost` para el tráfico entre contenedores.
+`vite.config.js` redirige `/api` a `http://api:8080`. Esto incluye REST y WebSocket. No use `localhost` para el tráfico entre contenedores.
 
 ## Pruebas de frontend
 

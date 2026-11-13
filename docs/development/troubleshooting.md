@@ -135,8 +135,9 @@ La respuesta debe ser `Content-Type: text/javascript`.
 
 **Identificar:** falla `http://localhost:8080`.
 **Registros:** `./terra logs web`.
-**Corrección:** reconstruya web después de cambios en el lockfile (`./terra build web`), verifique el puerto y
-el proxy de Vite.
+**Corrección:** ejecute `./terra up` (reconstruye web con caché) o `./terra build web` y
+`./terra up --recreate=web`; después `./terra doctor`. Si el error menciona un import que sí
+está en `package.json`, revise `npm ls --depth=0` dentro de web.
 **Verificar:** `curl -i http://localhost:8080/api/v1/health`.
 
 ## Fallo de proxy/API

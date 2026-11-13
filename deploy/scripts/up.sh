@@ -58,9 +58,27 @@ if ! terra_storage_has_data; then
 fi
 
 missing="$(terra_missing_images)"
-if ((build == 1)) || [[ -n "$missing" ]]; then
+web_built=0
+if ((build == 1)); then
   bash "$TERRA_SCRIPT_DIR/build.sh" --skip-check
+  web_built=1
+elif [[ -n "$missing" ]]; then
+  read -r -a missing_services <<<"$missing"
+  bash "$TERRA_SCRIPT_DIR/build.sh" --skip-check "${missing_services[@]}"
+  for service in "${missing_services[@]}"; do
+    [[ "$service" == "web" ]] && web_built=1
+  done
 fi
+# ./terra up debe mantener el frontend sincronizado con package.json y
+# package-lock.json. --recreate=api/worker/db no reconstruye web.
+case "$recreate" in
+  ""|all|web)
+    if ((web_built == 0)); then
+      bash "$TERRA_SCRIPT_DIR/build.sh" --skip-check --no-pull web
+      web_built=1
+    fi
+    ;;
+esac
 
 terra_step "Iniciando servicios"
 if [[ "$recreate" == "all" ]]; then

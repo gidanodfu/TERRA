@@ -57,6 +57,36 @@ npm run test:e2e
 ./terra migrate status
 ```
 
+## Dependencia declarada pero ausente
+
+### Síntoma
+
+Vite muestra `Failed to resolve import "@radix-ui/react-select"` aunque el manifiesto y el
+lockfile la declaren.
+
+### Diagnóstico
+
+```bash
+./terra doctor
+docker compose exec -T web sh -c 'cd /app && npm ls --depth=0'
+docker compose exec -T web node -e "require.resolve('@radix-ui/react-select')"
+```
+
+La imagen web puede ser anterior a los manifiestos actuales. `node_modules` pertenece a la
+imagen: montarlo desde el host o ejecutar `npm install` fuera de Docker no corrige el
+contenedor operativo.
+
+### Corrección
+
+```bash
+./terra build web
+./terra up --recreate=web
+./terra doctor
+```
+
+`./terra up` ya reconstruye web con caché antes de recrearla; `./terra restart web` no
+actualiza dependencias.
+
 ## Pantalla en blanco y errores de Vite
 
 ### Síntoma

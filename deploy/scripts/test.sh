@@ -118,6 +118,15 @@ backend_integration() {
   trap - EXIT
 }
 
+frontend_dependencies() {
+  section "DEPENDENCIAS DEL FRONTEND (web)"
+  if run_logged terra_check_web_dependencies; then
+    :
+  else
+    fail "Las dependencias del frontend no coinciden con los manifiestos."
+  fi
+}
+
 frontend_lint() {
   section "LINT DE FRONTEND (web)"
   if run_logged "$TERRA_DOCKER_BIN" compose --env-file "$TERRA_ENV_FILE" --project-name "$TERRA_PROJECT" \
@@ -193,6 +202,7 @@ case "$suite" in
   all)
     backend_unit
     backend_integration
+    frontend_dependencies
     frontend_lint
     frontend_unit
     frontend_integration
@@ -216,7 +226,7 @@ case "$suite" in
   frontend)
     if [[ "$detail" == "unit" ]]; then frontend_unit
     elif [[ "$detail" == "integration" ]]; then frontend_integration
-    else frontend_lint; frontend_unit; frontend_integration; frontend_build; frontend_coverage; fi
+    else frontend_dependencies; frontend_lint; frontend_unit; frontend_integration; frontend_build; frontend_coverage; fi
     ;;
   e2e) e2e ;;
 esac

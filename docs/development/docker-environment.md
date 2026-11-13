@@ -32,7 +32,10 @@ No hay Nginx, Traefik, Redis, broker, Compose de producción ni contenedor auxil
 | `${DB_PORT}` (obligatorio en `.env`) | PostgreSQL vinculado solo a 127.0.0.1 |
 | `8080` | API dentro de la red de Docker |
 
-Vite redirige `/api` (REST y WebSocket Upgrade) mediante proxy a `http://api:8080`. La comunicación
+Vite redirige `/api` (REST y WebSocket Upgrade) mediante proxy a `http://api:8080`.
+`package.json` y `package-lock.json` se montan como solo lectura en `/app`; `node_modules`
+se instala con `npm ci` en la imagen y no se monta desde el host. `./terra up` reconstruye
+web con caché antes de arrancar cuando el servicio web está implicado. La comunicación
 entre contenedores usa los nombres de servicio, nunca `localhost`.
 
 `DB_PORT` no tiene valor por defecto: Compose falla si falta en `.env`. El puerto interno

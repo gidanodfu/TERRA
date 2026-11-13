@@ -608,12 +608,34 @@ terra_check_web_port_mapping() {  local id mapping host_port
 }
 
 terra_check_web_dependencies() {
-  if terra_compose exec -T web test -f node_modules/vite/dist/client/client.mjs >/dev/null 2>&1; then
-    terra_ok "Dependencias del frontend visibles dentro de web (node_modules/vite)"
+  local failed=0 output
+  if ! terra_compose exec -T web test -f /app/package.json >/dev/null 2>&1       || ! terra_compose exec -T web test -f /app/package-lock.json >/dev/null 2>&1; then
+    terra_error "Los manifiestos package.json y package-lock.json no están visibles en /app."
+    terra_error "Verifique los montajes de web en deploy/compose.yaml."
+    return 1
+  fi
+  if ! terra_compose exec -T web test -f /app/node_modules/vite/dist/client/client.mjs >/dev/null 2>&1; then
+    terra_error "Problema general de Vite: node_modules/vite no está instalado en la imagen web."
+    terra_error "Reconstruya con: ./terra build web && ./terra up --recreate=web"
+    return 1
+  fi
+  if ! terra_compose exec -T web node -e "require.resolve('@radix-ui/react-select')" >/dev/null 2>&1; then
+    terra_error "Dependencia declarada pero ausente: @radix-ui/react-select."
+    terra_error "La imagen web no corresponde a package.json/package-lock.json."
+    terra_error "Reconstruya con: ./terra build web && ./terra up --recreate=web"
+    failed=1
+  fi
+  output="$(terra_compose exec -T web sh -c 'cd /app && npm ls --depth=0' 2>&1 || true)"
+  if grep -qiE 'UNMET DEPENDENCY|missing:|invalid:|extraneous' <<<"$output"; then
+    terra_error "Árbol de dependencias desincronizado respecto de package.json/package-lock.json."
+    printf '%s\n' "$output" | grep -iE 'UNMET DEPENDENCY|missing:|invalid:|extraneous' | head -n 10 >&2
+    terra_error "Reconstruya con: ./terra build web && ./terra up --recreate=web"
+    failed=1
+  fi
+  if ((failed == 0)); then
+    terra_ok "Dependencias frontend sincronizadas con los manifiestos; Radix Select resuelve dentro de web"
     return 0
   fi
-  terra_error "node_modules/vite no está visible dentro del contenedor web."
-  terra_error "Esto rompe /@vite/client y React Refresh; reconstruya web con ./terra build web y ./terra up."
   return 1
 }
 

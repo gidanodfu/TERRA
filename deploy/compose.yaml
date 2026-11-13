@@ -100,6 +100,8 @@ services:
       VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
       VITE_API_PROXY: http://api:8080
     volumes:
+      - ../frontend/package.json:/app/package.json:ro
+      - ../frontend/package-lock.json:/app/package-lock.json:ro
       - ../frontend/src:/app/src
       - ../frontend/public:/app/public
       - ../frontend/tests:/app/tests

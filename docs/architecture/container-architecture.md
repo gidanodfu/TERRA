@@ -53,6 +53,11 @@ Vite proxy:
 '/api': { target: 'http://api:8080' }
 ```
 
+`web` monta `package.json` y `package-lock.json` como solo lectura para que el diagnóstico
+compare los manifiestos vigentes con el `node_modules` de la imagen. No se monta
+`node_modules` desde el host ni se usa un volumen que pueda ocultar las dependencias
+instaladas durante el build.
+
 Esto cubre REST y WebSocket Upgrade. Los contenedores se comunican por nombre de servicio
 (`db`, `api`); nunca por `localhost`.
 
