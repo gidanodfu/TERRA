@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Ban, Download, RefreshCw, RotateCcw, WifiOff } from 'lucide-react'
+import { ArrowLeft, Ban, ChevronDown, Download, RefreshCw, RotateCcw, WifiOff } from 'lucide-react'
 import { useAuth } from '../app/AuthContext'
 import { PERMISSIONS } from '../features/auth/permissions'
 import { api, queryString } from '../services/api'
@@ -18,6 +18,13 @@ import {
   Spinner,
 } from '../components/ui'
 import { StatusBadge, ScopeLabel } from '../features/downloads/StatusBadge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/dropdown-menu'
 import { useJobEvents } from '../features/downloads/useJobEvents'
 import { formatBytes, formatDate, formatSeconds, durationBetween, isTerminal, progressIsIndeterminate, progressPercent } from '../utils/format'
 
@@ -179,20 +186,37 @@ export default function JobDetailPage({ basePath }) {
                 <WifiOff className="h-4 w-4" /> Sincronización por REST
               </span>
             ) : null}
-            {active && (!adminView || can(PERMISSIONS.JOBS_CANCEL)) ? (
-              <Button variant="danger" onClick={cancel} disabled={busy || job.status === 'cancel_requested'}>
-                {busy ? <Spinner className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                {job.status === 'cancel_requested' ? 'Cancelación solicitada' : 'Cancelar trabajo'}
-              </Button>
-            ) : null}
-            {adminView && can(PERMISSIONS.JOBS_RETRY) && ['failed', 'partially_completed'].includes(job.status) ? (
-              <Button variant="secondary" onClick={retry} disabled={busy}>
-                <RotateCcw className="h-4 w-4" /> Reintentar fallidos
-              </Button>
-            ) : null}
-            <Button variant="secondary" onClick={loadJob} disabled={busy}>
-              <RefreshCw className="h-4 w-4" /> Actualizar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" disabled={busy}>
+                  {busy ? <Spinner className="h-4 w-4" /> : null}
+                  Acciones <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem icon={RefreshCw} onSelect={loadJob} disabled={busy}>
+                  Actualizar
+                </DropdownMenuItem>
+                {active && (!adminView || can(PERMISSIONS.JOBS_CANCEL)) ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      icon={Ban}
+                      destructive
+                      onSelect={cancel}
+                      disabled={busy || job.status === 'cancel_requested'}
+                    >
+                      {job.status === 'cancel_requested' ? 'Cancelación solicitada' : 'Cancelar trabajo'}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+                {adminView && can(PERMISSIONS.JOBS_RETRY) && ['failed', 'partially_completed'].includes(job.status) ? (
+                  <DropdownMenuItem icon={RotateCcw} onSelect={retry} disabled={busy}>
+                    Reintentar fallidos
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         }
       />
@@ -367,8 +391,8 @@ export default function JobDetailPage({ basePath }) {
             <h2 className="font-semibold text-slate-900">Elementos</h2>
             <Select
               value={itemStatus}
-              onChange={(e) => {
-                setItemStatus(e.target.value)
+              onValueChange={(value) => {
+                setItemStatus(value)
                 setPage(1)
               }}
               aria-label="Filtrar elementos"

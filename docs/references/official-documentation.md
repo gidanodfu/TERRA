@@ -14,6 +14,8 @@ Fecha de revisión de versiones: **2026-11-03**.
 | Tailwind CSS / plugin Vite | 4.3.4 | npm registry |
 | React Router | 7.18.5 | npm registry |
 | Lucide React | 1.67.0 | npm registry |
+| Radix UI Dropdown Menu | 2.1.16 | npm registry |
+| Radix UI Select | 2.2.6 | npm registry |
 | Node (build) | 24-alpine | Docker Hub |
 | Docker / Compose | 29.9.2 / v5.6.1 | entorno de construcción |
 | pgx | v5.8.0 | `go.mod` |
@@ -119,6 +121,15 @@ Decisiones derivadas:
 - `alt=media` para binarios y comprobación de `capabilities.canDownload`.
 - Límites de exportación y tamaño controlados por configuración; los errores se registran por elemento.
 - No se usa Google Picker en el MVP; el selector propio valida pertenencia al árbol.
+
+## Radix UI
+
+- https://www.radix-ui.com/primitives/docs/components/dropdown-menu
+- https://www.radix-ui.com/primitives/docs/components/select
+
+Decisiones derivadas: primitives accesibles para menús y selectores; portal para
+evitar recortes; personalización visual con los tokens de TERRA; sin plantilla de
+UI completa.
 
 ## Cloudflare Turnstile
 

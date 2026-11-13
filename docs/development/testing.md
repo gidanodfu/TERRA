@@ -180,6 +180,7 @@ Siteverify real exige un token de Cloudflare.
 | Ancho/foco/resize del textarea de contenido de políticas | frontend | Navegador | — | Playwright | Cubierto |
 | Login de admin / ciclo de vida del reset de Turnstile | auth + frontend | HTTP + DB + navegador | Siteverify y widget simulados | Integración Go + Vitest + Playwright | Cubierto |
 | WebSocket | realtime/API | WebSocket | hook de cliente | integración WS y smoke de proxy | Cubierto |
+| Dropdown/Select | components | DOM | RTL + Playwright | unitarias, integración y E2E de portal/teclado/tema | Cubierto |
 | Proxy de Vite | frontend | HTTP | cliente HTTP | Playwright | Cubierto |
 | Almacenamiento local | storage | Sistema de archivos | pruebas de saneamiento/atomicidad | consistency check | Cubierto |
 

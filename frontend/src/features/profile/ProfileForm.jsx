@@ -123,7 +123,7 @@ export default function ProfileForm({ user, onSaved, submitLabel = 'Guardar perf
           <Select
             id="area_id"
             value={form.area_id}
-            onChange={(e) => update('area_id', e.target.value)}
+            onValueChange={(value) => update('area_id', value)}
             error={errors.area_id}
             disabled={loadingAreas}
           >
@@ -144,7 +144,7 @@ export default function ProfileForm({ user, onSaved, submitLabel = 'Guardar perf
           <Select
             id="position_id"
             value={form.position_id}
-            onChange={(e) => update('position_id', e.target.value)}
+            onValueChange={(value) => update('position_id', value)}
             error={errors.position_id}
             disabled={!form.area_id || loadingPositions}
           >

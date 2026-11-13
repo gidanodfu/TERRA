@@ -64,7 +64,7 @@ export default function WorkersPanel() {
             <Search className="h-4 w-4" /> Buscar
           </Button>
         </form>
-        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }} aria-label="Filtrar por estado" className="@lg:w-56">
+        <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }} aria-label="Filtrar por estado" className="@lg:w-56">
           <option value="">Todos los estados</option>
           <option value="active">Activos</option>
           <option value="pending_profile">Perfil pendiente</option>

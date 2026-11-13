@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { selectOption } from './helpers/select'
 import { ADMIN_PERMISSIONS, MODERATOR_PERMISSIONS, READ_ONLY_PERMISSIONS, WORKER_PERMISSIONS } from '../fixtures/permissions'
 
 const dashboard = {
@@ -183,7 +184,7 @@ test('el administrador crea una cuenta administrativa y la lista se actualiza', 
   await expect(page.getByText('mmoderadora')).toBeVisible()
 
   await page.getByRole('button', { name: 'Nuevo usuario administrativo' }).click()
-  await page.getByLabel('Rol administrativo').selectOption('read_only')
+  await selectOption(page, 'Rol administrativo', 'Solo lectura')
   await page.getByLabel('Nombres').fill('Nuevo')
   await page.getByLabel('Apellidos').fill('Usuario')
   await page.getByLabel('Usuario').fill('nuevo.usuario')

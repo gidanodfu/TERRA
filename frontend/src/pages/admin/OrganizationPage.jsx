@@ -354,8 +354,8 @@ export default function OrganizationPage() {
                 <Select
                   id="area-status"
                   value={areaModal.status}
-                  onChange={(e) => {
-                  setAreaModal({ ...areaModal, status: e.target.value })
+                  onValueChange={(value) => {
+                  setAreaModal({ ...areaModal, status: value })
                   setAreaFieldErrors((current) => ({ ...current, status: undefined }))
                 }}
                 >
@@ -417,8 +417,8 @@ export default function OrganizationPage() {
                 <Select
                   id="position-status"
                   value={positionModal.status}
-                  onChange={(e) => {
-                  setPositionModal({ ...positionModal, status: e.target.value })
+                  onValueChange={(value) => {
+                  setPositionModal({ ...positionModal, status: value })
                   setPositionFieldErrors((current) => ({ ...current, status: undefined }))
                 }}
                 >

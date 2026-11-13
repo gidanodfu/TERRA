@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { selectOption } from './helpers/select'
 import { ADMIN_PERMISSIONS } from '../fixtures/permissions'
 
 const admin = {
@@ -188,7 +189,7 @@ test('edita responsabilidades y estado de áreas y cargos', async ({ page }) => 
   await page.getByLabel('Quitar responsabilidad 1').click()
   await page.getByRole('button', { name: 'Añadir responsabilidad' }).click()
   await page.getByRole('textbox', { name: 'Responsabilidad 1', exact: true }).fill('Nueva responsabilidad')
-  await page.getByLabel('Estado').selectOption('inactive')
+  await selectOption(page, 'Estado', 'Inactiva')
   await page.getByRole('button', { name: 'Guardar' }).click()
 
   expect(state.requests.areaUpdate).toMatchObject({

@@ -131,7 +131,7 @@ export default function DownloadWizardPage() {
             </div>
             <div>
               <Field label="Trabajador propietario del Drive" htmlFor="worker" error={!workerId ? 'Seleccione un trabajador.' : undefined}>
-                <Select id="worker" value={workerId} onChange={(e) => { setWorkerId(e.target.value); setSelection({ folders: [], files: [] }) }}>
+                <Select id="worker" value={workerId} onValueChange={(value) => { setWorkerId(value); setSelection({ folders: [], files: [] }) }}>
                   <option value="">Seleccione un trabajador</option>
                   {(users || []).map((user) => (
                     <option key={user.id} value={user.id}>

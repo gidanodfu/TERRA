@@ -37,7 +37,7 @@ export default function ConnectionsPage() {
         title="Conexiones de Google Drive"
         description="Autorizaciones individuales de los trabajadores. TERRA nunca utiliza credenciales propias para acceder al Drive de otra persona."
         actions={
-          <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }} aria-label="Filtrar conexiones">
+          <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }} aria-label="Filtrar conexiones">
             <option value="">Todas</option>
             <option value="connected">Conectadas</option>
             <option value="reauthorization_required">Requieren reconexión</option>

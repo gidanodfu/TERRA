@@ -174,13 +174,13 @@ export default function AdministrativeAccountsPanel({ createOpen, onCloseCreate 
           />
           <Button type="submit" variant="secondary"><Search className="h-4 w-4" /> Buscar</Button>
         </form>
-        <Select value={role} onChange={(e) => { setRole(e.target.value); setPage(1) }} aria-label="Filtrar por rol" className="@2xl:w-48">
+        <Select value={role} onValueChange={(value) => { setRole(value); setPage(1) }} aria-label="Filtrar por rol" className="@2xl:w-48">
           <option value="">Todos los roles</option>
           {ADMIN_ROLE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </Select>
-        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }} aria-label="Filtrar por estado" className="@2xl:w-48">
+        <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }} aria-label="Filtrar por estado" className="@2xl:w-48">
           <option value="">Todos los estados</option>
           <option value="active">Activos</option>
           <option value="disabled">Desactivados</option>
@@ -270,7 +270,7 @@ export default function AdministrativeAccountsPanel({ createOpen, onCloseCreate 
         <form id="create-administrative-account" onSubmit={submit} className="space-y-4" noValidate>
           {formError ? <Alert tone="error">{formError}</Alert> : null}
           <Field label="Rol administrativo" htmlFor="account-role" error={fieldErrors.role}>
-            <Select id="account-role" value={form.role} onChange={(e) => update('role', e.target.value)} error={fieldErrors.role}>
+            <Select id="account-role" value={form.role} onValueChange={(value) => update('role', value)} error={fieldErrors.role}>
               {ADMIN_ROLE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}

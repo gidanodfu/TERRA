@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { selectOption } from './helpers/select'
 import { WORKER_PERMISSIONS } from '../fixtures/permissions'
 
 const worker = {
@@ -240,7 +241,7 @@ test('Mis descargas usa el ancho y conserva filtros y columnas', async ({ page }
 
   await scrollTop(page, 1440, 1000)
   await page.goto('/app/jobs')
-  await page.getByRole('combobox', { name: 'Filtrar por estado' }).selectOption('completed')
+  await selectOption(page, 'Filtrar por estado', 'Completados')
   await expect(page.getByRole('table')).toBeVisible()
   await page.screenshot({ path: '/tmp/terra-worker-jobs-1440.png' })
 

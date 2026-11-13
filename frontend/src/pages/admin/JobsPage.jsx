@@ -76,7 +76,7 @@ export default function AdminJobsPage() {
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por trabajador o solicitante" aria-label="Buscar trabajos" />
           <Button type="submit" variant="secondary"><Search className="h-4 w-4" /> Buscar</Button>
         </form>
-        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }} aria-label="Filtrar por estado" className="@lg:w-56">
+        <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }} aria-label="Filtrar por estado" className="@lg:w-56">
           <option value="">Todos los estados</option>
           <option value="queued">En cola</option>
           <option value="scanning">Explorando</option>
@@ -89,11 +89,11 @@ export default function AdminJobsPage() {
         </Select>
       </div>
       <div className="mb-4 grid gap-2 @lg:grid-cols-2 @3xl:grid-cols-4">
-        <Select value={areaId} onChange={(e) => { setAreaId(e.target.value); setPage(1) }} aria-label="Filtrar por área">
+        <Select value={areaId} onValueChange={(value) => { setAreaId(value); setPage(1) }} aria-label="Filtrar por área">
           <option value="">Todas las áreas</option>
           {areas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
         </Select>
-        <Select value={positionId} onChange={(e) => { setPositionId(e.target.value); setPage(1) }} aria-label="Filtrar por cargo" disabled={!areaId}>
+        <Select value={positionId} onValueChange={(value) => { setPositionId(value); setPage(1) }} aria-label="Filtrar por cargo" disabled={!areaId}>
           <option value="">Todos los cargos</option>
           {positions.map((position) => <option key={position.id} value={position.id}>{position.name}</option>)}
         </Select>

@@ -68,8 +68,8 @@ describe('WorkerDetailPage', () => {
 
     expect(await screen.findByText('Seleccione un área activa.')).toBeInTheDocument()
     expect(screen.getByText('Asigne área y cargo antes de activar.')).toBeInTheDocument()
-    expect(screen.getByLabelText('Área')).toHaveValue('area-1')
-    expect(screen.getByLabelText('Estado de la cuenta')).toHaveValue('active')
+    expect(screen.getByLabelText('Área')).toHaveTextContent('Sistemas')
+    expect(screen.getByLabelText('Estado de la cuenta')).toHaveTextContent('Activo')
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/admin/users/worker-1', {
       area_id: 'area-1',
       position_id: 'pos-1',

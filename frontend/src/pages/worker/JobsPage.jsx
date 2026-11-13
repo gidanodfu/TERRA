@@ -35,7 +35,7 @@ export default function WorkerJobs() {
         title="Mis descargas"
         description="Historial de respaldos institucionales asociados a su cuenta. Cada trabajo genera un snapshot independiente."
         actions={
-          <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }} aria-label="Filtrar por estado">
+          <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }} aria-label="Filtrar por estado">
             <option value="">Todos los estados</option>
             <option value="queued">En cola</option>
             <option value="scanning">Explorando</option>

@@ -53,14 +53,6 @@ export function Input({ id, error, className = '', ...props }) {
   return <input id={id} className={`input ${error ? 'border-red-400' : ''} ${className}`} {...props} />
 }
 
-export function Select({ id, error, className = '', children, ...props }) {
-  return (
-    <select id={id} className={`input ${error ? 'border-red-400' : ''} ${className}`} {...props}>
-      {children}
-    </select>
-  )
-}
-
 export function Textarea({ id, error, className = '', ...props }) {
   return <textarea id={id} className={`input min-h-28 ${error ? 'border-red-400' : ''} ${className}`} {...props} />
 }
@@ -205,3 +197,5 @@ export function DetailRow({ label, children }) {
     </div>
   )
 }
+
+export { Select } from './select'

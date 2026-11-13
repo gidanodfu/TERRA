@@ -35,12 +35,18 @@ describe('ProfileForm', () => {
   it('envía el perfil y las relaciones área/cargo', async () => {
     api.patch.mockResolvedValue({ ...workerUser, first_name: 'Ada', last_name: 'Lovelace' })
     render(<ProfileForm user={{ ...workerUser, first_name: '', last_name: '', area_id: null, position_id: null }} />)
-    await screen.findByRole('option', { name: 'Sistemas' })
+    await waitFor(() => expect(screen.getByLabelText('Área')).not.toBeDisabled())
     fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ada' } })
     fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'Lovelace' } })
-    fireEvent.change(screen.getByLabelText('Área'), { target: { value: 'area-1' } })
-    await screen.findByRole('option', { name: 'Analista' })
-    fireEvent.change(screen.getByLabelText('Cargo'), { target: { value: 'pos-1' } })
+    const area = screen.getByLabelText('Área')
+    fireEvent.pointerDown(area, { button: 0, ctrlKey: false })
+    fireEvent.click(area)
+    fireEvent.click(await screen.findByRole('option', { name: 'Sistemas' }))
+    const position = screen.getByLabelText('Cargo')
+    await waitFor(() => expect(position).not.toBeDisabled())
+    fireEvent.pointerDown(position, { button: 0, ctrlKey: false })
+    fireEvent.click(position)
+    fireEvent.click(await screen.findByRole('option', { name: 'Analista' }))
     fireEvent.click(screen.getByRole('button', { name: /Guardar perfil/i }))
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/me/profile', {
       first_name: 'Ada',
@@ -56,7 +62,7 @@ describe('ProfileForm', () => {
       fields: { first_name: 'El nombre no es válido.' },
     })
     render(<ProfileForm user={workerUser} />)
-    await screen.findByRole('option', { name: 'Sistemas' })
+    await waitFor(() => expect(screen.getByLabelText('Área')).not.toBeDisabled())
     fireEvent.click(screen.getByRole('button', { name: /Guardar perfil/i }))
     expect(await screen.findByText('El nombre no es válido.')).toBeInTheDocument()
     expect(screen.getByLabelText('Nombres')).toHaveValue(workerUser.first_name)

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, ExternalLink, Link2Off, RefreshCw, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronDown, ExternalLink, Link2Off, RefreshCw, ShieldCheck } from 'lucide-react'
 import { api } from '../../services/api'
 import {
   Alert,
@@ -212,11 +212,12 @@ export default function WorkerDrive() {
                     Versión vigente <strong className="text-slate-700">{policy.version}</strong> · publicada el{' '}
                     {formatDate(policy.published_at)}
                   </p>
-                  <details className="mt-3 rounded-xl border border-slate-200 bg-muted p-3">
-                    <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                  <details className="disclosure group mt-3">
+                    <summary className="disclosure-summary">
                       Leer el contenido de la política
+                      <ChevronDown className="h-4 w-4 transition group-open:rotate-180" aria-hidden="true" />
                     </summary>
-                    <div className="mt-3 max-h-64 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+                    <div className="disclosure-body max-h-64 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
                       {policy.content}
                     </div>
                   </details>

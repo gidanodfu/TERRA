@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { selectOption } from './helpers/select'
 import { ADMIN_PERMISSIONS } from '../fixtures/permissions'
 
 const worker = {
@@ -135,9 +136,9 @@ test('Trabajadores excluye al administrador y permite actualizar solo a un traba
   await expect(page.getByLabel('Cargo')).toBeVisible()
   await expect(page.getByLabel('Estado de la cuenta')).toBeVisible()
 
-  await page.getByLabel('Área').selectOption('cccccccc-cccc-4ccc-8ccc-cccccccccccc')
-  await page.getByLabel('Cargo').selectOption('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
-  await page.getByLabel('Estado de la cuenta').selectOption('suspended')
+  await selectOption(page, 'Área', 'Área Dos')
+  await selectOption(page, 'Cargo', 'Cargo Dos')
+  await selectOption(page, 'Estado de la cuenta', 'Suspendido')
   await page.getByRole('button', { name: /Guardar cambios/i }).click()
 
   await expect(page.getByText('Trabajador actualizado.')).toBeVisible()

@@ -168,7 +168,7 @@ export default function WorkerDetailPage() {
                   <Select
                     id="area_id"
                     value={form.area_id}
-                    onChange={(e) => { update('area_id', e.target.value); update('position_id', '') }}
+                    onValueChange={(value) => { update('area_id', value); update('position_id', '') }}
                     error={errors.area_id}
                   >
                     <option value="">Sin área</option>
@@ -181,7 +181,7 @@ export default function WorkerDetailPage() {
                   <Select
                     id="position_id"
                     value={form.position_id}
-                    onChange={(e) => update('position_id', e.target.value)}
+                    onValueChange={(value) => update('position_id', value)}
                     disabled={!form.area_id}
                     error={errors.position_id}
                   >
@@ -195,7 +195,7 @@ export default function WorkerDetailPage() {
                 </Field>
               </div>
               <Field label="Estado de la cuenta" htmlFor="status" error={errors.status} hint="Suspender o desactivar invalida todas las sesiones activas.">
-                <Select id="status" value={form.status} onChange={(e) => update('status', e.target.value)} error={errors.status}>
+                <Select id="status" value={form.status} onValueChange={(value) => update('status', value)} error={errors.status}>
                   <option value="active">Activo</option>
                   <option value="pending_profile">Perfil pendiente</option>
                   <option value="suspended">Suspendido</option>

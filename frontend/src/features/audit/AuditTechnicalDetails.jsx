@@ -34,12 +34,12 @@ function CopyIdentifier({ value, label }) {
 
 export default function AuditTechnicalDetails({ event }) {
   return (
-    <details className="group rounded-xl border border-slate-200 bg-surface-secondary">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+    <details className="disclosure group">
+      <summary className="disclosure-summary">
         Información técnica
         <ChevronDown className="h-4 w-4 transition group-open:rotate-180" aria-hidden="true" />
       </summary>
-      <dl className="space-y-2 border-t border-slate-200 px-4 py-3 text-sm">
+      <dl className="disclosure-body space-y-2 text-sm">
         <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between">
           <dt className="text-slate-500">Código de evento</dt>
           <dd className="break-all text-right font-mono text-xs text-slate-700">{event.action}</dd>

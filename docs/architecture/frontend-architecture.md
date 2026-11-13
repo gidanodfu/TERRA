@@ -111,6 +111,29 @@ límites se validan antes de crear la sesión; el frontend no autoriza nada.
 - `has_local_credentials` controla la visibilidad del formulario de contraseña; no se deduce del rol.
 - `must_rotate_password` solo fuerza el aviso y la redirección del primer acceso.
 
+## Componentes de menú y selección
+
+La capa compartida vive en `frontend/src/components/`:
+
+- `dropdown-menu.jsx`: shell Radix para menús de acciones.
+- `select.jsx`: selector de opciones Radix para formularios y filtros.
+- `ui.jsx`: reexporta `Select` y mantiene el resto del sistema de diseño.
+
+Reglas:
+
+1. Un menú de acciones usa `DropdownMenu` y puede incluir etiquetas, separadores,
+   iconos, elementos deshabilitados y acciones destructivas. La página decide qué
+   opciones mostrar según `useAuth().can()`.
+2. Un formulario o filtro usa `Select` con `value`, `onValueChange` y opciones.
+   El valor vacío se conserva como `''`; internamente se usa un centinela que nunca
+   llega a la API.
+3. Un panel de contenido informativo conserva `details/summary` y las clases
+   `disclosure`, `disclosure-summary` y `disclosure-body`.
+4. Los paneles Radix se renderizan en portal y usan los tokens de superficie,
+   borde, sombra y foco existentes. No se definen colores por rol ni por tema.
+5. Los componentes son agnósticos al RBAC; las páginas filtran acciones con los
+   permisos ya existentes.
+
 ## Tiempo real
 
 `RealtimeProvider` mantiene una única conexión WebSocket por sesión. Los componentes se

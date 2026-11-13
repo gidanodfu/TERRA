@@ -281,13 +281,18 @@ test('modales, tablas, formularios y controles adoptan superficies oscuras', asy
 
   await page.goto('/app/admin/workers')
   await expect(page.getByLabel('Buscar trabajadores')).toBeVisible()
-  await expect(page.getByLabel('Filtrar por estado')).toBeVisible()
+  const selectTrigger = page.getByRole('combobox', { name: 'Filtrar por estado' })
+  await expect(selectTrigger).toBeVisible()
   await expect(page.locator('table tbody tr').first()).toBeVisible()
+  await selectTrigger.click()
+  const listbox = page.getByRole('listbox')
+  await expect(listbox).toBeVisible()
   const surfaces = await page.evaluate(() => {
     const tableHead = document.querySelector('table thead')
     const input = document.querySelector('input[aria-label="Buscar trabajadores"]')
-    const select = document.querySelector('select[aria-label="Filtrar por estado"]')
-    const option = select?.querySelector('option')
+    const trigger = document.querySelector('[role="combobox"][aria-label="Filtrar por estado"]')
+    const content = document.querySelector('[role="listbox"]')
+    const option = content?.querySelector('[role="option"]')
     const badge = document.querySelector('table tbody .badge')
     return {
       tableHead: getComputedStyle(tableHead).backgroundColor,
@@ -295,9 +300,11 @@ test('modales, tablas, formularios y controles adoptan superficies oscuras', asy
       input: getComputedStyle(input).backgroundColor,
       inputBorder: getComputedStyle(input).borderTopColor,
       inputText: getComputedStyle(input).color,
-      selectBg: getComputedStyle(select).backgroundColor,
-      selectScheme: getComputedStyle(select).colorScheme,
+      selectBg: getComputedStyle(trigger).backgroundColor,
+      selectScheme: getComputedStyle(trigger).colorScheme,
+      menuBg: content ? getComputedStyle(content).backgroundColor : null,
       optionBg: option ? getComputedStyle(option).backgroundColor : null,
+      optionText: option ? getComputedStyle(option).color : null,
       badgeBg: badge ? getComputedStyle(badge).backgroundColor : null,
       badgeColor: badge ? getComputedStyle(badge).color : null,
     }
@@ -309,7 +316,10 @@ test('modales, tablas, formularios y controles adoptan superficies oscuras', asy
   expect(surfaces.inputText).toBe('rgb(255, 255, 255)')
   expect(surfaces.selectBg).toBe('rgb(8, 8, 8)')
   expect(surfaces.selectScheme).toBe('dark')
-  expect(surfaces.optionBg).toBe('rgb(24, 24, 24)')
+  expect(surfaces.menuBg).toBe('rgb(24, 24, 24)')
+  expect(surfaces.optionBg).not.toBe('rgb(255, 255, 255)')
+  expect(contrast(surfaces.optionText, surfaces.optionBg)).toBeGreaterThanOrEqual(4.5)
+  await page.keyboard.press('Escape')
   expect(surfaces.badgeBg).toBeTruthy()
   expect(contrast(surfaces.badgeColor, surfaces.badgeBg)).toBeGreaterThanOrEqual(4.5)
 
