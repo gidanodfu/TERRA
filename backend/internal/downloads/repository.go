@@ -227,7 +227,8 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]Job, int, error)
 		add("j.created_at >= $%d", *f.From)
 	}
 	if f.To != nil {
-		add("j.created_at <= $%d", *f.To)
+		// Límite superior exclusivo: inicio del día siguiente al "hasta" solicitado.
+		add("j.created_at < $%d", *f.To)
 	}
 	if f.RestrictToUser != nil {
 		args = append(args, *f.RestrictToUser)

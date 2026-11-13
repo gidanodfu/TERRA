@@ -133,8 +133,9 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]Event, int, erro
 		where += " AND a.created_at >= $" + itoa(len(args))
 	}
 	if f.To != nil {
+		// Límite superior exclusivo: inicio del día siguiente al "hasta" solicitado.
 		args = append(args, *f.To)
-		where += " AND a.created_at <= $" + itoa(len(args))
+		where += " AND a.created_at < $" + itoa(len(args))
 	}
 	var total int
 	if err := r.pool.QueryRow(ctx, "SELECT count(*) FROM audit_events a"+where, args...).Scan(&total); err != nil {

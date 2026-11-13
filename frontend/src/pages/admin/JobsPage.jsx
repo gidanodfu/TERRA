@@ -12,6 +12,8 @@ import {
   Select,
 } from '../../components/ui'
 import JobTable from '../../features/downloads/JobTable'
+import DatePicker from '../../components/DatePicker'
+import { isValidDateRange } from '../../utils/date-only'
 
 export default function AdminJobsPage() {
   const [jobs, setJobs] = useState(null)
@@ -28,6 +30,8 @@ export default function AdminJobsPage() {
   const [positions, setPositions] = useState([])
   const [error, setError] = useState('')
   const pageSize = 20
+  const rangeValid = isValidDateRange(from, to)
+  const rangeError = rangeValid ? undefined : 'La fecha Desde no puede ser posterior a Hasta.'
 
   useEffect(() => {
     api.get('/admin/areas').then((data) => setAreas(data.data || [])).catch((err) => setError(err.message))
@@ -41,6 +45,7 @@ export default function AdminJobsPage() {
   }, [areaId])
 
   useEffect(() => {
+    if (!rangeValid) return undefined
     let active = true
     setJobs(null)
     api
@@ -55,7 +60,7 @@ export default function AdminJobsPage() {
     return () => {
       active = false
     }
-  }, [page, status, applied, areaId, positionId, from, to])
+  }, [page, status, applied, areaId, positionId, from, to, rangeValid])
 
   return (
     <div>
@@ -97,8 +102,8 @@ export default function AdminJobsPage() {
           <option value="">Todos los cargos</option>
           {positions.map((position) => <option key={position.id} value={position.id}>{position.name}</option>)}
         </Select>
-        <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1) }} aria-label="Desde" />
-        <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1) }} aria-label="Hasta" />
+        <DatePicker id="jobs-from" value={from} onChange={(value) => { setFrom(value); setPage(1) }} max={to || undefined} error={rangeError} aria-label="Desde" />
+        <DatePicker id="jobs-to" value={to} onChange={(value) => { setTo(value); setPage(1) }} min={from || undefined} error={rangeError} aria-label="Hasta" />
       </div>
       {!jobs && !error ? <LoadingBlock /> : null}
       {jobs && jobs.length === 0 ? (

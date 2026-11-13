@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ScrollText, Search } from 'lucide-react'
+import DatePicker from '../../components/DatePicker'
+import { isValidDateRange } from '../../utils/date-only'
 import { api, queryString } from '../../services/api'
 import {
   Alert,
@@ -23,31 +25,29 @@ export default function AuditPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [action, setAction] = useState('')
+  const [appliedAction, setAppliedAction] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [error, setError] = useState('')
   const [selectedEvent, setSelectedEvent] = useState(null)
   const pageSize = 25
   const closeDetail = useCallback(() => setSelectedEvent(null), [])
+  const rangeValid = isValidDateRange(from, to)
+  const rangeError = rangeValid ? undefined : 'La fecha Desde no puede ser posterior a Hasta.'
 
   const search = (event) => {
     event?.preventDefault()
+    if (!rangeValid) return
     setPage(1)
-    api
-      .get(`/admin/audit-events${queryString({ page: 1, page_size: pageSize, action: action.trim(), from, to })}`)
-      .then((data) => {
-        setEvents(data.data || [])
-        setTotal(data.pagination?.total || 0)
-        setError('')
-      })
-      .catch((err) => setError(err.message))
+    setAppliedAction(action.trim())
   }
 
   useEffect(() => {
+    if (!rangeValid) return undefined
     let active = true
     setEvents(null)
     api
-      .get(`/admin/audit-events${queryString({ page, page_size: pageSize, action: action.trim(), from, to })}`)
+      .get(`/admin/audit-events${queryString({ page, page_size: pageSize, action: appliedAction, from, to })}`)
       .then((data) => {
         if (!active) return
         setEvents(data.data || [])
@@ -58,7 +58,7 @@ export default function AuditPage() {
     return () => {
       active = false
     }
-  }, [page, action, from, to])
+  }, [page, appliedAction, from, to, rangeValid])
 
   return (
     <div>
@@ -72,9 +72,9 @@ export default function AuditPage() {
 
       <form onSubmit={search} className="mb-4 flex flex-col gap-2 @2xl:flex-row">
         <Input value={action} onChange={(e) => setAction(e.target.value)} placeholder="Acción exacta, p. ej. download_job.created" aria-label="Filtrar por acción" />
-        <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Desde" />
-        <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Hasta" />
-        <Button type="submit" variant="secondary"><Search className="h-4 w-4" /> Filtrar</Button>
+        <DatePicker id="audit-from" value={from} onChange={(value) => { setFrom(value); setPage(1) }} max={to || undefined} error={rangeError} aria-label="Desde" />
+        <DatePicker id="audit-to" value={to} onChange={(value) => { setTo(value); setPage(1) }} min={from || undefined} error={rangeError} aria-label="Hasta" />
+        <Button type="submit" variant="secondary" disabled={!rangeValid}><Search className="h-4 w-4" /> Filtrar</Button>
       </form>
 
       {!events && !error ? <LoadingBlock /> : null}

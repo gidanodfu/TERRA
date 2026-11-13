@@ -190,6 +190,67 @@
   .label {
     @apply mb-1.5 block text-sm font-medium text-slate-700;
   }
+  .menu-content.terra-date-picker-panel {
+    @apply p-3;
+    min-width: 18rem;
+  }
+  .terra-calendar.rdp-root {
+    --rdp-accent-color: var(--primary);
+    --rdp-accent-background-color: var(--color-brand-50);
+    @apply text-slate-700;
+  }
+  .terra-calendar .rdp-months {
+    @apply m-0;
+  }
+  .terra-calendar .rdp-month_caption {
+    @apply px-2 pb-2 text-sm font-semibold text-slate-900;
+  }
+  .terra-calendar .rdp-nav {
+    @apply gap-1;
+  }
+  .terra-calendar .rdp-button_previous,
+  .terra-calendar .rdp-button_next {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500;
+  }
+  .terra-calendar .rdp-button_previous:hover,
+  .terra-calendar .rdp-button_next:hover {
+    @apply bg-brand-50 text-brand-700;
+  }
+  .terra-calendar .rdp-button_previous:focus-visible,
+  .terra-calendar .rdp-button_next:focus-visible,
+  .terra-calendar .rdp-day_button:focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-brand-600;
+  }
+  .terra-calendar .rdp-chevron {
+    fill: currentColor;
+  }
+  .terra-calendar .rdp-weekday {
+    @apply text-xs font-medium text-slate-500;
+  }
+  .terra-calendar .rdp-day {
+    @apply p-0;
+  }
+  .terra-calendar .rdp-day_button {
+    @apply mx-auto flex h-10 w-10 items-center justify-center rounded-xl text-sm text-slate-700 transition;
+  }
+  .terra-calendar .rdp-day_button:hover {
+    @apply bg-brand-50 text-brand-700;
+  }
+  .terra-calendar .rdp-selected .rdp-day_button {
+    @apply bg-brand-700 text-white hover:bg-brand-800;
+  }
+  .terra-calendar .rdp-today:not(.rdp-selected) .rdp-day_button {
+    @apply text-brand-700 ring-1 ring-brand-100;
+  }
+  .terra-calendar .rdp-outside .rdp-day_button {
+    @apply text-slate-300;
+  }
+  .terra-calendar .rdp-disabled .rdp-day_button {
+    @apply cursor-not-allowed opacity-35;
+  }
+  .terra-calendar .rdp-disabled .rdp-day_button:hover {
+    @apply bg-transparent text-slate-700;
+  }
   .disclosure {
     @apply rounded-2xl border border-border bg-surface-secondary;
   }

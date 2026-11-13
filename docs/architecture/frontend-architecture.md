@@ -111,12 +111,13 @@ límites se validan antes de crear la sesión; el frontend no autoriza nada.
 - `has_local_credentials` controla la visibilidad del formulario de contraseña; no se deduce del rol.
 - `must_rotate_password` solo fuerza el aviso y la redirección del primer acceso.
 
-## Componentes de menú y selección
+## Componentes de menú, selección y fecha
 
 La capa compartida vive en `frontend/src/components/`:
 
 - `dropdown-menu.jsx`: shell Radix para menús de acciones.
 - `select.jsx`: selector de opciones Radix para formularios y filtros.
+- `DatePicker.jsx`: selector de fecha global con DayPicker y Radix Popover.
 - `ui.jsx`: reexporta `Select` y mantiene el resto del sistema de diseño.
 
 Reglas:
@@ -133,6 +134,34 @@ Reglas:
    borde, sombra y foco existentes. No se definen colores por rol ni por tema.
 5. Los componentes son agnósticos al RBAC; las páginas filtran acciones con los
    permisos ya existentes.
+
+### DatePicker global
+
+`DatePicker` sustituye a los controles `type="date"` nativos. Contrato:
+
+- `value` es `YYYY-MM-DD` o `''`; `onChange` entrega siempre una de esas dos formas.
+- No se usan objetos `Date` ni `toISOString()` en formularios: las utilidades de
+  `frontend/src/utils/date-only.js` construyen y serializan fechas locales.
+- `min` y `max` son inclusivos y deshabilitan días fuera del rango.
+- `label`, `error`, `disabled`, `clearable`, `placeholder`, `aria-label` y `className`
+  cubren etiquetas, error accesible y estados del disparador.
+- El panel se abre en portal, se posiciona con colisiones y usa la localización
+  `es-PE` con semana iniciando en lunes.
+
+Para un rango Desde/Hasta se pasan límites cruzados (`max={to || undefined}` en Desde y
+`min={from || undefined}` en Hasta) y la página valida con `isValidDateRange(from, to)`
+antes de consultar. Un rango inválido no dispara peticiones. El error se muestra junto a
+los controles con `aria-invalid` y `aria-describedby`.
+
+El CSS oficial de DayPicker se importa una sola vez en `main.jsx`; los ajustes viven
+bajo `.terra-date-picker-panel` y `.terra-calendar` en `frontend/src/styles/index.css`
+y consumen los tokens de tema, incluido True Black.
+
+### Filtros de fecha en la API
+
+`from` y `to` son días completos inclusivos. El backend devuelve `to` como el inicio
+exclusivo del día siguiente y los repositorios comparan `created_at >= from` y
+`created_at < toExclusive`. Un `from` posterior a `to` se rechaza como solicitud inválida.
 
 ## Tiempo real
 

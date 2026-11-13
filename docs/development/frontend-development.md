@@ -75,6 +75,31 @@ Si `/@vite/client` devuelve HTML, el contenedor web no puede leer sus dependenci
 
 `vite.config.js` redirige `/api` a `http://api:8080`. Esto incluye REST y WebSocket. No use `localhost` para el tráfico entre contenedores.
 
+## Selectores de fecha
+
+Use `DatePicker` de `src/components/DatePicker.jsx` para cualquier fecha de formulario o
+filtro. No agregue `input type="date"` ni otra librería de calendario.
+
+```jsx
+<DatePicker
+  id="jobs-from"
+  value={from}
+  onChange={(value) => setFrom(value)}
+  max={to || undefined}
+  aria-label="Desde"
+/>
+```
+
+- El valor es `YYYY-MM-DD` o `''`; la fecha mostrada es `dd/MM/yyyy`.
+- Las utilidades `parseDateOnly`, `formatDateOnly`, `formatDateDisplay`,
+  `isValidDateOnly` e `isValidDateRange` están en `src/utils/date-only.js`.
+- Nunca use `new Date('YYYY-MM-DD')` ni `toISOString()` para el valor del formulario.
+- `min` y `max` son inclusivos. Para rangos, límite Desde con `max={to}` y Hasta con
+  `min={from}` y bloquee la consulta con `isValidDateRange(from, to)`.
+- El panel se monta en portal, por lo que no lo recorta `overflow-hidden`; los estilos
+  del calendario están aislados en `.terra-calendar`.
+- Es accesible con teclado (Enter/Space, flechas, Escape) y anuncia el día seleccionado.
+
 ## Pruebas de frontend
 
 ```bash

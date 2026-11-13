@@ -3,7 +3,6 @@ package admin
 import (
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -180,23 +179,12 @@ func (h *Handler) AuditEvents(w http.ResponseWriter, r *http.Request) {
 		}
 		f.ActorID = &id
 	}
-	if raw := q.Get("from"); raw != "" {
-		t, err := time.Parse("2006-01-02", raw)
-		if err != nil {
-			httpx.WriteError(w, r, apperr.BadRequest("Fecha desde inválida."))
-			return
-		}
-		f.From = &t
+	from, toExclusive, err := httpx.ParseDateRange(q)
+	if err != nil {
+		httpx.WriteError(w, r, err)
+		return
 	}
-	if raw := q.Get("to"); raw != "" {
-		t, err := time.Parse("2006-01-02", raw)
-		if err != nil {
-			httpx.WriteError(w, r, apperr.BadRequest("Fecha hasta inválida."))
-			return
-		}
-		end := t.Add(24*time.Hour - time.Second)
-		f.To = &end
-	}
+	f.From, f.To = from, toExclusive
 	events, total, err := h.svc.Audit(r.Context(), f)
 	if err != nil {
 		httpx.WriteError(w, r, err)

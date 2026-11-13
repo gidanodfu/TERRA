@@ -9,6 +9,7 @@ import '@fontsource/inter/latin-400.css'
 import '@fontsource/inter/latin-500.css'
 import '@fontsource/inter/latin-600.css'
 import '@fontsource/inter/latin-700.css'
+import '@daypicker/react/style.css'
 import './styles/index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(

@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -113,21 +112,11 @@ func parseJobFilter(r *http.Request, page, size int) (ListFilter, error) {
 		}
 		f.RequesterID = &id
 	}
-	if raw := q.Get("from"); raw != "" {
-		t, err := time.Parse("2006-01-02", raw)
-		if err != nil {
-			return f, apperr.BadRequest("Fecha desde inválida.")
-		}
-		f.From = &t
+	from, toExclusive, err := httpx.ParseDateRange(q)
+	if err != nil {
+		return f, err
 	}
-	if raw := q.Get("to"); raw != "" {
-		t, err := time.Parse("2006-01-02", raw)
-		if err != nil {
-			return f, apperr.BadRequest("Fecha hasta inválida.")
-		}
-		end := t.Add(24*time.Hour - time.Second)
-		f.To = &end
-	}
+	f.From, f.To = from, toExclusive
 	return f, nil
 }
 

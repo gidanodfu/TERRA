@@ -3,6 +3,7 @@ package unit_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -103,5 +104,23 @@ func TestDomainConstantsAndExports(t *testing.T) {
 	}
 	if _, ok := drive.ExportMime(drive.MimeVids); ok {
 		t.Fatal("Vids no debe exportarse")
+	}
+}
+
+func TestDateRangeFilterUsesExclusiveNextDay(t *testing.T) {
+	from, to, err := httpx.ParseDateRange(url.Values{"from": {"2026-11-10"}, "to": {"2026-11-10"}})
+	if err != nil || from == nil || to == nil {
+		t.Fatalf("rango válido: %v", err)
+	}
+	if from.Format("2006-01-02") != "2026-11-10" || to.Format("2006-01-02") != "2026-11-11" {
+		t.Fatalf("límites: from=%s to=%s", from, to)
+	}
+	if _, _, err := httpx.ParseDateRange(url.Values{"from": {"2026-11-11"}, "to": {"2026-11-10"}}); err == nil {
+		t.Fatal("un rango invertido debe rechazarse")
+	}
+	for _, value := range []string{"2025-02-29", "2026-02-30", "2026-13-01", "2026-00-10", "10/11/2026"} {
+		if _, _, err := httpx.ParseDateRange(url.Values{"from": {value}}); err == nil {
+			t.Fatalf("fecha inválida aceptada: %s", value)
+		}
 	}
 }
